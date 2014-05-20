@@ -164,12 +164,13 @@ def similarity(im0, im1):
     elif angle > 90.0:
         angle -= 180.0
 
-    im2 = ndii.zoom(im1, 1.0 / scale)
-    im2 = ndii.rotate(im2, angle)
+    # We consider the corner value the background color
+    bgval = float(im1[0, 0])
+    im2 = ndii.zoom(im1, 1.0 / scale, cval=bgval)
+    im2 = ndii.rotate(im2, angle, cval=bgval)
 
-    t = np.zeros_like(im0)
-    embed_to(t, im2)
-    im2 = t
+    t = np.zeros_like(im0) + bgval
+    im2 = embed_to(t, im2)
 
     """
     # DODGY
@@ -191,7 +192,7 @@ def similarity(im0, im1):
     if t1 > f0.shape[1] // 2:
         t1 -= f0.shape[1]
 
-    im2 = ndii.shift(im2, [t0, t1])
+    im2 = ndii.shift(im2, [t0, t1], cval=bgval)
 
     # correct parameters for ndimage's internal processing
     if angle > 0.0:
@@ -220,13 +221,14 @@ def embed_to(where, what):
             rem = diff - (diff // 2)
             slice_from = slice(diff // 2, dim2 - rem)
         if diff < 0:
-            diff = -1
+            diff *= -1
             rem = diff - (diff // 2)
             slice_to = slice(diff // 2, dim0 - rem)
         slices_from.append(slice_from)
         slices_to.append(slice_to)
 
     where[slices_to[0], slices_to[1]] = what[slices_from[0], slices_from[1]]
+    return where
 
 
 def similarity_matrix(scale, angle, vector):
@@ -302,10 +304,12 @@ def imshow(im0, im1, im2, im3=None, cmap=None, **kwargs):
         im3 = abs(im2 - im0)
     pyplot.subplot(221)
     pyplot.imshow(im0, cmap, **kwargs)
+    pyplot.grid()
     pyplot.subplot(222)
     pyplot.imshow(im1, cmap, **kwargs)
     pyplot.subplot(223)
     pyplot.imshow(im3, cmap, **kwargs)
     pyplot.subplot(224)
     pyplot.imshow(im2, cmap, **kwargs)
+    pyplot.grid()
     pyplot.show()
