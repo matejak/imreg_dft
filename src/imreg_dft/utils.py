@@ -67,3 +67,26 @@ def get_apofield(shape, aporad):
         vecs.append(toapp)
     apofield = np.outer(vecs[0], vecs[1])
     return apofield
+
+
+def frame_img(img, mask, radius):
+    import scipy.ndimage as ndimg
+    noland = mask == 0
+    bgval = np.mean(img[noland])
+    img[noland] = bgval
+
+    mask += 1e-10
+    convimg = ndimg.gaussian_filter(img * mask, radius, mode='wrap')
+    convmask = ndimg.gaussian_filter(img, radius, mode='wrap')
+
+    wconvimg = convimg / convmask
+
+    compmask = convmask - 0.5
+    compmask[compmask < 0] = 0
+    compmask /= compmask.max()
+
+    apofield = get_apofield(img.shape, radius * 2)
+    apoarr = compmask * apofield
+
+    res = wconvimg * (1 - apoarr) + apoarr * img
+    return res

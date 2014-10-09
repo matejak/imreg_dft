@@ -130,7 +130,7 @@ def similarity(im0, im1):
     if im0.shape != im1.shape:
         raise ValueError("Images must have same shapes.")
     elif len(im0.shape) != 2:
-        raise ValueError("Images must be 2 dimensional.")
+        raise ValueError("Images must be 2-dimensional.")
 
     f0 = fftshift(abs(fft2(im0)))
     f1 = fftshift(abs(fft2(im1)))
@@ -164,25 +164,29 @@ def similarity(im0, im1):
     elif angle > 90.0:
         angle -= 180.0
 
-    # We consider the corner value the background color
-    bgval = float(im1[0, 0])
-    im2 = ndii.zoom(im1, 1.0 / scale, cval=bgval)
-    im2 = ndii.rotate(im2, angle, cval=bgval)
+    im2 = transform_img(im1, scale, angle)
 
-    t = np.zeros_like(im0) + bgval
-    im2 = embed_to(t, im2)
+    # now we can use pcorr to guess the translation
+    t0, t1 = _compute_translation(im0, im2)
 
-    """
-    # DODGY
-    if im2.shape < im0.shape:
-        t = np.zeros_like(im0)
-        t[:im2.shape[0], :im2.shape[1]] = im2
-        im2 = t
-    elif im2.shape > im0.shape:
-        im2 = im2[:im0.shape[0], :im0.shape[1]]
-    """
+    im2 = transform_img(im2, 1, 0, t0, t1)
 
-    f0 = fft2(im0)
+    # correct parameters for ndimage's internal processing
+    if angle > 0.0:
+        d = int((int(im1.shape[1] / scale) * math.sin(math.radians(angle))))
+        t0, t1 = t1, d + t0
+    elif angle < 0.0:
+        d = int((int(im1.shape[0] / scale) * math.sin(math.radians(angle))))
+        t0, t1 = d + t1, d + t0
+
+    # don't know what it does, but it alters the scale a little bit
+    scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
+
+    return im2, scale, angle, [-t0, -t1]
+
+
+def _compute_translation(im1, im2):
+    f0 = fft2(im1)
     f1 = fft2(im2)
     ir = abs(ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1))))
     t0, t1 = np.unravel_index(np.argmax(ir), ir.shape)
@@ -192,18 +196,24 @@ def similarity(im0, im1):
     if t1 > f0.shape[1] // 2:
         t1 -= f0.shape[1]
 
-    im2 = ndii.shift(im2, [t0, t1], cval=bgval)
+    return t0, t1
 
-    # correct parameters for ndimage's internal processing
-    if angle > 0.0:
-        d = int((int(im1.shape[1] / scale) * math.sin(math.radians(angle))))
-        t0, t1 = t1, d + t0
-    elif angle < 0.0:
-        d = int((int(im1.shape[0] / scale) * math.sin(math.radians(angle))))
-        t0, t1 = d + t1, d + t0
-    scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
 
-    return im2, scale, angle, [-t0, -t1]
+def transform_img(src, scale=1.0, angle=0.0, t0=0, t1=0):
+    # We consider the corner value the background color
+    bgval = float(src[0, 0])
+    dest0 = src.copy()
+    if scale != 1.0:
+        dest0 = ndii.zoom(dest0, 1.0 / scale, cval=bgval)
+    if angle != 0.0:
+        dest0 = ndii.rotate(dest0, angle, cval=bgval)
+
+    bg = np.zeros_like(src) + bgval
+    dest = embed_to(bg, dest0)
+
+    if t0 != 0 or t1 != 0:
+        dest[:] = ndii.shift(dest, [t0, t1], cval=bgval)
+    return dest
 
 
 def embed_to(where, what):
@@ -262,7 +272,6 @@ def logpolar(image, angles=None, radii=None):
         radii = shape[1]
     theta = np.empty((angles, radii), dtype=np.float64)
     theta.T[:] = -np.linspace(0, np.pi, angles, endpoint=False)
-    #d = radii
     d = np.hypot(shape[0] - center[0], shape[1] - center[1])
     log_base = 10.0 ** (math.log10(d) / (radii))
     radius = np.empty_like(theta)
