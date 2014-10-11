@@ -1,3 +1,0 @@
-# apodize stub
-# embed stub
-

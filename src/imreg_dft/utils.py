@@ -2,6 +2,69 @@ import numpy as np
 import numpy.fft as fft
 
 
+def _get_emslices(shape1, shape2):
+    slices_from = []
+    slices_to = []
+    for dim1, dim2 in zip(shape1, shape2):
+        diff = dim2 - dim1
+        # In fact: if diff == 0:
+        slice_from = slice(None)
+        slice_to = slice(None)
+
+        # dim2 is bigger => we will skip some of their pixels
+        if diff > 0:
+            # diff // 2 + rem == diff
+            rem = diff - (diff // 2)
+            slice_from = slice(diff // 2, dim2 - rem)
+        if diff < 0:
+            diff *= -1
+            rem = diff - (diff // 2)
+            slice_to = slice(diff // 2, dim1 - rem)
+        slices_from.append(slice_from)
+        slices_to.append(slice_to)
+    return slices_from, slices_to
+
+
+def undo_embed(what, orig):
+    _, slices_to = _get_emslices(what.shape, orig.shape)
+
+    res = what[slices_to[0], slices_to[1]].copy()
+    return res
+
+
+def embed_to(where, what):
+    slices_from, slices_to = _get_emslices(where.shape, what.shape)
+
+    where[slices_to[0], slices_to[1]] = what[slices_from[0], slices_from[1]]
+    return where
+
+
+def extend_by(what, dst):
+    olddim = np.array(what.shape, dtype=int)
+    newdim = olddim + dst
+
+    bgval = get_borderval(what, dst)
+
+    dest = np.zeros(newdim)
+    res = dest.copy() + bgval
+    embed_to(res, what)
+
+    mask = dest
+    embed_to(mask, np.ones_like(what))
+
+    res = frame_img(res, mask, dst)
+
+    return res
+
+
+def unextend_by(what, dst):
+    newdim = np.array(what.shape, dtype=int)
+    origdim = newdim - dst
+
+    res = undo_embed(what, np.empty(origdim))
+    return res
+
+
 def filter(img, lows=None, highs=None):
     """
     Given an image, it applies a list of high-pass and low-pass filters on its
@@ -36,9 +99,9 @@ def _xpass(shape, lo, hi):
     Computer a pass-filter mask with values ranging from 0 to 1.0
     The mask is low-pass, application has to be handled by a calling funcion.
     """
-    assert lo < hi, \
+    assert lo <= hi, \
         "Filter order wrong, low '%g', high '%g'" % (lo, hi)
-    assert lo > 0, \
+    assert lo >= 0, \
         "Low filter lower than zero (%g)" % lo
     # High can be as high as possible
 
@@ -69,15 +132,14 @@ def get_apofield(shape, aporad):
     return apofield
 
 
-def frame_img(img, mask, radius):
+def frame_img(img, mask, dst):
     import scipy.ndimage as ndimg
-    noland = mask == 0
-    bgval = np.mean(img[noland])
-    img[noland] = bgval
 
-    mask += 1e-10
+    radius = dst // 3
+
+    mask += 1e-5
     convimg = ndimg.gaussian_filter(img * mask, radius, mode='wrap')
-    convmask = ndimg.gaussian_filter(img, radius, mode='wrap')
+    convmask = ndimg.gaussian_filter(mask, radius, mode='wrap')
 
     wconvimg = convimg / convmask
 
@@ -85,8 +147,19 @@ def frame_img(img, mask, radius):
     compmask[compmask < 0] = 0
     compmask /= compmask.max()
 
-    apofield = get_apofield(img.shape, radius * 2)
+    apofield = get_apofield(img.shape, dst // 2)
     apoarr = compmask * apofield
 
     res = wconvimg * (1 - apoarr) + apoarr * img
     return res
+
+
+def get_borderval(img, radius):
+    mask = np.zeros_like(img, dtype=np.bool)
+    mask[:, :radius] = True
+    mask[:, -radius:] = True
+    mask[radius, :] = True
+    mask[-radius:, :] = True
+
+    mean = img[mask].mean()
+    return mean

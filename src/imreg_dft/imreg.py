@@ -88,9 +88,13 @@ import math
 import numpy as np
 from numpy.fft import fft2, ifft2, fftshift
 
+import imreg_dft.utils as utils
+
 try:
+    import scipy.ndimage as ndi
     import scipy.ndimage.interpolation as ndii
 except ImportError:
+    import ndimage as ndi
     import ndimage.interpolation as ndii
 
 __docformat__ = 'restructuredtext en'
@@ -111,7 +115,7 @@ def translation(im0, im1):
     return [t0, t1]
 
 
-def similarity(im0, im1):
+def similarity(im0, im1, order, filter_pcorr):
     """Return similarity transformed image im1 and transformation parameters.
 
     Transformation parameters are: isotropic scale factor, rotation angle (in
@@ -164,12 +168,19 @@ def similarity(im0, im1):
     elif angle > 90.0:
         angle -= 180.0
 
-    im2 = transform_img(im1, scale, angle)
+    bgval = utils.get_borderval(im1, 5)
+    im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
     # now we can use pcorr to guess the translation
-    t0, t1 = _compute_translation(im0, im2)
+    t0, t1 = _compute_translation(im0, im2, filter_pcorr)
 
-    im2 = transform_img(im2, 1, 0, t0, t1)
+    im2 = transform_img(im2, 1, 0, t0, t1, bgval=bgval, order=order)
+    im2 = transform_img(im1, scale, angle, t0, t1, bgval, order=order)
+
+    imask = transform_img(np.ones_like(im1), scale, angle, t0, t1,
+                          0, order=order)
+
+    im2 = utils.frame_img(im2, imask, 20)
 
     # correct parameters for ndimage's internal processing
     if angle > 0.0:
@@ -185,10 +196,13 @@ def similarity(im0, im1):
     return im2, scale, angle, [-t0, -t1]
 
 
-def _compute_translation(im1, im2):
+def _compute_translation(im1, im2, filter_pcorr=0):
     f0 = fft2(im1)
     f1 = fft2(im2)
     ir = abs(ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1))))
+    if filter_pcorr > 0:
+        ir = ndi.minimum_filter(ir, filter_pcorr)
+
     t0, t1 = np.unravel_index(np.argmax(ir), ir.shape)
 
     if t0 > f0.shape[0] // 2:
@@ -199,46 +213,20 @@ def _compute_translation(im1, im2):
     return t0, t1
 
 
-def transform_img(src, scale=1.0, angle=0.0, t0=0, t1=0):
-    # We consider the corner value the background color
-    bgval = float(src[0, 0])
+def transform_img(src, scale=1.0, angle=0.0, t0=0, t1=0, bgval=0, order=1):
     dest0 = src.copy()
     if scale != 1.0:
-        dest0 = ndii.zoom(dest0, 1.0 / scale, cval=bgval)
+        dest0 = ndii.zoom(dest0, 1.0 / scale, order=order, cval=bgval)
     if angle != 0.0:
-        dest0 = ndii.rotate(dest0, angle, cval=bgval)
-
-    bg = np.zeros_like(src) + bgval
-    dest = embed_to(bg, dest0)
+        dest0 = ndii.rotate(dest0, angle, order=order, cval=bgval)
 
     if t0 != 0 or t1 != 0:
-        dest[:] = ndii.shift(dest, [t0, t1], cval=bgval)
+        dest0 = ndii.shift(dest0, [t0, t1], order=order, cval=bgval)
+
+    bg = np.zeros_like(src) + bgval
+    dest = utils.embed_to(bg, dest0)
+
     return dest
-
-
-def embed_to(where, what):
-    slices_from = []
-    slices_to = []
-    for dim0, dim2 in zip(where.shape, what.shape):
-        diff = dim2 - dim0
-        # In fact: if diff == 0:
-        slice_from = slice(None)
-        slice_to = slice(None)
-
-        # dim2 is bigger => we will skip some of their pixels
-        if diff > 0:
-            # diff // 2 + rem == diff
-            rem = diff - (diff // 2)
-            slice_from = slice(diff // 2, dim2 - rem)
-        if diff < 0:
-            diff *= -1
-            rem = diff - (diff // 2)
-            slice_to = slice(diff // 2, dim0 - rem)
-        slices_from.append(slice_from)
-        slices_to.append(slice_to)
-
-    where[slices_to[0], slices_to[1]] = what[slices_from[0], slices_from[1]]
-    return where
 
 
 def similarity_matrix(scale, angle, vector):
@@ -307,6 +295,7 @@ def imread(fname, norm=True):
 def imshow(im0, im1, im2, im3=None, cmap=None, **kwargs):
     """Plot images using matplotlib."""
     from matplotlib import pyplot
+
     if cmap is None:
         cmap = 'coolwarm'
     if im3 is None:
