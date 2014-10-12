@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # imreg.py
 
+# Copyright (c) 2014-?, Matěj Týč
 # Copyright (c) 2011-2014, Christoph Gohlke
 # Copyright (c) 2011-2014, The Regents of the University of California
 # Produced at the Laboratory for Fluorescence Dynamics
@@ -30,55 +31,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""FFT based image registration.
-
-Implements an FFT-based technique for translation, rotation and scale-invariant
-image registration [1].
-
-:Author:
-  `Christoph Gohlke <http://www.lfd.uci.edu/~gohlke/>`_
-  `Matěj Týč <https://github.com/matejak>`_
-
-:Organization:
-  Laboratory for Fluorescence Dynamics, University of California, Irvine
-  Brno University of Technology, Brno, Czech Republic
-
-:Version: 1.0.0
-
-Requirements
-------------
-* `CPython 2.7 or 3.3 <http://www.python.org>`_
-* `Numpy 1.7 <http://www.numpy.org>`_
-* `Scipy 0.12 <http://www.scipy.org>`_
-* `Matplotlib 1.2 <http://www.matplotlib.org>`_  (optional for plotting)
-
-Notes
------
-The API and algorithms are not stable yet and are expected to change between
-revisions.
-
-References
-----------
-(1) An FFT-based technique for translation, rotation and scale-invariant
-    image registration. BS Reddy, BN Chatterji.
-    IEEE Transactions on Image Processing, 5, 1266-1271, 1996
-(2) An IDL/ENVI implementation of the FFT-based algorithm for automatic
-    image registration. H Xiea, N Hicksa, GR Kellera, H Huangb, V Kreinovich.
-    Computers & Geosciences, 29, 1045-1055, 2003.
-(3) Image Registration Using Adaptive Polar Transform. R Matungka, YF Zheng,
-    RL Ewing. IEEE Transactions on Image Processing, 18(10), 2009.
-
-Examples
---------
->>> im0 = imread('t400')
->>> im1 = imread('Tr19s1.3')
->>> im2, scale, angle, (t0, t1) = similarity(im0, im1)
->>> imshow(im0, im1, im2)
-
->>> im0 = imread('t350380ori')
->>> im1 = imread('t350380shf')
->>> t0, t1 = translation(im0, im1)
-
+"""
+FFT based image registration. --- main functions
 """
 
 from __future__ import division, print_function
@@ -99,20 +53,6 @@ except ImportError:
 
 __docformat__ = 'restructuredtext en'
 __all__ = ['translation', 'similarity']
-
-
-def translation(im0, im1):
-    """Return translation vector to register images."""
-    shape = im0.shape
-    f0 = fft2(im0)
-    f1 = fft2(im1)
-    ir = abs(ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1))))
-    t0, t1 = np.unravel_index(np.argmax(ir), shape)
-    if t0 > shape[0] // 2:
-        t0 -= shape[0]
-    if t1 > shape[1] // 2:
-        t1 -= shape[1]
-    return [t0, t1]
 
 
 def similarity(im0, im1, order, filter_pcorr):
@@ -172,7 +112,7 @@ def similarity(im0, im1, order, filter_pcorr):
     im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
     # now we can use pcorr to guess the translation
-    t0, t1 = _compute_translation(im0, im2, filter_pcorr)
+    t0, t1 = translation(im0, im2, filter_pcorr)
 
     im2 = transform_img(im2, 1, 0, t0, t1, bgval=bgval, order=order)
     im2 = transform_img(im1, scale, angle, t0, t1, bgval, order=order)
@@ -196,7 +136,8 @@ def similarity(im0, im1, order, filter_pcorr):
     return im2, scale, angle, [-t0, -t1]
 
 
-def _compute_translation(im1, im2, filter_pcorr=0):
+def translation(im1, im2, filter_pcorr=0):
+    """Return translation vector to register images."""
     f0 = fft2(im1)
     f1 = fft2(im2)
     ir = abs(ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1))))

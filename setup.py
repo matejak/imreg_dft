@@ -24,6 +24,14 @@ st.setup(
            'ird = imreg_dft.cli:main',
         ],
     },
+    install_requires=[
+        "numpy>=1.7",
+        "scipy>=0.12",
+    ],
+    extras_require = {
+        'plotting':  ["matplotlib>=1.2"],
+        'loading images': ["pillow>=2.2"],
+    },
     classifiers=[
         "Development Status :: 1 - Beta",
         "Natural Language :: English",
