@@ -2,6 +2,8 @@ language: python
 python:
   - "2.7"
   - "3.4"
+before_install:
+  - sudo apt-get install -qq libblas-dev liblapack-dev
 # command to install dependencies
 install:
   - "pip install ."
