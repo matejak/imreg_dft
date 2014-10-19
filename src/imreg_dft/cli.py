@@ -39,15 +39,38 @@ import imreg_dft as ird
 
 
 def _float_tuple(st):
+    """
+    Support function for parsing string of two floats delimited by a comma.
+    """
     vals = st.split(",")
     if len(vals) != 2:
-        raise ap.ArgumentTypeError("'%s' are not two values delimited by comma"
-                                   % st)
+        raise ap.ArgumentTypeError(
+            "'%s' are not two values delimited by comma" % st)
     try:
         vals = [float(val) for val in vals]
     except ValueError:
         raise ap.ArgumentTypeError("%s are not two float values" % vals)
     return vals
+
+
+def outmsg(msg):
+    """
+    Support function for checking of validity of the output format string.
+    A test interpolation is performed and exceptions handled.
+    """
+    fake_data = dict(scale=1.0, angle=2.0, tx=2, ty=2)
+    tpl = "The string '%s' is not a good format string"
+    try:
+        msg % fake_data
+    except KeyError as exc:
+        raise ap.ArgumentTypeError(
+            (tpl + ". The correct string "
+             "has to contain at most %s, but this one also contains an invalid"
+             " value '%s'.") % (msg, fake_data.keys(), exc.args[0]))
+    except Exception as exc:
+        raise ap.ArgumentTypeError(
+            (tpl + " - %s") % (msg, exc.message))
+    return msg
 
 
 def main():
@@ -66,17 +89,18 @@ def main():
                         help="Extend images by the specified amount of pixels "
                         "before the processing (thus eliminating edge effects)")
     parser.add_argument('--order', type=int, default=1,
-                        help="Interpolation order (1 = linear, 3 = cubic etc.)")
+                        help="Interpolation order (1 = linear, 3 = cubic etc)")
     parser.add_argument(
         '--filter-pcorr', type=int, default=0,
         help="Whether to filter during translation detection. Normally not "
         "needed, but when using low-pass filtering, you may need to increase "
         "filter radius (0 means no filtering, 4 should be enough)")
-    parser.add_argument('--print-result', action="store_true", default=False,
-                        help="")
+    parser.add_argument(
+        '--print-result', action="store_true", default=False,
+        help="We don't print anything unless this option is specified")
     parser.add_argument(
         '--print-format', default="scale: %(scale)f\nangle: %(angle)f\nshift: "
-        "%(tx)d, %(ty)d\n",
+        "%(tx)d, %(ty)d\n", type=outmsg,
         help="Print a string (to stdout) in a given format. A dictionary "
         "containing the 'scale', 'angle', 'tx' and 'ty' keys will be "
         "passed for interpolation")
@@ -103,7 +127,7 @@ def main():
 def filter_images(ims, low, high):
     from imreg_dft import utils
 
-    ret = [utils.filter(im, low, high) for im in ims]
+    ret = [utils.imfilter(im, low, high) for im in ims]
     return ret
 
 
@@ -148,7 +172,9 @@ def run(template, image, opts):
 
     tform = dict(scale=scale, angle=angle, tx=t0, ty=t1)
     if opts["print_format"] is not None:
-        sys.stdout.write(opts["print_format"] % tform)
+        msg = opts["print_format"] % tform
+        msg = bytes.decode(msg, "utf-8").decode('string-escape')
+        sys.stdout.write(msg)
 
     ims = [utils.unextend_by(im, opts["extend"]) for im in ims]
     im2 = utils.unextend_by(im2, opts["extend"])

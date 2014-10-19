@@ -37,6 +37,9 @@ import numpy.fft as fft
 
 
 def _get_emslices(shape1, shape2):
+    """
+    Common code used by :func:`embed_to` and :func:`undo_embed`
+    """
     slices_from = []
     slices_to = []
     for dim1, dim2 in zip(shape1, shape2):
@@ -59,14 +62,32 @@ def _get_emslices(shape1, shape2):
     return slices_from, slices_to
 
 
-def undo_embed(what, orig):
-    _, slices_to = _get_emslices(what.shape, orig.shape)
+def undo_embed(what, orig_shape):
+    """
+    Undo an embed operation
+
+    :param what: What has once be the destination array
+    :param what: The shape of the once original array
+
+    :returns: The closest we got to the undo
+    """
+    _, slices_to = _get_emslices(what.shape, orig_shape)
 
     res = what[slices_to[0], slices_to[1]].copy()
     return res
 
 
 def embed_to(where, what):
+    """
+    Given a source and destination arrays, put the source into
+    the destination so it is centered and perform all necessary operations
+    (cropping or aligning)
+
+    :param where: The destination array (also modified inplace)
+    :param what: The source array
+
+    :returns: The destination array
+    """
     slices_from, slices_to = _get_emslices(where.shape, what.shape)
 
     where[slices_to[0], slices_to[1]] = what[slices_from[0], slices_from[1]]
@@ -74,6 +95,10 @@ def embed_to(where, what):
 
 
 def extend_by(what, dst):
+    """
+    Given a source array, extend it by given number of pixels and try
+    to make the extension smooth (not altering the original array).
+    """
     olddim = np.array(what.shape, dtype=int)
     newdim = olddim + dst
 
@@ -92,14 +117,17 @@ def extend_by(what, dst):
 
 
 def unextend_by(what, dst):
+    """
+    Undo exactly what :func:`extend_by` does.
+    """
     newdim = np.array(what.shape, dtype=int)
     origdim = newdim - dst
 
-    res = undo_embed(what, np.empty(origdim))
+    res = undo_embed(what, origdim)
     return res
 
 
-def filter(img, lows=None, highs=None):
+def imfilter(img, lows=None, highs=None):
     """
     Given an image, it applies a list of high-pass and low-pass filters on its
     Fourier spectrum.
@@ -169,6 +197,18 @@ def get_apofield(shape, aporad):
 
 
 def frame_img(img, mask, dst):
+    """
+    Given an array, a mask (floats between 0 and 1), and a distance,
+    alter the area where the mask is low (and roughly within dst from the edge)
+    so it blends well with the area where the mask is high.
+    The purpose of this is removal of spurious frequencies in the image's
+    Fourier spectrum.
+
+    :param img: What we want to alter
+    :param mask: The indicator what can be altered and what not
+    :param dst: Parameter controlling behavior near edges, value could be
+    probably deduced from the mask.
+    """
     import scipy.ndimage as ndimg
 
     radius = dst // 3
@@ -191,6 +231,10 @@ def frame_img(img, mask, dst):
 
 
 def get_borderval(img, radius):
+    """
+    Given an image and a radius, examine the average value of the image
+    at most radius pixels from the edge
+    """
     mask = np.zeros_like(img, dtype=np.bool)
     mask[:, :radius] = True
     mask[:, -radius:] = True

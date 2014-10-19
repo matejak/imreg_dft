@@ -15,7 +15,7 @@ There are three main reasons why you would want to use it:
 
    .. code-block:: shell-session
 
-     [user@linuxbox ~]$ ird la.png lo.png --print-result 'rot:%(rotation)g\nscale:%(scale)\ntranslation:%(tx)d,%(ty)d'
+     [user@linuxbox ~]$ ird la.png lo.png --print-result 'rot:%(angle)g\nscale:%(scale)\ntranslation:%(tx)d,%(ty)d\n'
      rot:45
      scale:0.987
      translation:2,4
