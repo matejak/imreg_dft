@@ -27,6 +27,7 @@ st.setup(
     install_requires=[
         "numpy>=1.7",
         "scipy>=0.12",
+        "setuptools>=1.0"
     ],
     extras_require = {
         'plotting':  ["matplotlib>=1.2"],

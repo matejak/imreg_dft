@@ -15,6 +15,12 @@
 import sys
 import os
 
+import mock
+
+MOCK_MODULES = ['numpy', 'scipy']
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
+
 sys.path.insert(0, os.path.join(os.path.abspath('.'), '..', 'src'))
 
 from imreg_dft import __version__
