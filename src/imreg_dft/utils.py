@@ -100,16 +100,16 @@ def extend_by(what, dst):
     to make the extension smooth (not altering the original array).
     """
     olddim = np.array(what.shape, dtype=int)
-    newdim = olddim + dst
+    newdim = olddim + 2 * dst
 
     bgval = get_borderval(what, dst)
 
     dest = np.zeros(newdim)
     res = dest.copy() + bgval
-    embed_to(res, what)
+    res = embed_to(res, what)
 
     mask = dest
-    embed_to(mask, np.ones_like(what))
+    mask = embed_to(mask, np.ones_like(what))
 
     res = frame_img(res, mask, dst)
 
@@ -118,10 +118,11 @@ def extend_by(what, dst):
 
 def unextend_by(what, dst):
     """
-    Undo exactly what :func:`extend_by` does.
+    Try to undo as much as the :func:`extend_by` does.
+    Some things can't be undone, though.
     """
     newdim = np.array(what.shape, dtype=int)
-    origdim = newdim - dst
+    origdim = newdim - 2 * dst
 
     res = undo_embed(what, origdim)
     return res
@@ -187,10 +188,11 @@ def get_apofield(shape, aporad):
     apos = np.hanning(aporad * 2)
     vecs = []
     for dim in shape:
-        assert dim > aporad * 2
+        assert dim > aporad * 2, \
+            "Apodization radius %d too big for shape dim. %d" % (aporad, dim)
         toapp = np.ones(dim)
         toapp[:aporad] = apos[:aporad]
-        toapp[-aporad - 1:] = apos[-aporad - 1:]
+        toapp[-aporad:] = apos[-aporad:]
         vecs.append(toapp)
     apofield = np.outer(vecs[0], vecs[1])
     return apofield
@@ -211,20 +213,25 @@ def frame_img(img, mask, dst):
     """
     import scipy.ndimage as ndimg
 
-    radius = dst // 3
+    radius = dst / 1.8
 
-    mask += 1e-5
-    convimg = ndimg.gaussian_filter(img * mask, radius, mode='wrap')
-    convmask = ndimg.gaussian_filter(mask, radius, mode='wrap')
+    mask1 = mask + 1e-5
+    convimg = ndimg.gaussian_filter(img * mask1, 0.7, mode='wrap')
+    convmask1 = ndimg.gaussian_filter(mask1, 0.7, mode='wrap')
+    wconvimg1 = convimg / convmask1
 
-    wconvimg = convimg / convmask
+    convimg = ndimg.gaussian_filter(convimg, radius, mode='wrap')
+    convmask2 = ndimg.gaussian_filter(convmask1, radius, mode='wrap')
+    wconvimg2 = convimg / convmask2
 
-    compmask = convmask - 0.5
+    wconvimg = wconvimg1 * convmask1 + wconvimg2 * (1 - convmask1)
+
+    compmask = convmask2 - 0.5
     compmask[compmask < 0] = 0
     compmask /= compmask.max()
 
-    apofield = get_apofield(img.shape, dst // 2)
-    apoarr = compmask * apofield
+    apofield = get_apofield(img.shape, dst)
+    apoarr = mask
 
     res = wconvimg * (1 - apoarr) + apoarr * img
     return res

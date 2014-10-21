@@ -40,7 +40,7 @@ from __future__ import division, print_function
 import math
 
 import numpy as np
-from numpy.fft import fft2, ifft2, fftshift
+import numpy.fft as fft
 
 import imreg_dft.utils as utils
 
@@ -76,8 +76,8 @@ def similarity(im0, im1, order, filter_pcorr):
     elif len(im0.shape) != 2:
         raise ValueError("Images must be 2-dimensional.")
 
-    f0 = fftshift(abs(fft2(im0)))
-    f1 = fftshift(abs(fft2(im1)))
+    f0 = fft.fftshift(abs(fft.fft2(im0)))
+    f1 = fft.fftshift(abs(fft.fft2(im1)))
 
     h = highpass(f0.shape)
     f0 *= h
@@ -87,16 +87,16 @@ def similarity(im0, im1, order, filter_pcorr):
     f0, log_base = logpolar(f0)
     f1, log_base = logpolar(f1)
 
-    f0 = fft2(f0)
-    f1 = fft2(f1)
+    f0 = fft.fft2(f0)
+    f1 = fft.fft2(f1)
     r0 = abs(f0) * abs(f1)
-    ir = abs(ifft2((f0 * f1.conjugate()) / r0))
+    ir = abs(fft.ifft2((f0 * f1.conjugate()) / r0))
     i0, i1 = np.unravel_index(np.argmax(ir), ir.shape)
     angle = 180.0 * i0 / ir.shape[0]
     scale = log_base ** i1
 
     if scale > 1.8:
-        ir = abs(ifft2((f1 * f0.conjugate()) / r0))
+        ir = abs(fft.ifft2((f1 * f0.conjugate()) / r0))
         i0, i1 = np.unravel_index(np.argmax(ir), ir.shape)
         angle = -180.0 * i0 / ir.shape[0]
         scale = 1.0 / (log_base ** i1)
@@ -138,9 +138,9 @@ def similarity(im0, im1, order, filter_pcorr):
 
 def translation(im1, im2, filter_pcorr=0):
     """Return translation vector to register images."""
-    f0 = fft2(im1)
-    f1 = fft2(im2)
-    ir = abs(ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1))))
+    f0 = fft.fft2(im1)
+    f1 = fft.fft2(im2)
+    ir = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1))))
     if filter_pcorr > 0:
         ir = ndi.minimum_filter(ir, filter_pcorr)
 

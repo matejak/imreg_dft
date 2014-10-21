@@ -15,11 +15,21 @@
 import sys
 import os
 
-import mock
+have_mock = False
+try:
+    import mock
+    have_mock = True
+except ImportError:
+    try:
+        from unittest import mock
+        have_mock = True
+    except ImportError:
+        pass
 
-MOCK_MODULES = ['numpy', 'scipy']
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
+if have_mock:
+    MOCK_MODULES = ['numpy', 'numpy.fft', 'scipy']
+    for mod_name in MOCK_MODULES:
+        sys.modules[mod_name] = mock.Mock()
 
 sys.path.insert(0, os.path.join(os.path.abspath('.'), '..', 'src'))
 
