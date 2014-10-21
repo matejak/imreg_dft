@@ -51,11 +51,68 @@ except ImportError:
     import ndimage as ndi
     import ndimage.interpolation as ndii
 
-__docformat__ = 'restructuredtext en'
 __all__ = ['translation', 'similarity']
 
 
-def similarity(im0, im1, order, filter_pcorr):
+EXPO = 'inf'
+
+
+def _calc_cog(array, exponent):
+    ret = None
+    if exponent == "inf":
+        amax = np.argmax(array)
+        ret = np.unravel_index(amax, array.shape)
+    else:
+        col = np.arange(array.shape[0])[:, np.newaxis]
+        row = np.arange(array.shape[1])[np.newaxis, :]
+
+        arr2 = array ** exponent
+        arrsum = arr2.sum()
+        arrprody = np.sum(arr2 * col) / arrsum
+        arrprodx = np.sum(arr2 * row) / arrsum
+        ret = (arrprody, arrprodx)
+    return ret
+
+
+def _getAngScale(ims):
+    shape = ims[0].shape
+    adfts = [fft.fftshift(abs(fft.fft2(im))) for im in ims]
+    """
+    h = highpass(f0.shape)
+    for adft in adfts:
+        adft *= h
+    del h
+    """
+
+    stuffs = [_logpolar(adft, shape[1]) for adft in adfts]
+    log_base = _getLogBase(shape, shape[1])
+
+    stuffs = [fft.fft2(stuff) for stuff in stuffs]
+    r0 = abs(stuffs[0]) * abs(stuffs[1])
+    ir = abs(fft.ifft2((stuffs[0] * stuffs[1].conjugate()) / r0))
+
+    i0, i1 = _calc_cog(ir, EXPO)
+
+    angle = 180.0 * i0 / ir.shape[0]
+    scale = log_base ** i1
+
+    if scale > 1.8:
+        ir = abs(fft.ifft2((stuffs[1] * stuffs[0].conjugate()) / r0))
+        i0, i1 = _calc_cog(ir, EXPO)
+        angle = -180.0 * i0 / ir.shape[0]
+        scale = 1.0 / (log_base ** i1)
+        if scale > 1.8:
+            raise ValueError("Images are not compatible. Scale change > 1.8")
+
+    if angle < -90.0:
+        angle += 180.0
+    elif angle > 90.0:
+        angle -= 180.0
+
+    return scale, angle
+
+
+def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
     """Return similarity transformed image im1 and transformation parameters.
 
     Transformation parameters are: isotropic scale factor, rotation angle (in
@@ -73,43 +130,21 @@ def similarity(im0, im1, order, filter_pcorr):
     """
     if im0.shape != im1.shape:
         raise ValueError("Images must have same shapes.")
-    elif len(im0.shape) != 2:
+    elif im0.ndim != 2:
         raise ValueError("Images must be 2-dimensional.")
 
-    f0 = fft.fftshift(abs(fft.fft2(im0)))
-    f1 = fft.fftshift(abs(fft.fft2(im1)))
+    # We are going to iterate and precise scale and angle estimates
+    scale = 1.0
+    angle = 0.0
+    im2 = im1
 
-    h = highpass(f0.shape)
-    f0 *= h
-    f1 *= h
-    del h
+    for ii in range(numiter):
+        newscale, newangle = _getAngScale([im0, im2])
+        scale *= newscale
+        angle += newangle
 
-    f0, log_base = logpolar(f0)
-    f1, log_base = logpolar(f1)
-
-    f0 = fft.fft2(f0)
-    f1 = fft.fft2(f1)
-    r0 = abs(f0) * abs(f1)
-    ir = abs(fft.ifft2((f0 * f1.conjugate()) / r0))
-    i0, i1 = np.unravel_index(np.argmax(ir), ir.shape)
-    angle = 180.0 * i0 / ir.shape[0]
-    scale = log_base ** i1
-
-    if scale > 1.8:
-        ir = abs(fft.ifft2((f1 * f0.conjugate()) / r0))
-        i0, i1 = np.unravel_index(np.argmax(ir), ir.shape)
-        angle = -180.0 * i0 / ir.shape[0]
-        scale = 1.0 / (log_base ** i1)
-        if scale > 1.8:
-            raise ValueError("Images are not compatible. Scale change > 1.8")
-
-    if angle < -90.0:
-        angle += 180.0
-    elif angle > 90.0:
-        angle -= 180.0
-
-    bgval = utils.get_borderval(im1, 5)
-    im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
+        bgval = utils.get_borderval(im1, 5)
+        im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
     # now we can use pcorr to guess the translation
     t0, t1 = translation(im0, im2, filter_pcorr)
@@ -191,6 +226,32 @@ def similarity_matrix(scale, angle, vector):
     return np.dot(T, np.dot(R, S))
 
 
+def _getLogBase(shape, radii):
+    center = shape[0] / 2, shape[1] / 2
+    d = np.hypot(shape[0] - center[0], shape[1] - center[1])
+    log_base = 10.0 ** (math.log10(d) / (radii))
+    return log_base
+
+
+def _logpolar(image, radii, angles=None):
+    """Return log-polar transformed image and log base."""
+    shape = image.shape
+    center = shape[0] / 2, shape[1] / 2
+    if angles is None:
+        angles = shape[0]
+    theta = np.empty((angles, radii), dtype=np.float64)
+    theta.T[:] = -np.linspace(0, np.pi, angles, endpoint=False)
+    log_base = _getLogBase(shape, radii)
+    radius = np.empty_like(theta)
+    radius[:] = np.power(log_base, np.arange(radii,
+                                             dtype=np.float64)) - 1.0
+    x = radius * np.sin(theta) + center[0]
+    y = radius * np.cos(theta) + center[1]
+    output = np.empty_like(x)
+    ndii.map_coordinates(image, [x, y], output=output)
+    return output
+
+
 def logpolar(image, angles=None, radii=None):
     """Return log-polar transformed image and log base."""
     shape = image.shape
@@ -240,7 +301,10 @@ def imshow(im0, im1, im2, im3=None, cmap=None, **kwargs):
     if cmap is None:
         cmap = 'coolwarm'
     if im3 is None:
-        im3 = abs(im2 - im0)
+        # To increase the contrast of the difference, we norm images according
+        # to their near-maximums
+        norm = np.percentile(im2, 95) / np.percentile(im0, 95)
+        im3 = abs(im2 - im0 * norm)
     pyplot.subplot(221)
     pyplot.imshow(im0, cmap, **kwargs)
     pyplot.grid()

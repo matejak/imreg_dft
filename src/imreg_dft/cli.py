@@ -85,9 +85,13 @@ def main():
     parser.add_argument('--highpass', type=_float_tuple, action="append",
                         default=[], metavar="HI_THRESH,LOW_THRESH",
                         help="0,0 means no-op, 0.2,0.1 is a mild filter")
+    parser.add_argument('--iters', type=int, default=1,
+                        help="How many iterations to guess the right scale "
+                        "and angle")
     parser.add_argument('--extend', type=int, metavar="PIXELS", default=0,
                         help="Extend images by the specified amount of pixels "
-                        "before the processing (thus eliminating edge effects)")
+                        "before the processing (thus eliminating "
+                        "edge effects)")
     parser.add_argument('--order', type=int, default=1,
                         help="Interpolation order (1 = linear, 3 = cubic etc)")
     parser.add_argument(
@@ -120,6 +124,7 @@ def main():
         high=args.highpass,
         show=args.show,
         print_format=print_format,
+        iters=args.iters,
     )
     run(args.template, args.image, opts)
 
@@ -154,13 +159,23 @@ def apodize(ims, radius_ratio):
 
 
 def run(template, image, opts):
-    import numpy as np
     from scipy import misc
-
-    from imreg_dft import utils
     from imreg_dft import imreg
 
     ims = [misc.imread(fname, True) for fname in (template, image)]
+    im2 = process_images(ims, opts)
+
+    if opts["show"]:
+        import pylab as pyl
+        imreg.imshow(ims[0], ims[1], im2)
+        pyl.show()
+
+
+def process_images(ims, opts):
+    import numpy as np
+    from imreg_dft import utils
+    from imreg_dft import imreg
+
     bigshape = np.array([im.shape for im in ims]).max(0)
     ims = [utils.extend_by(im, opts["extend"]) for im in ims]
     ims = filter_images(ims, opts["low"], opts["high"])
@@ -168,21 +183,18 @@ def run(template, image, opts):
     ims = [utils.embed_to(np.zeros(bigshape) + im[0, 0], im) for im in ims]
 
     im2, scale, angle, (t0, t1) = imreg.similarity(
-        ims[0], ims[1], opts["order"], opts["filter_pcorr"])
+        ims[0], ims[1], opts["iters"], opts["order"], opts["filter_pcorr"])
 
-    tform = dict(scale=scale, angle=angle, tx=t0, ty=t1)
+    tform = dict(scale=scale, angle=angle, tx=t1, ty=t0)
     if opts["print_format"] is not None:
         msg = opts["print_format"] % tform
         msg = bytes.decode(msg, "utf-8").decode('string-escape')
         sys.stdout.write(msg)
 
-    ims = [utils.unextend_by(im, opts["extend"]) for im in ims]
+    #ims = [utils.unextend_by(im, opts["extend"]) for im in ims]
     im2 = utils.unextend_by(im2, opts["extend"])
 
-    if opts["show"]:
-        import pylab as pyl
-        imreg.imshow(ims[0], ims[1], im2)
-        pyl.show()
+    return im2
 
 
 if __name__ == "__main__":

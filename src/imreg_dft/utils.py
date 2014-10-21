@@ -206,10 +206,11 @@ def frame_img(img, mask, dst):
     The purpose of this is removal of spurious frequencies in the image's
     Fourier spectrum.
 
-    :param img: What we want to alter
-    :param mask: The indicator what can be altered and what not
-    :param dst: Parameter controlling behavior near edges, value could be
-    probably deduced from the mask.
+    Args:
+        img (np.array): What we want to alter
+        maski (np.array): The indicator what can be altered and what not
+        dst (int): Parameter controlling behavior near edges, value could be
+            probably deduced from the mask.
     """
     import scipy.ndimage as ndimg
 
