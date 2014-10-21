@@ -20,7 +20,7 @@ image registration [1].
 
 Requirements
 ------------
-See the setup.py script for the exact specification.
+See the ``requirements.txt`` file in the project's root for the exact specification.
 Generally, you will need ``numpy`` and ``scipy`` for the algorithm functionality and ``matplotlib`` for plotting.
 
 Notes

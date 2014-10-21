@@ -7,6 +7,7 @@ import setuptools as st
 sys.path.append(os.path.join('src'))
 import imreg_dft
 
+reqs = open('requirements.txt', 'r').read().strip().splitlines()
 
 st.setup(
     name="imreg_dft",
@@ -24,11 +25,7 @@ st.setup(
            'ird = imreg_dft.cli:main',
         ],
     },
-    install_requires=[
-        "numpy>=1.7",
-        "scipy>=0.12",
-        "setuptools>=1.0"
-    ],
+    install_requires=reqs,
     extras_require = {
         'plotting':  ["matplotlib>=1.2"],
         'loading images': ["pillow>=2.2"],
