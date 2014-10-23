@@ -176,11 +176,16 @@ def process_images(ims, opts):
     from imreg_dft import utils
     from imreg_dft import imreg
 
-    bigshape = np.array([im.shape for im in ims]).max(0)
     ims = [utils.extend_by(im, opts["extend"]) for im in ims]
+    bigshape = np.array([im.shape for im in ims]).max(0)
+
+    #import pylab as pyl
+    #pyl.figure(); pyl.imshow(ims[1]); pyl.show()
+
     ims = filter_images(ims, opts["low"], opts["high"])
     # We think that im[0, 0] has the right value after apodization
-    ims = [utils.embed_to(np.zeros(bigshape) + im[0, 0], im) for im in ims]
+    ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(im, 5), im)
+           for im in ims]
 
     im2, scale, angle, (t0, t1) = imreg.similarity(
         ims[0], ims[1], opts["iters"], opts["order"], opts["filter_pcorr"])

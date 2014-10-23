@@ -53,9 +53,35 @@ There are three main reasons why you would want to use it:
 
    So, four iterations are enough for a precise result!
 
-#. Buy what do we actually get?
-   However, you may wonder what those numbers mean.
-   The scale and angle information is clear, but the translation depends on the center of scaling and the center of rotation...
+#. And now something even more tricky - when a part of the image is cut out.
+   The fourth and third samples are different just by the translation and by the fact that the feature we are matching against is incomplete on the fourth image.
+
+   Generally, we have to address the cutoff.
+   The ``--extend`` option here serves exactly this purpose.
+   It extends the image by a given amount of pixels (on each side) and it tries to blur the cut-out image beyond its original border.
+   Although the blurring might not look very impressive, it makes a huge difference for the image's spectrum which is used for the registration.
+   So let's try:
+
+   .. code-block:: shell-session
+
+     [user@linuxbox examples]$ ird sample1.png sample4.png --extend 20 --show --print-result --iter 4
+     scale: 0.745331
+     angle: -36.580548
+     shift: 165, 130
+
+   As we can see, the result is correct.
+
+   Extension can occur on-demand when the scale change or rotation operations result in image size growth.
+   However, whether this will occur or not is not obvious, so it is advisable to specify the argument manually.
+   In this example, specifying the option manually is not needed.
+
+   .. warning::
+
+     If the image extension by blurring is very different from how the image really looks like, the image registration will fail.
+
+#. Buy what do we actually get on output?
+   You may wonder what those numbers mean.
+   The scale and angle information is quite clear, but the translation depends on the center of scaling and the center of rotation...
    So the idea is as follows.
    Let's assume you have an image, an ``imreg_dft`` output and all you want is to perform the image transformation yourself.
    All transformations are performed using ``scipy.ndimage.interpolate`` package and you need to do the following:

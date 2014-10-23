@@ -216,26 +216,21 @@ def frame_img(img, mask, dst):
 
     radius = dst / 1.8
 
-    mask1 = mask + 1e-5
-    convimg = ndimg.gaussian_filter(img * mask1, 0.7, mode='wrap')
-    convmask1 = ndimg.gaussian_filter(mask1, 0.7, mode='wrap')
-    wconvimg1 = convimg / convmask1
+    convmask = mask + 1e-5
 
-    convimg = ndimg.gaussian_filter(convimg, radius, mode='wrap')
-    convmask2 = ndimg.gaussian_filter(convmask1, radius, mode='wrap')
-    wconvimg2 = convimg / convmask2
+    krad = 0.7
+    convimg = img
+    convimg0 = img
 
-    wconvimg = wconvimg1 * convmask1 + wconvimg2 * (1 - convmask1)
+    while krad < radius:
+        convimg = ndimg.gaussian_filter(convimg0 * convmask, krad, mode='wrap')
+        convmask = ndimg.gaussian_filter(convmask, krad, mode='wrap')
+        convimg /= convmask
+        convimg = convimg0 * convmask + convimg * (1 - convmask)
+        krad *= 1.5
+        convimg0 = convimg
 
-    compmask = convmask2 - 0.5
-    compmask[compmask < 0] = 0
-    compmask /= compmask.max()
-
-    apofield = get_apofield(img.shape, dst)
-    apoarr = mask
-
-    res = wconvimg * (1 - apoarr) + apoarr * img
-    return res
+    return convimg
 
 
 def get_borderval(img, radius):
@@ -249,5 +244,5 @@ def get_borderval(img, radius):
     mask[radius, :] = True
     mask[-radius:, :] = True
 
-    mean = img[mask].mean()
+    mean = np.median(img[mask])
     return mean

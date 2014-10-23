@@ -55,27 +55,43 @@ __all__ = ['translation', 'similarity']
 
 
 EXPO = 'inf'
+#EXPO = 10
 
 
 def _calc_cog(array, exponent):
+
+    # When using an integer exponent for _calc_cog, it is good to have the
+    # neutral rotation/scale in the center rather near the edges
+    sarray = fft.fftshift(array)
+
+    #import pylab as pyl
+    #pyl.figure(); pyl.imshow(array); pyl.show()
+
     ret = None
     if exponent == "inf":
-        amax = np.argmax(array)
-        ret = np.unravel_index(amax, array.shape)
+        amax = np.argmax(sarray)
+        ret = list(np.unravel_index(amax, sarray.shape))
     else:
-        col = np.arange(array.shape[0])[:, np.newaxis]
-        row = np.arange(array.shape[1])[np.newaxis, :]
+        col = np.arange(sarray.shape[0])[:, np.newaxis]
+        row = np.arange(sarray.shape[1])[np.newaxis, :]
 
-        arr2 = array ** exponent
+        arr2 = sarray ** exponent
         arrsum = arr2.sum()
         arrprody = np.sum(arr2 * col) / arrsum
         arrprodx = np.sum(arr2 * row) / arrsum
-        ret = (arrprody, arrprodx)
+        ret = [arrprody, arrprodx]
+
+    # Compensation of the fftshift
+    ret[0] = (ret[0] + sarray.shape[0] / 2) % sarray.shape[0]
+    ret[1] = (ret[1] + sarray.shape[1] / 2) % sarray.shape[1]
     return ret
 
 
 def _getAngScale(ims):
     shape = ims[0].shape
+    #import pylab as pyl
+    #pyl.figure(); pyl.imshow(ims[1]); pyl.show()
+
     adfts = [fft.fftshift(abs(fft.fft2(im))) for im in ims]
     """
     h = highpass(f0.shape)
@@ -155,7 +171,8 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
     imask = transform_img(np.ones_like(im1), scale, angle, t0, t1,
                           0, order=order)
 
-    im2 = utils.frame_img(im2, imask, 20)
+    # Framing here = just blending the im2 with its BG according to the mask
+    im2 = utils.frame_img(im2, imask, 10)
 
     # correct parameters for ndimage's internal processing
     if angle > 0.0:
