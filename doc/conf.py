@@ -27,7 +27,8 @@ except ImportError:
         pass
 
 if have_mock:
-    MOCK_MODULES = ['numpy', 'numpy.fft', 'scipy']
+    MOCK_MODULES = ['numpy', 'numpy.fft', 'scipy', 'scipy.ndimage',
+                    'scipy.ndimage.interpolation']
     for mod_name in MOCK_MODULES:
         sys.modules[mod_name] = mock.Mock()
 

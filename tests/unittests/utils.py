@@ -32,7 +32,12 @@ class TestUtils(ut.TestCase):
         # Measures the amount of DFT artifacts (in a quite strict manner)
         dft = fft.fft2(arr) * self.whatsize
         dft /= dft.size
-        ret = np.log(np.abs(dft))
+
+        yfreqs = fft.fftfreq(arr.shape[0])[:, np.newaxis]
+        xfreqs = fft.fftfreq(arr.shape[1])[np.newaxis, :]
+        weifun = xfreqs ** 2 + yfreqs ** 2
+
+        ret = np.abs(dft) * weifun
         return ret.sum()
 
     def testExtend(self):
@@ -46,7 +51,7 @@ class TestUtils(ut.TestCase):
 
             # Bigger distance should mean better "DFT score"
             dftscore = self._dftscore(ext)
-            self.assertLess(dftscore, dftscore0)
+            self.assertLess(dftscore, dftscore0 * 1.1)
             dftscore0 = dftscore
 
             undone = utils.unextend_by(ext, dst)

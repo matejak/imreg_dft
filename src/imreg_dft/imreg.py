@@ -109,13 +109,13 @@ def _getAngScale(ims):
 
     i0, i1 = _calc_cog(ir, EXPO)
 
-    angle = 180.0 * i0 / ir.shape[0]
+    angle = -180.0 * i0 / ir.shape[0]
     scale = log_base ** i1
 
     if scale > 1.8:
         ir = abs(fft.ifft2((stuffs[1] * stuffs[0].conjugate()) / r0))
         i0, i1 = _calc_cog(ir, EXPO)
-        angle = -180.0 * i0 / ir.shape[0]
+        angle = 180.0 * i0 / ir.shape[0]
         scale = 1.0 / (log_base ** i1)
         if scale > 1.8:
             raise ValueError("Images are not compatible. Scale change > 1.8")
@@ -125,24 +125,32 @@ def _getAngScale(ims):
     elif angle > 90.0:
         angle -= 180.0
 
-    return scale, angle
+    return 1.0 / scale, - angle
 
 
 def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
-    """Return similarity transformed image im1 and transformation parameters.
-
+    """
+    Return similarity transformed image im1 and transformation parameters.
     Transformation parameters are: isotropic scale factor, rotation angle (in
     degrees), and translation vector.
 
     A similarity transformation is an affine transformation with isotropic
     scale and without shear.
 
-    Limitations:
-    Image shapes must be equal and square.
-    All image areas must have same scale, rotation, and shift.
-    Scale change must be less than 1.8.
-    No subpixel precision.
+    .. note:: There are limitations
 
+        * Scale change must be less than 1.8.
+        * No subpixel precision.
+
+    Args:
+        im0 (2D numpy array): The first (template) image
+        im1 (2D numpy array): The second image
+        numiter (int): How many times to iterate when determining scale and
+            rotation
+        order (int): Order of approximation (when doing transformations). 1 =
+            linear, 3 = cubic etc.
+        filter_pcorr (int): Radius of a spectrum filter for translation
+            detection
     """
     if im0.shape != im1.shape:
         raise ValueError("Images must have same shapes.")
@@ -163,35 +171,51 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
     # now we can use pcorr to guess the translation
-    t0, t1 = translation(im0, im2, filter_pcorr)
+    tvec = translation(im2, im0, filter_pcorr)
 
-    im2 = transform_img(im2, 1, 0, t0, t1, bgval=bgval, order=order)
-    im2 = transform_img(im1, scale, angle, t0, t1, bgval, order=order)
+    # don't know what it does, but it alters the scale a little bit
+    #scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
 
-    imask = transform_img(np.ones_like(im1), scale, angle, t0, t1,
-                          0, order=order)
+    res = dict(
+        scale=scale,
+        angle=angle,
+        tvec=tvec,
+    )
+
+    # correct parameters for ndimage's internal processing
+    # Probably calculated for the case the tform center is 0, 0 (vs center of
+    # the image)
+    if angle > 0.0:
+        d = int((int(im1.shape[1] / scale) * math.sin(math.radians(angle))))
+        tvec = d + tvec[1], d + tvec[0]
+    elif angle < 0.0:
+        d = int((int(im1.shape[0] / scale) * math.sin(math.radians(angle))))
+        tvec = d + tvec[1], d + tvec[0]
+
+    im2 = transform_img_dict(im1, res, bgval, order)
+    imask = transform_img_dict(np.ones_like(im1), res, 0, order)
 
     # Framing here = just blending the im2 with its BG according to the mask
     im2 = utils.frame_img(im2, imask, 10)
 
-    # correct parameters for ndimage's internal processing
-    if angle > 0.0:
-        d = int((int(im1.shape[1] / scale) * math.sin(math.radians(angle))))
-        t0, t1 = t1, d + t0
-    elif angle < 0.0:
-        d = int((int(im1.shape[0] / scale) * math.sin(math.radians(angle))))
-        t0, t1 = d + t1, d + t0
-
-    # don't know what it does, but it alters the scale a little bit
-    scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
-
-    return im2, scale, angle, [-t0, -t1]
+    res["timg"] = im2
+    return res
 
 
-def translation(im1, im2, filter_pcorr=0):
-    """Return translation vector to register images."""
-    f0 = fft.fft2(im1)
-    f1 = fft.fft2(im2)
+def translation(im0, im1, filter_pcorr=0):
+    """
+    Return translation vector to register images.
+
+    Args:
+        im0 (2D numpy array): The first (template) image
+        im1 (2D numpy array): The second image
+        filter_pcorr (int): Radius of a spectrum filter for translation
+            detection
+    Returns:
+        tuple: The translation vector (Y, X)
+    """
+    f0 = fft.fft2(im0)
+    f1 = fft.fft2(im1)
     ir = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1))))
     if filter_pcorr > 0:
         ir = ndi.minimum_filter(ir, filter_pcorr)
@@ -203,27 +227,57 @@ def translation(im1, im2, filter_pcorr=0):
     if t1 > f0.shape[1] // 2:
         t1 -= f0.shape[1]
 
-    return t0, t1
+    return (-t0, -t1)
 
 
-def transform_img(src, scale=1.0, angle=0.0, t0=0, t1=0, bgval=0, order=1):
-    dest0 = src.copy()
+def transform_img_dict(img, tdict, bgval=0, order=1, invert=False):
+    scale = tdict["scale"]
+    angle = tdict["angle"]
+    tvec = np.array(tdict["tvec"])
+    if invert:
+        scale = 1.0 / scale
+        angle *= -1
+        tvec *= -1
+    res = transform_img(img, scale, angle, tvec, bgval=bgval, order=order)
+    return res
+
+
+def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=0, order=1):
+    """
+    Return translation vector to register images.
+
+    Args:
+        img (2D numpy array): What will be transformed
+        scale (float): The scale factor (scale > 1.0 means zooming in)
+        angle (float): Degrees of rotation (clock-wise)
+        tvec (2-tuple): Pixel translation vector, Y and X component.
+        bgval (float): Shade of the background (filling in some cases of
+            rotation and/or scaling)
+        order (int): Order of approximation (when doing transformations). 1 =
+            linear, 3 = cubic etc.
+
+    Returns:
+        The transformed img, may have another i.e. (bigger) shape than
+        the source.
+    """
+    dest0 = img.copy()
     if scale != 1.0:
-        dest0 = ndii.zoom(dest0, 1.0 / scale, order=order, cval=bgval)
+        dest0 = ndii.zoom(dest0, scale, order=order, cval=bgval)
     if angle != 0.0:
         dest0 = ndii.rotate(dest0, angle, order=order, cval=bgval)
 
-    if t0 != 0 or t1 != 0:
-        dest0 = ndii.shift(dest0, [t0, t1], order=order, cval=bgval)
+    if tvec[0] != 0 or tvec[1] != 0:
+        dest0 = ndii.shift(dest0, tvec, order=order, cval=bgval)
 
-    bg = np.zeros_like(src) + bgval
+    bg = np.zeros_like(img) + bgval
     dest = utils.embed_to(bg, dest0)
 
     return dest
 
 
 def similarity_matrix(scale, angle, vector):
-    """Return homogeneous transformation matrix from similarity parameters.
+    """
+    Return homogeneous transformation matrix from similarity parameters.
 
     Transformation parameters are: isotropic scale factor, rotation angle (in
     degrees), and translation vector (of size 2).

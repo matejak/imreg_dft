@@ -187,10 +187,16 @@ def process_images(ims, opts):
     ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(im, 5), im)
            for im in ims]
 
-    im2, scale, angle, (t0, t1) = imreg.similarity(
+    resdict = imreg.similarity(
         ims[0], ims[1], opts["iters"], opts["order"], opts["filter_pcorr"])
 
-    tform = dict(scale=scale, angle=angle, tx=t1, ty=t0)
+    im2 = resdict.pop("timg")
+
+    ty, tx = resdict["tvec"]
+    resdict["tx"] = tx
+    resdict["ty"] = ty
+    tform = resdict
+
     if opts["print_format"] is not None:
         msg = opts["print_format"] % tform
         msg = bytes.decode(msg, "utf-8").decode('string-escape')

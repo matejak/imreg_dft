@@ -13,7 +13,7 @@ There are three main reasons why you would want to use it:
      [user@linuxbox ir_dft]$ ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result
      scale: 1.000000
      angle: 0.000000
-     shift: 19, -79
+     shift: -19, 79
 
    .. warning::
 
@@ -26,7 +26,7 @@ There are three main reasons why you would want to use it:
 
      [user@linuxbox ir_dft]$ cd resources/examples
      [user@linuxbox examples]$ ird sample1.png sample2.png --print-result --print-format 'translation:%(tx)d,%(ty)d\n'
-     translation:19,-79
+     translation:-19,79
 
 
 #. Let's try something tricky - the first and third example!
@@ -40,16 +40,16 @@ There are three main reasons why you would want to use it:
 
    However, we have a triumph in our sleeve.
    We can force ``ir_dft`` to try to guess scale and rotation multiple times in a row.
-   The correct values are -30° for the rotation and 80% for the scale:
+   The correct values are -30° for the rotation and 1 / 80% = 1.25 for the scale:
 
    .. code-block:: shell-session
 
      [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n'
-     scale: 0.738889, angle: -37.8
+     scale: 1.35484, angle: -37.8
      [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n' --iter 2
-     scale: 0.791667, angle: -27.6
+     scale: 1.26448, angle: -27.6
      [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n' --iter 4 --show
-     scale: 0.802817, angle: -30
+     scale: 1.24715, angle: -30
 
    So, four iterations are enough for a precise result!
 
@@ -84,14 +84,16 @@ There are three main reasons why you would want to use it:
    The scale and angle information is quite clear, but the translation depends on the center of scaling and the center of rotation...
    So the idea is as follows.
    Let's assume you have an image, an ``imreg_dft`` output and all you want is to perform the image transformation yourself.
+   The output describes what operations to perform on the image so it is close to the template.
    All transformations are performed using ``scipy.ndimage.interpolate`` package and you need to do the following:
 
-   i. Call the ``zoom`` function with the inverse of the scale.
+   i. Call the ``zoom`` function with the provided scale.
       The center of the zoom is the center of the image.
 
-   #. Then, rotate the image using the ``rotate`` function, using the negative of the angle you got on the output.
+   #. Then, rotate the image using the ``rotate`` function, specifyinh the angle you got on the output.
       The center of the rotation is again the center of the image.
 
    #. Finally, translate the image using the ``shift`` function.
       Remember that the ``y`` axis is the first one and ``x`` the second one.
 
+   #. That's it, the image should now look like the template.

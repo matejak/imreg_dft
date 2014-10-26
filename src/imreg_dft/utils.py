@@ -216,19 +216,24 @@ def frame_img(img, mask, dst):
 
     radius = dst / 1.8
 
-    convmask = mask + 1e-5
+    convmask0 = mask + 1e-8
 
-    krad = 0.7
+    krad = radius * 2
     convimg = img
+    convmask = convmask0
     convimg0 = img
 
-    while krad < radius:
-        convimg = ndimg.gaussian_filter(convimg0 * convmask, krad, mode='wrap')
-        convmask = ndimg.gaussian_filter(convmask, krad, mode='wrap')
+    while krad > 0.2:
+        convimg = ndimg.gaussian_filter(convimg0 * convmask0,
+                                        krad, mode='wrap')
+        convmask = ndimg.gaussian_filter(convmask0, krad, mode='wrap')
         convimg /= convmask
-        convimg = convimg0 * convmask + convimg * (1 - convmask)
-        krad *= 1.5
+        convmask **= 0.5
+        convimg = convimg * convmask + convimg0 * (1 - convmask)
+        krad /= 1.6
         convimg0 = convimg
+
+    convimg[mask == 1] = img[mask == 1]
 
     return convimg
 
