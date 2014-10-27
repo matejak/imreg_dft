@@ -4,6 +4,7 @@ python:
   - "3.4"
 before_install:
   - sudo apt-get update
+  - sudo apt-get install make
     # - sudo apt-get install -qq libblas-dev liblapack-dev python-numpy python3-numpy python-scipy python3-scipy gfortran
 install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -24,4 +25,6 @@ install:
   - source activate test-environment
   - python setup.py install
 # command to run tests
-script: python ./tests/unittests/__init__.py
+script: 
+  - python ./tests/unittests/__init__.py
+  - cd ./tests/regressiontests && make check
