@@ -31,6 +31,6 @@ script:
   # create new .coverage file
   - coverage run --source imreg_dft ./tests/unittests/__init__.py
   # then append to it
-  - make -f ./tests/regressiontests check COVERAGE=coverage
+  - make -f ./tests/regressiontests/Makefile check COVERAGE=coverage
 after_success:
   - coveralls
