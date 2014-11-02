@@ -1,13 +1,11 @@
 #!/bin/sh
 
-function die
-{
+die () {
 	echo "$1"
        	exit 1
 }
 
-function almost_equal
-{
+almost_equal () {
 	python -c 'import sys; sys.exit(1 - ('"abs($1 - $2) < $3"'))'
 	return $?
 }
