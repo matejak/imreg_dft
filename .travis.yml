@@ -22,10 +22,10 @@ install:
 
   # Replace dep1 dep2 ... with your dependencies
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy setuptools
-  - source activate test-environment
-  - python setup.py install
   - pip install coverage
   - pip install coveralls 
+  - source activate test-environment
+  - python setup.py install
 # command to run tests
 script: 
   # create new .coverage file
