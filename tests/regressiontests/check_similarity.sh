@@ -17,7 +17,7 @@ TY=$4
 ANGLE=$5
 SCALE=$6
 
-TVEC=$(ird "$1" "$2" --print-result --print-format '%(tx)d,%(ty)d,%(angle).3g,%(scale).3g' --iter 4)
+TVEC=$($COVER_PREFIX $(which ird) "$1" "$2" --print-result --print-format '%(tx)d,%(ty)d,%(angle).3g,%(scale).3g' --iter 4)
 
 GOTX=$(echo $TVEC | cut -f 1 -d ,)
 GOTY=$(echo $TVEC | cut -f 2 -d ,)

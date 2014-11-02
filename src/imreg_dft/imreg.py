@@ -59,6 +59,20 @@ EXPO = 'inf'
 
 
 def _calc_cog(array, exponent):
+    """
+    Calculate coordinates of the COM (center of mass) of the provided array.
+    Assume that the COM has coordinates close to (0, 0), so prior to calculating
+    the COM, the array is fftshifted, then the calculation is performed and
+    finally the result is recalculated to compensate the fftshift.
+
+    Args:
+        array (ndarray): The array to be examined.
+        exponent (float or 'inf'): The exponent we power the array with. If the
+            value 'inf' is given, the coordinage of the array maximum is taken.
+
+    Returns:
+        list : The COG coordinate tuple
+    """
 
     # When using an integer exponent for _calc_cog, it is good to have the
     # neutral rotation/scale in the center rather near the edges
@@ -80,11 +94,12 @@ def _calc_cog(array, exponent):
         arrprody = np.sum(arr2 * col) / arrsum
         arrprodx = np.sum(arr2 * row) / arrsum
         ret = [arrprody, arrprodx]
+        ret = np.round(ret).astype(int)
 
     # Compensation of the fftshift
-    ret[0] = (ret[0] + sarray.shape[0] / 2) % sarray.shape[0]
-    ret[1] = (ret[1] + sarray.shape[1] / 2) % sarray.shape[1]
-    return ret
+    ret[0] = (ret[0] - sarray.shape[0] // 2) % sarray.shape[0]
+    ret[1] = (ret[1] - sarray.shape[1] // 2) % sarray.shape[1]
+    return np.array(ret)
 
 
 def _getAngScale(ims):
@@ -137,11 +152,6 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
     A similarity transformation is an affine transformation with isotropic
     scale and without shear.
 
-    .. note:: There are limitations
-
-        * Scale change must be less than 1.8.
-        * No subpixel precision.
-
     Args:
         im0 (2D numpy array): The first (template) image
         im1 (2D numpy array): The second image
@@ -151,6 +161,12 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
             linear, 3 = cubic etc.
         filter_pcorr (int): Radius of a spectrum filter for translation
             detection
+
+    .. note:: There are limitations
+
+        * Scale change must be less than 1.8.
+        * No subpixel precision.
+
     """
     if im0.shape != im1.shape:
         raise ValueError("Images must have same shapes.")
@@ -231,6 +247,22 @@ def translation(im0, im1, filter_pcorr=0):
 
 
 def transform_img_dict(img, tdict, bgval=0, order=1, invert=False):
+    """
+    Wrapper of :func:`transform_img`, works well with the :func:`similarity`
+    output.
+
+    Args:
+        img
+        tdict (dictionary): Transformation dictionary --- supposed to contain
+            "scale", "angle" and "tvec"
+        bgval
+        order
+        invert (bool): Whether to perform inverse transformation --- doesn't
+            work very well with the translation.
+
+    Returns:
+        :The same as :func:`transform_img`
+    """
     scale = tdict["scale"]
     angle = tdict["angle"]
     tvec = np.array(tdict["tvec"])
@@ -258,7 +290,7 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=0, order=1):
 
     Returns:
         The transformed img, may have another i.e. (bigger) shape than
-        the source.
+            the source.
     """
     dest0 = img.copy()
     if scale != 1.0:

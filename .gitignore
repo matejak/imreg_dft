@@ -1,5 +1,6 @@
 *~
 *.pyc
 .ropeproject
+.coverage
 *.egg-info
 doc/_build

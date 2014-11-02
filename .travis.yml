@@ -24,7 +24,13 @@ install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy setuptools
   - source activate test-environment
   - python setup.py install
+  - pip install coverage
+  - pip install coveralls 
 # command to run tests
 script: 
-  - python ./tests/unittests/__init__.py
-  - cd ./tests/regressiontests && make check
+  # create new .coverage file
+  - coverage run --source imreg_dft ./tests/unittests/__init__.py
+  # then append to it
+  - make -f ./tests/regressiontests check COVERAGE=coverage
+after_success:
+  - coveralls
