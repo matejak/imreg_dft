@@ -15,12 +15,14 @@ TY=$4
 ANGLE=$5
 SCALE=$6
 
-TVEC=$($COVER_PREFIX $(which ird) "$1" "$2" --print-result --print-format '%(tx)d,%(ty)d,%(angle).3g,%(scale).3g' --iter 4)
+test -z "$CMD" && CMD='ird'
 
-GOTX=$(echo $TVEC | cut -f 1 -d ,)
-GOTY=$(echo $TVEC | cut -f 2 -d ,)
-GOTAng=$(echo $TVEC | cut -f 3 -d ,)
-GOTScale=$(echo $TVEC | cut -f 4 -d ,)
+TVEC=$($CMD "$1" "$2" --print-result --print-format '%(tx)d,%(ty)d,%(angle).3g,%(scale).3g' --iter 4)
+
+GOTX=`echo $TVEC | cut -f 1 -d ,`
+GOTY=`echo $TVEC | cut -f 2 -d ,`
+GOTAng=`echo $TVEC | cut -f 3 -d ,`
+GOTScale=`echo $TVEC | cut -f 4 -d ,`
 
 test "$GOTX" -ne "$TX" -o "$GOTY" -ne "$TY" \
 	&& die "Translation didn't work out, expected $TX,$TY got $GOTX,$GOTY"

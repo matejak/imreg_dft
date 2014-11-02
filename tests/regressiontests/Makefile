@@ -1,12 +1,13 @@
 # directory of regression tests(ie where this makefile is based in)
 RTESTDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-RSRCDIR = $(RTESTDIR)../../resources/examples
+PROOT = $(RTESTDIR)/../..
+RSRCDIR = $(PROOT)/resources/examples
 COVERAGE =
-COVER_PREFIX =
+CMD =
 
 ifdef COVERAGE
 # The shell script will see this and call ird using the coverage stuff as a wrapper
-export COVER_PREFIX = $(COVERAGE) run -a --source imreg_dft
+export CMD = $(COVERAGE) run -a --source imreg_dft $(PROOT)/src/imreg_dft/cli.py
 endif
 
 check: check-translation check-similarity
