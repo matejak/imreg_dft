@@ -29,8 +29,8 @@ install:
 # command to run tests
 script: 
   # create new .coverage file
-  - coverage run --source=imreg_dft ./tests/unittests/__init__.py
-  #- python ./tests/unittests/__init__.py
+  #- coverage run --source=imreg_dft ./tests/unittests/__init__.py
+  - python ./tests/unittests/__init__.py
   # then append to it
   - make -f ./tests/regressiontests/Makefile check
 after_success:
