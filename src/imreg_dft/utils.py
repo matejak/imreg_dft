@@ -128,38 +128,43 @@ def unextend_by(what, dst):
     return res
 
 
-def imfilter(img, lows=None, highs=None):
+def imfilter(img, low=None, high=None):
     """
-    Given an image, it applies a list of high-pass and low-pass filters on its
+    Given an image, it a high-pass and/or low-pass filters on its
     Fourier spectrum.
-    """
-    if lows is None:
-        lows = []
-    if highs is None:
-        highs = []
 
+    Args
+        img (ndarray): The image to be filtered
+        low (tuple): The low-pass filter parameters
+        high (tuple): The high-pass filter parameters
+
+    Returns
+        ndarray: The real component of the image after filtering
+    """
     dft = fft.fft2(img)
-    for spec in highs:
-        highpass(dft, spec[0], spec[1])
-    for spec in lows:
-        lowpass(dft, spec[0], spec[1])
+
+    if low is not None:
+        _lowpass(dft, low[0], low[1])
+    if high is not None:
+        _highpass(dft, high[0], high[1])
+
     ret = np.real(fft.ifft2(dft))
     return ret
 
 
-def highpass(dft, lo, hi):
+def _highpass(dft, lo, hi):
     mask = _xpass((dft.shape), lo, hi)
     dft *= (1 - mask)
 
 
-def lowpass(dft, lo, hi):
+def _lowpass(dft, lo, hi):
     mask = _xpass((dft.shape), lo, hi)
     dft *= mask
 
 
 def _xpass(shape, lo, hi):
     """
-    Computer a pass-filter mask with values ranging from 0 to 1.0
+    Compute a pass-filter mask with values ranging from 0 to 1.0
     The mask is low-pass, application has to be handled by a calling funcion.
     """
     assert lo <= hi, \

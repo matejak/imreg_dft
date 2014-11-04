@@ -5,6 +5,9 @@ The package contains one Python :abbr:`CLI (command-line interface)` script.
 Although you are more likely to use the ``imreg_dft`` functionality from your own Python programs, you can still have some use to the ``ird`` front-end.
 There are three main reasons why you would want to use it:
 
+Quick reference
++++++++++++++++
+
 #. Quickly find out whether it works for you, having the results shown in a pop-up window and printed out.
    We assume you stand in the root of ``imreg_dft`` cloned from the git repo.
 
@@ -97,3 +100,65 @@ There are three main reasons why you would want to use it:
       Remember that the ``y`` axis is the first one and ``x`` the second one.
 
    #. That's it, the image should now look like the template.
+
+Advanced tweaking
++++++++++++++++++
+
+There are some strange options you can use, we will explain their meaning now:
+
+``--lowpass``, ``--highpass``: These two concern filtration of the image prior to the registration.
+    There can be multiple reasons why to filter images:
+
+    * One of them is filtered already due to conditions beyond your control, so by filtering them again just brings the other one on the par with the first one.
+
+    * You want to filter out low frequencies since they are of no good when registering images anyway.
+
+    The domain of the spectrum is a set of spatial frequencies.
+    Each spatial frequency in an image is a vector with a :math:`x` and :math:`y` components.
+    You can norm the frequencies by stating that the highest value of a compnent is 1, and denote value of spatial frequency as the (euclidean) length of the normed vector.
+    Therefore the spatial frequencies of greatest values of :math:`\sqrt 2` are (1, 1), (1, -1) etc.
+
+    An argument to a ``--lowpass`` or ``--highpass`` option is a tuple, usualy a number between 0 and 1.
+    This number relates to the value of spatial frequencies it affects.
+    For example, passing ``--lowpass 0.2,0.4`` means that spatial frequencies with value ranging from 0 to 0.2 will pass, whereas those with higher value than 0.4 won't.
+    Spatial frequencies with values in between the two will be attenuated linearly.
+
+``--filter-pcorr``: Fitering of phase correlation applies when determining the right translation vector.
+    If the image pattern is not sampled very densely (i.e. close or even below the Nyquist frequency), ripples may appear near edges in the image.
+    These ripples basically interfere with the algorithm and the phase correlation filtration may overcome this problem.
+
+``--exponent``: When finding the right angle and scale, the highest element in an array is searched for.
+    However, again due to incorrect sampling, it might not be the best guess --- for instance, this approach has the obvious flaw of being numerically unstable.
+    There may be several extreme values close together and picking the center of them can be much better.
+    This option plays the following role in the process:
+    
+    * The array is powered by the exponent.
+
+    * The coordinates of the center of mass of the array are determined. 
+
+    Formally: Let :math:`f(x)` be a discrete, 1-variable non-negative function, for instance :math:`f(0) = 3,\ f(1) = 0, f(2) = 2.99, f(3) = 1`.
+    Then, the index of the greatest value is denoted by :math:`\mathrm{argmax}\, f(x) = 0`, because :math:`f(0)` is the greatest of :math:`f(x)` for all :math:`x` whete :math:`f(x)` is defined.
+    The coordinate of the center of mass of :math:`f(x)` is :math:`t_f = \sum f(x_i)^c x_i / \sum f(x_i)^c`, where :math:`c` is our exponent, in case of real center of mass, :math:`c = 1`.
+    The problem is that in this case, the value of :math:`\mathrm{argmax}\, f(x)` is unstable, since the difference between :math:`f(0)` and :math:`f(2)` is relatively low.
+    If we consider real-world conditions, it could be below a fraction of the noise standard deviation.
+    However, if we select a value of :math:`c = 5`, the value of :math:`t_f = 0.996`, which is just between the two highest values and not affected by :math:`f(3)`.
+    And this is actually exactly what we want --- the interpolation during image transformations is not perfect and an analogous situation can occur in the spectrum and the center of few extreme values close together is more representative than the location of just one extreme value.
+
+    One can generalize this to the case of 2D discrete functions and that's our case.
+    Obviously, the higher the exponent is, the closer are we to picking the coordinates of the greatest array element.
+    To neutralize the influence of points with low value, set the value of the exponent to a value greater or equal to 5.
+
+    .. code-block:: shell-session
+
+      [user@linuxbox ir_dft]$ ird resources/examples/sample1.png resources/examples/sample3.png --exponent inf --print-result
+      scale: 1.357143
+      angle: -37.800000
+      shift: 37, 92
+      [user@linuxbox ir_dft]$ ird resources/examples/sample1.png resources/examples/sample3.png --exponent 5 --print-result
+      scale: 1.321192
+      angle: -34.800000
+      shift: 38, 84
+
+    Although if we increase the number of iteration, the exponent won't make a difference.
+    However, we can see that with only one iteration, setting the ``--exponent`` to ``5`` results in more precise result than the default value of ``'inf'``.
+    The correct value is 1.25 for scale and -30 for angle.

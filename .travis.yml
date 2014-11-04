@@ -18,18 +18,19 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   # Useful for debugging any issues with conda
-  - conda info -a
+  #- conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy setuptools
-  - pip install coverage
+  #- conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy setuptools
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy setuptools pillow
   - pip install coveralls 
   - source activate test-environment
   - python setup.py install
 # command to run tests
 script: 
   # create new .coverage file
-  - python ./tests/unittests/__init__.py
+  - coverage run --source=imreg_dft ./tests/unittests/__init__.py
+  #- python ./tests/unittests/__init__.py
   # then append to it
   - make -f ./tests/regressiontests/Makefile check
 after_success:

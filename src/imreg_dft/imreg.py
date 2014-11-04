@@ -78,9 +78,6 @@ def _calc_cog(array, exponent):
     # neutral rotation/scale in the center rather near the edges
     sarray = fft.fftshift(array)
 
-    #import pylab as pyl
-    #pyl.figure(); pyl.imshow(array); pyl.show()
-
     ret = None
     if exponent == "inf":
         amax = np.argmax(sarray)
@@ -102,18 +99,26 @@ def _calc_cog(array, exponent):
     return np.array(ret)
 
 
-def _getAngScale(ims):
+def _getAngScale(ims, exponent=EXPO):
+    """
+    Given two images, return their scale and angle difference.
+
+    Args:
+        ims (2-tuple-like of 2D ndarrays): The images
+        exponent (float or 'inf'): The exponent passed to :func:`_calc_cog`
+
+    Returns:
+        tuple: Scale, angle. Describes the relationship of the second image to
+        the first one.
+    """
+    assert len(ims) == 2, \
+        "Only two images are supported as input"
     shape = ims[0].shape
-    #import pylab as pyl
-    #pyl.figure(); pyl.imshow(ims[1]); pyl.show()
 
     adfts = [fft.fftshift(abs(fft.fft2(im))) for im in ims]
-    """
-    h = highpass(f0.shape)
-    for adft in adfts:
-        adft *= h
-    del h
-    """
+
+    # High-pass filtering used to be here, but we have moved it to a higher
+    # level interface
 
     stuffs = [_logpolar(adft, shape[1]) for adft in adfts]
     log_base = _getLogBase(shape, shape[1])
@@ -122,14 +127,14 @@ def _getAngScale(ims):
     r0 = abs(stuffs[0]) * abs(stuffs[1])
     ir = abs(fft.ifft2((stuffs[0] * stuffs[1].conjugate()) / r0))
 
-    i0, i1 = _calc_cog(ir, EXPO)
+    i0, i1 = _calc_cog(ir, exponent)
 
     angle = -180.0 * i0 / ir.shape[0]
     scale = log_base ** i1
 
     if scale > 1.8:
         ir = abs(fft.ifft2((stuffs[1] * stuffs[0].conjugate()) / r0))
-        i0, i1 = _calc_cog(ir, EXPO)
+        i0, i1 = _calc_cog(ir, exponent)
         angle = 180.0 * i0 / ir.shape[0]
         scale = 1.0 / (log_base ** i1)
         if scale > 1.8:
@@ -143,7 +148,7 @@ def _getAngScale(ims):
     return 1.0 / scale, - angle
 
 
-def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
+def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
     """
     Return similarity transformed image im1 and transformation parameters.
     Transformation parameters are: isotropic scale factor, rotation angle (in
@@ -161,12 +166,12 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
             linear, 3 = cubic etc.
         filter_pcorr (int): Radius of a spectrum filter for translation
             detection
+        exponent (float or 'inf'): The exponent passed to :func:`_calc_cog`
 
     .. note:: There are limitations
 
         * Scale change must be less than 1.8.
         * No subpixel precision.
-
     """
     if im0.shape != im1.shape:
         raise ValueError("Images must have same shapes.")
@@ -179,7 +184,7 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
     im2 = im1
 
     for ii in range(numiter):
-        newscale, newangle = _getAngScale([im0, im2])
+        newscale, newangle = _getAngScale([im0, im2], exponent)
         scale *= newscale
         angle += newangle
 
@@ -190,7 +195,7 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0):
     tvec = translation(im2, im0, filter_pcorr)
 
     # don't know what it does, but it alters the scale a little bit
-    #scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
+    scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
 
     res = dict(
         scale=scale,
@@ -232,7 +237,9 @@ def translation(im0, im1, filter_pcorr=0):
     """
     f0 = fft.fft2(im0)
     f1 = fft.fft2(im1)
-    ir = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1))))
+    # spectrum can be filtered, so we take precaution against dividing by 0
+    eps = abs(f1).max() * 1e-10
+    ir = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * (abs(f1) + eps))))
     if filter_pcorr > 0:
         ir = ndi.minimum_filter(ir, filter_pcorr)
 
@@ -330,6 +337,9 @@ def similarity_matrix(scale, angle, vector):
 
 
 def _getLogBase(shape, radii):
+    """
+    Basically common functionality of :func:`_logpolar` and :func:`_getAngScale`
+    """
     center = shape[0] / 2, shape[1] / 2
     d = np.hypot(shape[0] - center[0], shape[1] - center[1])
     log_base = 10.0 ** (math.log10(d) / (radii))
@@ -353,36 +363,6 @@ def _logpolar(image, radii, angles=None):
     output = np.empty_like(x)
     ndii.map_coordinates(image, [x, y], output=output)
     return output
-
-
-def logpolar(image, angles=None, radii=None):
-    """Return log-polar transformed image and log base."""
-    shape = image.shape
-    center = shape[0] / 2, shape[1] / 2
-    if angles is None:
-        angles = shape[0]
-    if radii is None:
-        radii = shape[1]
-    theta = np.empty((angles, radii), dtype=np.float64)
-    theta.T[:] = -np.linspace(0, np.pi, angles, endpoint=False)
-    d = np.hypot(shape[0] - center[0], shape[1] - center[1])
-    log_base = 10.0 ** (math.log10(d) / (radii))
-    radius = np.empty_like(theta)
-    radius[:] = np.power(log_base, np.arange(radii,
-                                             dtype=np.float64)) - 1.0
-    x = radius * np.sin(theta) + center[0]
-    y = radius * np.cos(theta) + center[1]
-    output = np.empty_like(x)
-    ndii.map_coordinates(image, [x, y], output=output)
-    return output, log_base
-
-
-def highpass(shape):
-    """Return highpass filter to be multiplied with fourier transform."""
-    x = np.outer(
-        np.cos(np.linspace(- math.pi / 2., math.pi / 2., shape[0])),
-        np.cos(np.linspace(- math.pi / 2., math.pi / 2., shape[1])))
-    return (1.0 - x) * (2.0 - x)
 
 
 def imread(fname, norm=True):

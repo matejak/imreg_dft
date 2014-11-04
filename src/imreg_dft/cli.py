@@ -53,6 +53,17 @@ def _float_tuple(st):
     return vals
 
 
+def _exponent(st):
+    if st == 'inf':
+        return st
+    try:
+        ret = float(st)
+    except:
+        raise ap.ArgumentTypeError(
+            "'%s' should be either 'inf' or a float value" % st)
+    return ret
+
+
 def outmsg(msg):
     """
     Support function for checking of validity of the output format string.
@@ -79,12 +90,14 @@ def main():
     parser.add_argument('image')
     parser.add_argument('--show', action="store_true", default=False,
                         help="Whether to show registration result")
-    parser.add_argument('--lowpass', type=_float_tuple, action="append",
-                        default=[], metavar="HI_THRESH,LOW_THRESH",
-                        help="1,1 means no-op, 0.9,0.8 is a mild filter")
-    parser.add_argument('--highpass', type=_float_tuple, action="append",
-                        default=[], metavar="HI_THRESH,LOW_THRESH",
-                        help="0,0 means no-op, 0.2,0.1 is a mild filter")
+    parser.add_argument('--lowpass', type=_float_tuple,
+                        default=None, metavar="HI_THRESH,LOW_THRESH",
+                        help="1,1 means no-op, 0.8,0.9 is a mild filter")
+    parser.add_argument('--highpass', type=_float_tuple,
+                        default=None, metavar="HI_THRESH,LOW_THRESH",
+                        help="0,0 means no-op, 0.1,0.2 is a mild filter")
+    parser.add_argument('--exponent', type=_exponent, default="inf",
+                        help="Either 'inf' or float. See the docs.")
     parser.add_argument('--iters', type=int, default=1,
                         help="How many iterations to guess the right scale "
                         "and angle")
@@ -125,11 +138,13 @@ def main():
         show=args.show,
         print_format=print_format,
         iters=args.iters,
+        exponent=args.exponent,
     )
     run(args.template, args.image, opts)
 
 
 def filter_images(ims, low, high):
+    # lazy import so no imports before run() is really called
     from imreg_dft import utils
 
     ret = [utils.imfilter(im, low, high) for im in ims]
@@ -137,6 +152,7 @@ def filter_images(ims, low, high):
 
 
 def apodize(ims, radius_ratio):
+    # lazy import so no imports before run() is really called
     import numpy as np
     from imreg_dft import utils
 
@@ -159,6 +175,7 @@ def apodize(ims, radius_ratio):
 
 
 def run(template, image, opts):
+    # lazy import so no imports before run() is really called
     from scipy import misc
     from imreg_dft import imreg
 
@@ -172,6 +189,7 @@ def run(template, image, opts):
 
 
 def process_images(ims, opts):
+    # lazy import so no imports before run() is really called
     import numpy as np
     from imreg_dft import utils
     from imreg_dft import imreg
@@ -179,16 +197,14 @@ def process_images(ims, opts):
     ims = [utils.extend_by(im, opts["extend"]) for im in ims]
     bigshape = np.array([im.shape for im in ims]).max(0)
 
-    #import pylab as pyl
-    #pyl.figure(); pyl.imshow(ims[1]); pyl.show()
-
     ims = filter_images(ims, opts["low"], opts["high"])
-    # We think that im[0, 0] has the right value after apodization
+
     ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(im, 5), im)
            for im in ims]
 
     resdict = imreg.similarity(
-        ims[0], ims[1], opts["iters"], opts["order"], opts["filter_pcorr"])
+        ims[0], ims[1], opts["iters"], opts["order"],
+        opts["filter_pcorr"], opts["exponent"])
 
     im2 = resdict.pop("timg")
 
@@ -202,7 +218,6 @@ def process_images(ims, opts):
         msg = bytes.decode(msg, "utf-8").decode('string-escape')
         sys.stdout.write(msg)
 
-    #ims = [utils.unextend_by(im, opts["extend"]) for im in ims]
     im2 = utils.unextend_by(im2, opts["extend"])
 
     return im2
