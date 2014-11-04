@@ -24,7 +24,7 @@ install:
   #- conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy setuptools
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy setuptools pillow
   - pip install coveralls 
-  - source activate test-environment
+  #- source activate test-environment
   - python setup.py install
 # command to run tests
 script: 
