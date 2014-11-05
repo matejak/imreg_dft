@@ -215,7 +215,7 @@ def process_images(ims, opts):
 
     if opts["print_format"] is not None:
         msg = opts["print_format"] % tform
-        msg.encode("utf-8")
+        msg = msg.encode("utf-8")
         msg = msg.decode('unicode_escape')
         sys.stdout.write(msg)
 
