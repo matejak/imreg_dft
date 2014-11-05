@@ -216,7 +216,7 @@ def process_images(ims, opts):
     if opts["print_format"] is not None:
         msg = opts["print_format"] % tform
         msg.encode("utf-8")
-        msg = bytes.decode(msg, "utf-8").decode('string-escape')
+        msg = msg.decode('unicode_escape')
         sys.stdout.write(msg)
 
     im2 = utils.unextend_by(im2, opts["extend"])
