@@ -81,7 +81,7 @@ def outmsg(msg):
     except Exception as exc:
         raise ap.ArgumentTypeError(
             (tpl + " - %s") % (msg, exc.message))
-    return msg.encode("utf-8")
+    return msg
 
 
 def main():
@@ -215,6 +215,7 @@ def process_images(ims, opts):
 
     if opts["print_format"] is not None:
         msg = opts["print_format"] % tform
+        msg.encode("utf-8")
         msg = bytes.decode(msg, "utf-8").decode('string-escape')
         sys.stdout.write(msg)
 

@@ -19,6 +19,8 @@ test -z "$CMD" && CMD='ird'
 
 TVEC=$($CMD "$1" "$2" --print-result --print-format '%(tx)d,%(ty)d,%(angle).3g,%(scale).3g' --iter 4)
 
+test $? -eq 0 || die "ird terminated with an error"
+
 GOTX=`echo $TVEC | cut -f 1 -d ,`
 GOTY=`echo $TVEC | cut -f 2 -d ,`
 GOTAng=`echo $TVEC | cut -f 3 -d ,`
