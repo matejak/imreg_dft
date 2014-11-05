@@ -81,7 +81,7 @@ def outmsg(msg):
     except Exception as exc:
         raise ap.ArgumentTypeError(
             (tpl + " - %s") % (msg, exc.message))
-    return msg
+    return bytes(msg)
 
 
 def main():
@@ -116,8 +116,8 @@ def main():
         '--print-result', action="store_true", default=False,
         help="We don't print anything unless this option is specified")
     parser.add_argument(
-        '--print-format', default="scale: %(scale)f\nangle: %(angle)f\nshift: "
-        "%(tx)d, %(ty)d\n", type=outmsg,
+        '--print-format', default=b"scale: %(scale)f\nangle: %(angle)f\nshift: "
+        b"%(tx)d, %(ty)d\n", type=outmsg,
         help="Print a string (to stdout) in a given format. A dictionary "
         "containing the 'scale', 'angle', 'tx' and 'ty' keys will be "
         "passed for interpolation")
