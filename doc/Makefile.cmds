@@ -13,32 +13,32 @@ TEXTS = \
 	08-resample2 \
 	$(NUL)
 
-TARGETS = $(foreach title,$(TEXTS),$(BUILDDIR)/$(title).txt)
+TARGETS = $(foreach title,$(TEXTS),_static/examples/$(title).txt)
 
-$(word 1,$(TARGETS)): | $(BUILDDIR)
+$(word 1,$(TARGETS)):
 	DIR=../../imreg_dft $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $@
 
-$(word 2,$(TARGETS)): | $(BUILDDIR)
+$(word 2,$(TARGETS)):
 	DIR=../../imreg_dft $(REPEATER) cd resources/examples > $@
 	$(REPEATER) ird sample1.png sample2.png --print-result --print-format "'translation:%(tx)d,%(ty)d\n'" >> $@
 
-$(word 3,$(TARGETS)): | $(BUILDDIR)
+$(word 3,$(TARGETS)):
 	$(REPEATER) ird sample1.png sample3.png --show > $@
 
-$(word 4,$(TARGETS)): | $(BUILDDIR)
+$(word 4,$(TARGETS)):
 	$(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" > $@
 	$(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" --iter 2 >> $@
 	$(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" --iter 4 --show >> $@
 
-$(word 5,$(TARGETS)): | $(BUILDDIR)
+$(word 5,$(TARGETS)):
 	$(REPEATER) ird sample1.png sample4.png --extend 20 --show --print-result --iter 4 > $@
 
-$(word 6,$(TARGETS)): | $(BUILDDIR)
+$(word 6,$(TARGETS)):
 	$(REPEATER) ird sample1.png sample3.png --exponent inf --print-result > $@
 	$(REPEATER) ird sample1.png sample3.png --exponent 5 --print-result >> $@
 
-$(word 7,$(TARGETS)): | $(BUILDDIR)
+$(word 7,$(TARGETS)):
 	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --print-result > $@
 
-$(word 8,$(TARGETS)): | $(BUILDDIR)
+$(word 8,$(TARGETS)):
 	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --lowpass 0.9,1.1 --extend 10 --print-result > $@

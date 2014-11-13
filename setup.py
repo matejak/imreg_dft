@@ -37,4 +37,5 @@ st.setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: BSD License",
     ],
+    zip_safe=True,
 )

@@ -1,0 +1,8 @@
+[user@linuxbox examples]$ ird sample1.png sample3.png --exponent inf --print-result
+scale: 1.357143
+angle: -37.800000
+shift: 37, 92
+[user@linuxbox examples]$ ird sample1.png sample3.png --exponent 5 --print-result
+scale: 1.321192
+angle: -34.800000
+shift: 38, 84

@@ -49,9 +49,6 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 
-$(BUILDDIR):
-	mkdir -p $@
-
 include Makefile.cmds
 
 html: $(TARGETS)

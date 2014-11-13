@@ -11,7 +11,7 @@ Quick reference
 #. Quickly find out whether it works for you, having the results (optionally) shown in a pop-up window and printed out.
    We assume you stand in the root of ``imreg_dft`` cloned from the git repo.
 
-   .. literalinclude:: _build/01-intro.txt
+   .. literalinclude:: _static/examples/01-intro.txt
      :language: shell-session
 
    .. warning::
@@ -21,13 +21,13 @@ Quick reference
 #. You can have the results print in a defined way.
    First of all though, let's move to the examples directory:
 
-   .. literalinclude:: _build/02-print.txt
+   .. literalinclude:: _static/examples/02-print.txt
      :language: shell-session
 
 #. Let's try something more tricky!
    The first and third examples are rotated against each other and also have a different scale.
 
-   .. literalinclude:: _build/03-bad.txt
+   .. literalinclude:: _static/examples/03-bad.txt
      :language: shell-session
 
    Uh-oh, that didn't turn out very well, did it?
@@ -37,7 +37,7 @@ Quick reference
    We can force ``ir_dft`` to try to guess scale and rotation multiple times in a row.
    The correct values are -30° for the rotation and 1 / 80% = 1.25 for the scale:
 
-   .. literalinclude:: _build/04-iter.txt
+   .. literalinclude:: _static/examples/04-iter.txt
      :language: shell-session
 
    So, four iterations are enough for a precise result!
@@ -51,7 +51,7 @@ Quick reference
    Although the blurring might not look very impressive, it makes a huge difference for the image's spectrum which is used for the registration.
    So let's try:
 
-   .. literalinclude:: _build/05-extend.txt
+   .. literalinclude:: _static/examples/05-extend.txt
      :language: shell-session
 
    As we can see, the result is correct.
@@ -141,7 +141,7 @@ There are some extended options you can use, we will explain their meaning now:
     Obviously, the higher the exponent is, the closer are we to picking the coordinate of the greatest array element.
     To neutralize the influence of points with low value, set the value of the exponent to greater or equal to 5.
 
-    .. literalinclude:: _build/06-exponent.txt
+    .. literalinclude:: _static/examples/06-exponent.txt
       :language: shell-session
 
     We can see that with only one iteration, setting the ``--exponent`` to ``5`` brings a more accurate result than the default value of ``'inf'`` --- the correct value is 1.25 for the scale and -30 for the angle.
@@ -153,7 +153,7 @@ There are some extended options you can use, we will explain their meaning now:
     As opposed to well-known 2D interpolation methods such as bilinear or bicubic, resampling uses the :math:`sinc(x) = sin(x) / x` function, but it is usually implemented by taking a discrete Fourier transform of the input, padding the spectrum with zeros and then performing an inverse transform.
     If you try it, results are not so great:
 
-    .. literalinclude:: _build/07-resample.txt
+    .. literalinclude:: _static/examples/07-resample.txt
       :language: shell-session
 
     However, resampling can result in artifacts near the image edges.
@@ -164,7 +164,7 @@ There are some extended options you can use, we will explain their meaning now:
     This removes spurious spatial frequencies that appear as a ``+`` pattern in the image's power spectrum.
     The second one then ensures that the power spectrum is mostly smooth after the zero-pading, which is also good.
 
-    .. literalinclude:: _build/08-resample2.txt
+    .. literalinclude:: _static/examples/08-resample2.txt
       :language: shell-session
 
     As we can see, both the scale and angle were determined extremely precisely.
