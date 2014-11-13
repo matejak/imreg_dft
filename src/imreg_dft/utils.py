@@ -238,7 +238,7 @@ def frame_img(img, mask, dst):
         krad /= 1.6
         convimg0 = convimg
 
-    convimg[mask == 1] = img[mask == 1]
+    convimg[mask >= 1] = img[mask >= 1]
 
     return convimg
 

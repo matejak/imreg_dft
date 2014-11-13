@@ -53,9 +53,7 @@ except ImportError:
 
 __all__ = ['translation', 'similarity']
 
-
 EXPO = 'inf'
-#EXPO = 10
 
 
 def _calc_cog(array, exponent):
@@ -171,7 +169,7 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
     .. note:: There are limitations
 
         * Scale change must be less than 1.8.
-        * No subpixel precision.
+        * No subpixel precision (but you can use resampling to get around this).
     """
     if im0.shape != im1.shape:
         raise ValueError("Images must have same shapes.")
@@ -215,6 +213,9 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
 
     im2 = transform_img_dict(im1, res, bgval, order)
     imask = transform_img_dict(np.ones_like(im1), res, 0, order)
+    # for some reason, when using cubic interp, the mask becomes quite strange
+    # and low.
+    imask[imask > 0.8] = 1.0
 
     # Framing here = just blending the im2 with its BG according to the mask
     im2 = utils.frame_img(im2, imask, 10)
@@ -238,8 +239,8 @@ def translation(im0, im1, filter_pcorr=0):
     f0 = fft.fft2(im0)
     f1 = fft.fft2(im1)
     # spectrum can be filtered, so we take precaution against dividing by 0
-    eps = abs(f1).max() * 1e-10
-    ir = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * (abs(f1) + eps))))
+    eps = abs(f1).max() * 1e-15
+    ir = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1) + eps)))
     if filter_pcorr > 0:
         ir = ndi.minimum_filter(ir, filter_pcorr)
 
@@ -250,7 +251,7 @@ def translation(im0, im1, filter_pcorr=0):
     if t1 > f0.shape[1] // 2:
         t1 -= f0.shape[1]
 
-    return (-t0, -t1)
+    return np.array((-t0, -t1), dtype=float)
 
 
 def transform_img_dict(img, tdict, bgval=0, order=1, invert=False):
@@ -307,6 +308,7 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=0, order=1):
 
     if tvec[0] != 0 or tvec[1] != 0:
         dest0 = ndii.shift(dest0, tvec, order=order, cval=bgval)
+
 
     bg = np.zeros_like(img) + bgval
     dest = utils.embed_to(bg, dest0)

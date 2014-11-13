@@ -8,79 +8,62 @@ There are three main reasons why you would want to use it:
 Quick reference
 +++++++++++++++
 
-#. Quickly find out whether it works for you, having the results shown in a pop-up window and printed out.
+#. Quickly find out whether it works for you, having the results (optionally) shown in a pop-up window and printed out.
    We assume you stand in the root of ``imreg_dft`` cloned from the git repo.
 
-   .. code-block:: shell-session
-
-     [user@linuxbox ir_dft]$ ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result
-     scale: 1.000000
-     angle: 0.000000
-     shift: -19, 79
+   .. literalinclude:: _build/01-intro.txt
+     :language: shell-session
 
    .. warning::
 
-     Remember that images have the zero coordinate (i.e. the origin) in their upper left corner!
+     Keep in mind that images have the zero coordinate (i.e. the origin) in their upper left corner!
 
 #. You can have the results print in a defined way.
    First of all though, let's move to the examples directory:
 
-   .. code-block:: shell-session
+   .. literalinclude:: _build/02-print.txt
+     :language: shell-session
 
-     [user@linuxbox ir_dft]$ cd resources/examples
-     [user@linuxbox examples]$ ird sample1.png sample2.png --print-result --print-format 'translation:%(tx)d,%(ty)d\n'
-     translation:-19,79
+#. Let's try something more tricky!
+   The first and third examples are rotated against each other and also have a different scale.
 
-
-#. Let's try something tricky - the first and third example!
-
-   .. code-block:: shell-session
-
-     [user@linuxbox examples]$ ird sample1.png sample3.png --show
+   .. literalinclude:: _build/03-bad.txt
+     :language: shell-session
 
    Uh-oh, that didn't turn out very well, did it?
-   The result is somehow better than the input, but highly unsatisfactory nevertheless.
+   The result is somehow better than a no-op, but highly unsatisfactory nevertheless.
 
    However, we have a triumph in our sleeve.
    We can force ``ir_dft`` to try to guess scale and rotation multiple times in a row.
    The correct values are -30° for the rotation and 1 / 80% = 1.25 for the scale:
 
-   .. code-block:: shell-session
-
-     [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n'
-     scale: 1.35484, angle: -37.8
-     [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n' --iter 2
-     scale: 1.26448, angle: -27.6
-     [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n' --iter 4 --show
-     scale: 1.24715, angle: -30
+   .. literalinclude:: _build/04-iter.txt
+     :language: shell-session
 
    So, four iterations are enough for a precise result!
 
 #. And now something even more tricky - when a part of the image is cut out.
-   The fourth and third samples are different just by the translation and by the fact that the feature we are matching against is incomplete on the fourth image.
+   The difference between the fourth and third sample is their mutual translation which also causes that the feature we are matching against is cut out from the fourth image.
 
-   Generally, we have to address the cutoff.
+   Generally, we have to address the this
    The ``--extend`` option here serves exactly this purpose.
    It extends the image by a given amount of pixels (on each side) and it tries to blur the cut-out image beyond its original border.
    Although the blurring might not look very impressive, it makes a huge difference for the image's spectrum which is used for the registration.
    So let's try:
 
-   .. code-block:: shell-session
-
-     [user@linuxbox examples]$ ird sample1.png sample4.png --extend 20 --show --print-result --iter 4
-     scale: 0.745331
-     angle: -36.580548
-     shift: 165, 130
+   .. literalinclude:: _build/05-extend.txt
+     :language: shell-session
 
    As we can see, the result is correct.
 
    Extension can occur on-demand when the scale change or rotation operations result in image size growth.
    However, whether this will occur or not is not obvious, so it is advisable to specify the argument manually.
-   In this example, specifying the option manually is not needed.
+   In this example (and possibly in the majority of other examples) specifying the option manually is not needed.
 
    .. warning::
 
      If the image extension by blurring is very different from how the image really looks like, the image registration will fail.
+     Don't use this option until you become sure that it improves the registration quality.
 
 #. Buy what do we actually get on output?
    You may wonder what those numbers mean.
@@ -93,7 +76,7 @@ Quick reference
    i. Call the ``zoom`` function with the provided scale.
       The center of the zoom is the center of the image.
 
-   #. Then, rotate the image using the ``rotate`` function, specifyinh the angle you got on the output.
+   #. Then, rotate the image using the ``rotate`` function, specifying the given angle.
       The center of the rotation is again the center of the image.
 
    #. Finally, translate the image using the ``shift`` function.
@@ -104,30 +87,39 @@ Quick reference
 Advanced tweaking
 +++++++++++++++++
 
-There are some strange options you can use, we will explain their meaning now:
+There are some extended options you can use, we will explain their meaning now:
 
-``--lowpass``, ``--highpass``: These two concern filtration of the image prior to the registration.
+``--lowpass``, ``--highpass``
+    These two concern filtration of the image prior to the registration.
     There can be multiple reasons why to filter images:
 
     * One of them is filtered already due to conditions beyond your control, so by filtering them again just brings the other one on the par with the first one.
+      As a side note, filtering in this case should make little to no difference.
+
+    * A part of spectrum contains noise which you want to remove.
 
     * You want to filter out low frequencies since they are of no good when registering images anyway.
 
+    The filtering works like this:
+
     The domain of the spectrum is a set of spatial frequencies.
     Each spatial frequency in an image is a vector with a :math:`x` and :math:`y` components.
-    You can norm the frequencies by stating that the highest value of a compnent is 1, and denote value of spatial frequency as the (euclidean) length of the normed vector.
-    Therefore the spatial frequencies of greatest values of :math:`\sqrt 2` are (1, 1), (1, -1) etc.
+    We norm the frequencies by stating that the highest value of a compnent is 1. 
+    Next, define the *value* of spatial frequency as the (euclidean) length of the normed vector.
+    Therefore the spatial frequencies of greatest values (:math:`\sqrt 2`) are (1, 1), (1, -1) etc.
 
-    An argument to a ``--lowpass`` or ``--highpass`` option is a tuple, usualy a number between 0 and 1.
-    This number relates to the value of spatial frequencies it affects.
-    For example, passing ``--lowpass 0.2,0.4`` means that spatial frequencies with value ranging from 0 to 0.2 will pass, whereas those with higher value than 0.4 won't.
-    Spatial frequencies with values in between the two will be attenuated linearly.
+    An argument to a ``--lowpass`` or ``--highpass`` option is a tuple composed of numbers between 0 and 1.
+    Those relate to the value of spatial frequencies it affects.
+    For example, passing ``--lowpass 0.2,0.4`` means that spatial frequencies with value ranging from 0 to 0.2 will pass and those with value higher than 0.4 won't.
+    Spatial frequencies with values in-between will be progressively attenuated. 
 
-``--filter-pcorr``: Fitering of phase correlation applies when determining the right translation vector.
+``--filter-pcorr``
+    Fitering of phase correlation applies when determining the right translation vector.
     If the image pattern is not sampled very densely (i.e. close or even below the Nyquist frequency), ripples may appear near edges in the image.
     These ripples basically interfere with the algorithm and the phase correlation filtration may overcome this problem.
 
-``--exponent``: When finding the right angle and scale, the highest element in an array is searched for.
+``--exponent``
+    When finding the right angle and scale, the highest element in an array is searched for.
     However, again due to incorrect sampling, it might not be the best guess --- for instance, this approach has the obvious flaw of being numerically unstable.
     There may be several extreme values close together and picking the center of them can be much better.
     This option plays the following role in the process:
@@ -136,29 +128,51 @@ There are some strange options you can use, we will explain their meaning now:
 
     * The coordinates of the center of mass of the array are determined. 
 
-    Formally: Let :math:`f(x)` be a discrete, 1-variable non-negative function, for instance :math:`f(0) = 3,\ f(1) = 0, f(2) = 2.99, f(3) = 1`.
+    Formally: Let :math:`f(x)` be a discrete non-negative function, for instance :math:`f(0) = 3,\ f(1) = 0, f(2) = 2.99, f(3) = 1`.
     Then, the index of the greatest value is denoted by :math:`\mathrm{argmax}\, f(x) = 0`, because :math:`f(0)` is the greatest of :math:`f(x)` for all :math:`x` whete :math:`f(x)` is defined.
     The coordinate of the center of mass of :math:`f(x)` is :math:`t_f = \sum f(x_i)^c x_i / \sum f(x_i)^c`, where :math:`c` is our exponent, in case of real center of mass, :math:`c = 1`.
     The problem is that in this case, the value of :math:`\mathrm{argmax}\, f(x)` is unstable, since the difference between :math:`f(0)` and :math:`f(2)` is relatively low.
-    If we consider real-world conditions, it could be below a fraction of the noise standard deviation.
-    However, if we select a value of :math:`c = 5`, the value of :math:`t_f = 0.996`, which is just between the two highest values and not affected by :math:`f(3)`.
-    And this is actually exactly what we want --- the interpolation during image transformations is not perfect and an analogous situation can occur in the spectrum and the center of few extreme values close together is more representative than the location of just one extreme value.
+    If we consider real-world conditions, the difference could be below a fraction of the noise standard deviation.
+    However, if we select a value of :math:`c = 5`, the value of corresponding :math:`t_f = 0.996`, which is just between the two highest values and not affected by :math:`f(3)`.
+    And this is actually exactly what we want --- the interpolation during image transformations is not perfect and an analogous situation can occur in the spectrum.
+    The center of few extreme values close together is more representative than the location of just one extreme value.
 
     One can generalize this to the case of 2D discrete functions and that's our case.
-    Obviously, the higher the exponent is, the closer are we to picking the coordinates of the greatest array element.
-    To neutralize the influence of points with low value, set the value of the exponent to a value greater or equal to 5.
+    Obviously, the higher the exponent is, the closer are we to picking the coordinate of the greatest array element.
+    To neutralize the influence of points with low value, set the value of the exponent to greater or equal to 5.
 
-    .. code-block:: shell-session
+    .. literalinclude:: _build/06-exponent.txt
+      :language: shell-session
 
-      [user@linuxbox ir_dft]$ ird resources/examples/sample1.png resources/examples/sample3.png --exponent inf --print-result
-      scale: 1.357143
-      angle: -37.800000
-      shift: 37, 92
-      [user@linuxbox ir_dft]$ ird resources/examples/sample1.png resources/examples/sample3.png --exponent 5 --print-result
-      scale: 1.321192
-      angle: -34.800000
-      shift: 38, 84
+    We can see that with only one iteration, setting the ``--exponent`` to ``5`` brings a more accurate result than the default value of ``'inf'`` --- the correct value is 1.25 for the scale and -30 for the angle.
+    However, if we increase the number of iterations, the exponent won't make a difference any more.
 
-    Although if we increase the number of iteration, the exponent won't make a difference.
-    However, we can see that with only one iteration, setting the ``--exponent`` to ``5`` results in more precise result than the default value of ``'inf'``.
-    The correct value is 1.25 for scale and -30 for angle.
+``--resample``
+    You can try to go for sub-pixel precision if you request resampling of the input prior to the registration.
+    Resampling can be regarded as an interpolation method that is the only correct one in the case when the data are sampled correctly.
+    As opposed to well-known 2D interpolation methods such as bilinear or bicubic, resampling uses the :math:`sinc(x) = sin(x) / x` function, but it is usually implemented by taking a discrete Fourier transform of the input, padding the spectrum with zeros and then performing an inverse transform.
+    If you try it, results are not so great:
+
+    .. literalinclude:: _build/07-resample.txt
+      :language: shell-session
+
+    However, resampling can result in artifacts near the image edges.
+    This is a known phenomenon that occurs when you have an unbounded signal (i.e. signal that goes beyond the field of view) and you manipulate its spectrum.
+    Extending the image and applying a mild low-pass filter can improve things considerably.
+
+    The first operation removes the edge artifact problem by making the opposing edges the same and making the image seamless.
+    This removes spurious spatial frequencies that appear as a ``+`` pattern in the image's power spectrum.
+    The second one then ensures that the power spectrum is mostly smooth after the zero-pading, which is also good.
+
+    .. literalinclude:: _build/08-resample2.txt
+      :language: shell-session
+
+    As we can see, both the scale and angle were determined extremely precisely.
+    So, a warning for those who skip the ordinary text:
+
+    .. warning::
+
+      The ``--resample`` option offers the potential of sub-pixel resolution.
+      However, when using it, be sure to start off with (let's say) ``--extend 10`` and ``--lowpass 0.9,1.1`` to exploit it.
+      Then, experiment with the settings until the results look best.
+    
