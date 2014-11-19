@@ -38,14 +38,14 @@ import argparse as ap
 import imreg_dft as ird
 
 
-def _float_tuple(st):
+def _float_tuple(string):
     """
     Support function for parsing string of two floats delimited by a comma.
     """
-    vals = st.split(",")
+    vals = string.split(",")
     if len(vals) != 2:
         raise ap.ArgumentTypeError(
-            "'%s' are not two values delimited by comma" % st)
+            "'%s' are not two values delimited by comma" % string)
     try:
         vals = [float(val) for val in vals]
     except ValueError:
@@ -53,14 +53,17 @@ def _float_tuple(st):
     return vals
 
 
-def _exponent(st):
-    if st == 'inf':
-        return st
+def _exponent(string):
+    """
+    Converts the passed string to a float or "inf"
+    """
+    if string == 'inf':
+        return string
     try:
-        ret = float(st)
+        ret = float(string)
     except:
         raise ap.ArgumentTypeError(
-            "'%s' should be either 'inf' or a float value" % st)
+            "'%s' should be either 'inf' or a float value" % string)
     return ret
 
 
@@ -153,25 +156,25 @@ def main():
     run(args.template, args.image, opts)
 
 
-def filter_images(ims, low, high):
+def filter_images(imgs, low, high):
     # lazy import so no imports before run() is really called
     from imreg_dft import utils
 
-    ret = [utils.imfilter(im, low, high) for im in ims]
+    ret = [utils.imfilter(img, low, high) for img in imgs]
     return ret
 
 
-def apodize(ims, radius_ratio):
+def apodize(imgs, radius_ratio):
     # lazy import so no imports before run() is really called
     import numpy as np
     from imreg_dft import utils
 
     ret = []
     # They might have different shapes...
-    for im in ims:
-        shape = im.shape
+    for img in imgs:
+        shape = img.shape
 
-        bgval = np.median(im)
+        bgval = np.median(img)
         bg = np.ones(shape) * bgval
 
         radius = radius_ratio * min(shape)
@@ -179,7 +182,7 @@ def apodize(ims, radius_ratio):
 
         bg *= (1 - apofield)
         # not modifying inplace
-        toapp = bg + im * apofield
+        toapp = bg + img * apofield
         ret.append(toapp)
     return ret
 
@@ -189,25 +192,23 @@ def run(template, image, opts):
     from scipy import misc
     from imreg_dft import imreg
 
-    ims = [misc.imread(fname, True) for fname in (template, image)]
+    imgs = [misc.imread(fname, True) for fname in (template, image)]
     if opts["invert"]:
-        ims[0] *= -1
-    im2 = process_images(ims, opts)
+        imgs[0] *= -1
+    im2 = process_images(imgs, opts)
 
     if opts["output"] is not None:
         misc.imsave(opts["output"], im2)
 
     if opts["show"]:
         import pylab as pyl
-        imreg.imshow(ims[0], ims[1], im2)
+        imreg.imshow(imgs[0], imgs[1], im2)
         pyl.show()
 
 
-
-
-def resample(im, coef):
+def resample(img, coef):
     from scipy import signal
-    ret = im
+    ret = img
     for axis in range(2):
         newdim = ret.shape[axis] * coef
         ret = signal.resample(ret, newdim, axis=axis)
@@ -220,18 +221,18 @@ def process_images(ims, opts):
     from imreg_dft import utils
     from imreg_dft import imreg
 
-    ims = [utils.extend_by(im, opts["extend"]) for im in ims]
-    bigshape = np.array([im.shape for im in ims]).max(0)
+    ims = [utils.extend_by(img, opts["extend"]) for img in ims]
+    bigshape = np.array([img.shape for img in ims]).max(0)
 
     ims = filter_images(ims, opts["low"], opts["high"])
     rcoef = opts["resample"]
     if rcoef != 1:
-        ims = [resample(im, rcoef) for im in ims]
+        ims = [resample(img, rcoef) for img in ims]
         bigshape *= rcoef
 
     # Make the shape of images the same
-    ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(im, 5), im)
-           for im in ims]
+    ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(img, 5), img)
+           for img in ims]
 
     resdict = imreg.similarity(
         ims[0], ims[1], opts["iters"], opts["order"],

@@ -41,69 +41,24 @@ import math
 
 import numpy as np
 import numpy.fft as fft
+import scipy.ndimage as ndi
+import scipy.ndimage.interpolation as ndii
 
 import imreg_dft.utils as utils
 
-try:
-    import scipy.ndimage as ndi
-    import scipy.ndimage.interpolation as ndii
-except ImportError:
-    import ndimage as ndi
-    import ndimage.interpolation as ndii
 
 __all__ = ['translation', 'similarity']
 
 EXPO = 'inf'
 
 
-def _calc_cog(array, exponent):
-    """
-    Calculate coordinates of the COM (center of mass) of the provided array.
-    Assume that the COM has coordinates close to (0, 0), so prior to calculating
-    the COM, the array is fftshifted, then the calculation is performed and
-    finally the result is recalculated to compensate the fftshift.
-
-    Args:
-        array (ndarray): The array to be examined.
-        exponent (float or 'inf'): The exponent we power the array with. If the
-            value 'inf' is given, the coordinage of the array maximum is taken.
-
-    Returns:
-        list : The COG coordinate tuple
-    """
-
-    # When using an integer exponent for _calc_cog, it is good to have the
-    # neutral rotation/scale in the center rather near the edges
-    sarray = fft.fftshift(array)
-
-    ret = None
-    if exponent == "inf":
-        amax = np.argmax(sarray)
-        ret = list(np.unravel_index(amax, sarray.shape))
-    else:
-        col = np.arange(sarray.shape[0])[:, np.newaxis]
-        row = np.arange(sarray.shape[1])[np.newaxis, :]
-
-        arr2 = sarray ** exponent
-        arrsum = arr2.sum()
-        arrprody = np.sum(arr2 * col) / arrsum
-        arrprodx = np.sum(arr2 * row) / arrsum
-        ret = [arrprody, arrprodx]
-        ret = np.round(ret).astype(int)
-
-    # Compensation of the fftshift
-    ret[0] = (ret[0] - sarray.shape[0] // 2) % sarray.shape[0]
-    ret[1] = (ret[1] - sarray.shape[1] // 2) % sarray.shape[1]
-    return np.array(ret)
-
-
-def _getAngScale(ims, exponent=EXPO):
+def _get_ang_scale(ims, exponent=EXPO):
     """
     Given two images, return their scale and angle difference.
 
     Args:
         ims (2-tuple-like of 2D ndarrays): The images
-        exponent (float or 'inf'): The exponent passed to :func:`_calc_cog`
+        exponent (float or 'inf'): The exponent stuff, see :func:`similarity`
 
     Returns:
         tuple: Scale, angle. Describes the relationship of the second image to
@@ -119,20 +74,20 @@ def _getAngScale(ims, exponent=EXPO):
     # level interface
 
     stuffs = [_logpolar(adft, shape[1]) for adft in adfts]
-    log_base = _getLogBase(shape, shape[1])
+    log_base = _get_log_base(shape, shape[1])
 
     stuffs = [fft.fft2(stuff) for stuff in stuffs]
     r0 = abs(stuffs[0]) * abs(stuffs[1])
     ir = abs(fft.ifft2((stuffs[0] * stuffs[1].conjugate()) / r0))
 
-    i0, i1 = _calc_cog(ir, exponent)
+    i0, i1 = utils._argmax_ext(ir, exponent)
 
     angle = -180.0 * i0 / ir.shape[0]
     scale = log_base ** i1
 
     if scale > 1.8:
         ir = abs(fft.ifft2((stuffs[1] * stuffs[0].conjugate()) / r0))
-        i0, i1 = _calc_cog(ir, exponent)
+        i0, i1 = utils._argmax_ext(ir, exponent)
         angle = 180.0 * i0 / ir.shape[0]
         scale = 1.0 / (log_base ** i1)
         if scale > 1.8:
@@ -164,7 +119,10 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
             linear, 3 = cubic etc.
         filter_pcorr (int): Radius of a spectrum filter for translation
             detection
-        exponent (float or 'inf'): The exponent passed to :func:`_calc_cog`
+        exponent (float or 'inf'): The exponent value used during processing.
+            Refer to the docs for a thorough explanation. Generally, pass "inf"
+            when feeling conservative. Otherwise, experiment, values below 5
+            are not even supposed to work.
 
     .. note:: There are limitations
 
@@ -182,7 +140,7 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
     im2 = im1
 
     for ii in range(numiter):
-        newscale, newangle = _getAngScale([im0, im2], exponent)
+        newscale, newangle = _get_ang_scale([im0, im2], exponent)
         scale *= newscale
         angle += newangle
 
@@ -201,16 +159,6 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
         tvec=tvec,
     )
 
-    # correct parameters for ndimage's internal processing
-    # Probably calculated for the case the tform center is 0, 0 (vs center of
-    # the image)
-    if angle > 0.0:
-        d = int((int(im1.shape[1] / scale) * math.sin(math.radians(angle))))
-        tvec = d + tvec[1], d + tvec[0]
-    elif angle < 0.0:
-        d = int((int(im1.shape[0] / scale) * math.sin(math.radians(angle))))
-        tvec = d + tvec[1], d + tvec[0]
-
     im2 = transform_img_dict(im1, res, bgval, order)
     imask = transform_img_dict(np.ones_like(im1), res, 0, order)
     # for some reason, when using cubic interp, the mask becomes quite strange
@@ -222,6 +170,18 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
 
     res["timg"] = im2
     return res
+
+    # correct parameters for ndimage's internal processing
+    # Probably calculated for the case the tform center is 0, 0 (vs center of
+    # the image)
+    if angle > 0.0:
+        dif = int((int(im1.shape[1] / scale) * math.sin(math.radians(angle))))
+        tvec = dif + tvec[1], dif + tvec[0]
+    elif angle < 0.0:
+        dif = int((int(im1.shape[0] / scale) * math.sin(math.radians(angle))))
+        tvec = dif + tvec[1], dif + tvec[0]
+
+    # We don't know what this is supposed to do, so it is here.
 
 
 def translation(im0, im1, filter_pcorr=0):
@@ -309,7 +269,6 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=0, order=1):
     if tvec[0] != 0 or tvec[1] != 0:
         dest0 = ndii.shift(dest0, tvec, order=order, cval=bgval)
 
-
     bg = np.zeros_like(img) + bgval
     dest = utils.embed_to(bg, dest0)
 
@@ -326,21 +285,23 @@ def similarity_matrix(scale, angle, vector):
     The order of transformations is: scale, rotate, translate.
 
     """
-    S = np.diag([scale, scale, 1.0])
-    R = np.identity(3)
+    raise NotImplementedError("We have no idea what this is supposed to do")
+    m_scale = np.diag([scale, scale, 1.0])
+    m_rot = np.identity(3)
     angle = math.radians(angle)
-    R[0, 0] = math.cos(angle)
-    R[1, 1] = math.cos(angle)
-    R[0, 1] = -math.sin(angle)
-    R[1, 0] = math.sin(angle)
-    T = np.identity(3)
-    T[:2, 2] = vector
-    return np.dot(T, np.dot(R, S))
+    m_rot[0, 0] = math.cos(angle)
+    m_rot[1, 1] = math.cos(angle)
+    m_rot[0, 1] = -math.sin(angle)
+    m_rot[1, 0] = math.sin(angle)
+    m_transl = np.identity(3)
+    m_transl[:2, 2] = vector
+    return np.dot(m_transl, np.dot(m_rot, m_scale))
 
 
-def _getLogBase(shape, radii):
+def _get_log_base(shape, radii):
     """
-    Basically common functionality of :func:`_logpolar` and :func:`_getAngScale`
+    Basically common functionality of :func:`_logpolar`
+    and :func:`_get_ang_scale`
     """
     center = shape[0] / 2, shape[1] / 2
     d = np.hypot(shape[0] - center[0], shape[1] - center[1])
@@ -356,7 +317,7 @@ def _logpolar(image, radii, angles=None):
         angles = shape[0]
     theta = np.empty((angles, radii), dtype=np.float64)
     theta.T[:] = -np.linspace(0, np.pi, angles, endpoint=False)
-    log_base = _getLogBase(shape, radii)
+    log_base = _get_log_base(shape, radii)
     radius = np.empty_like(theta)
     radius[:] = np.power(log_base, np.arange(radii,
                                              dtype=np.float64)) - 1.0

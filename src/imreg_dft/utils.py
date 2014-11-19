@@ -36,6 +36,47 @@ import numpy as np
 import numpy.fft as fft
 
 
+def _argmax_ext(array, exponent):
+    """
+    Calculate coordinates of the COM (center of mass) of the provided array.
+    Assume that the COM has coordinates close to (0, 0), so prior to calculating
+    the COM, the array is fftshifted, then the calculation is performed and
+    finally the result is recalculated to compensate the fftshift.
+
+    Args:
+        array (ndarray): The array to be examined.
+        exponent (float or 'inf'): The exponent we power the array with. If the
+            value 'inf' is given, the coordinage of the array maximum is taken.
+
+    Returns:
+        list : The COG coordinate tuple
+    """
+
+    # When using an integer exponent for _argmax_ext, it is good to have the
+    # neutral rotation/scale in the center rather near the edges
+    sarray = fft.fftshift(array)
+
+    ret = None
+    if exponent == "inf":
+        amax = np.argmax(sarray)
+        ret = list(np.unravel_index(amax, sarray.shape))
+    else:
+        col = np.arange(sarray.shape[0])[:, np.newaxis]
+        row = np.arange(sarray.shape[1])[np.newaxis, :]
+
+        arr2 = sarray ** exponent
+        arrsum = arr2.sum()
+        arrprody = np.sum(arr2 * col) / arrsum
+        arrprodx = np.sum(arr2 * row) / arrsum
+        ret = [arrprody, arrprodx]
+        ret = np.round(ret).astype(int)
+
+    # Compensation of the fftshift
+    ret[0] = (ret[0] - sarray.shape[0] // 2) % sarray.shape[0]
+    ret[1] = (ret[1] - sarray.shape[1] // 2) % sarray.shape[1]
+    return np.array(ret)
+
+
 def _get_emslices(shape1, shape2):
     """
     Common code used by :func:`embed_to` and :func:`undo_embed`
