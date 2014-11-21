@@ -1,1 +1,4 @@
-__version__ = "0.6.0"
+from imreg_dft.imreg import *
+
+
+__version__ = "0.8.0"

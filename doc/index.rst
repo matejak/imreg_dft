@@ -13,6 +13,7 @@ Contents:
 
    overview.rst
    cli.rst
+   api.rst
    devel.rst
 
 

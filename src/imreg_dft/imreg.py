@@ -47,7 +47,8 @@ import scipy.ndimage.interpolation as ndii
 import imreg_dft.utils as utils
 
 
-__all__ = ['translation', 'similarity']
+__all__ = ['translation', 'similarity', 'transform_img',
+           'transform_img_dict', 'imshow']
 
 EXPO = 'inf'
 
@@ -124,6 +125,10 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
             when feeling conservative. Otherwise, experiment, values below 5
             are not even supposed to work.
 
+    Returns:
+        dict: Contains following keys: ``scale``, ``angle``, ``tvec`` (Y, X) and
+        ``timg`` (the transformed image)
+
     .. note:: There are limitations
 
         * Scale change must be less than 1.8.
@@ -139,16 +144,16 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
     angle = 0.0
     im2 = im1
 
+    bgval = utils.get_borderval(im1, 5)
     for ii in range(numiter):
         newscale, newangle = _get_ang_scale([im0, im2], exponent)
         scale *= newscale
         angle += newangle
 
-        bgval = utils.get_borderval(im1, 5)
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
     # now we can use pcorr to guess the translation
-    tvec = translation(im2, im0, filter_pcorr)
+    tvec = translation(im0, im2, filter_pcorr)
 
     # don't know what it does, but it alters the scale a little bit
     scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
@@ -187,6 +192,7 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
 def translation(im0, im1, filter_pcorr=0):
     """
     Return translation vector to register images.
+    It tells how to translate the im1 to get im0.
 
     Args:
         im0 (2D numpy array): The first (template) image
@@ -211,10 +217,10 @@ def translation(im0, im1, filter_pcorr=0):
     if t1 > f0.shape[1] // 2:
         t1 -= f0.shape[1]
 
-    return np.array((-t0, -t1), dtype=float)
+    return np.array((t0, t1), dtype=float)
 
 
-def transform_img_dict(img, tdict, bgval=0, order=1, invert=False):
+def transform_img_dict(img, tdict, bgval=None, order=1, invert=False):
     """
     Wrapper of :func:`transform_img`, works well with the :func:`similarity`
     output.
@@ -222,7 +228,7 @@ def transform_img_dict(img, tdict, bgval=0, order=1, invert=False):
     Args:
         img
         tdict (dictionary): Transformation dictionary --- supposed to contain
-            "scale", "angle" and "tvec"
+            keys "scale", "angle" and "tvec"
         bgval
         order
         invert (bool): Whether to perform inverse transformation --- doesn't
@@ -242,7 +248,7 @@ def transform_img_dict(img, tdict, bgval=0, order=1, invert=False):
     return res
 
 
-def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=0, order=1):
+def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
     """
     Return translation vector to register images.
 
@@ -251,8 +257,9 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=0, order=1):
         scale (float): The scale factor (scale > 1.0 means zooming in)
         angle (float): Degrees of rotation (clock-wise)
         tvec (2-tuple): Pixel translation vector, Y and X component.
-        bgval (float): Shade of the background (filling in some cases of
-            rotation and/or scaling)
+        bgval (float): Shade of the background (filling during transformations)
+            If None is passed, :func:`imreg_dft.utils.get_borderval` with radius
+            of 5 is used to get it.
         order (int): Order of approximation (when doing transformations). 1 =
             linear, 3 = cubic etc.
 
@@ -260,6 +267,8 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=0, order=1):
         The transformed img, may have another i.e. (bigger) shape than
             the source.
     """
+    if bgval is None:
+        bgval = utils.get_borderval(img, 5)
     dest0 = img.copy()
     if scale != 1.0:
         dest0 = ndii.zoom(dest0, scale, order=order, cval=bgval)
@@ -340,25 +349,55 @@ def imread(fname, norm=True):
     return img
 
 
-def imshow(im0, im1, im2, im3=None, cmap=None, **kwargs):
-    """Plot images using matplotlib."""
+def imshow(im0, im1, im2, cmap=None, fig=None, **kwargs):
+    """
+    Plot images using matplotlib.
+    Opens a new figure with four subplots:
+
+    ::
+
+      +---------------------+---------------------+
+      |                     |                     |
+      |   <template image>  |       <image>       |
+      |                     |                     |
+      +---------------------+---------------------+
+      | <difference between |                     |
+      |   template and the  | <transformed image> |
+      |  transformed image> |                     |
+      +---------------------+---------------------+
+
+    Args:
+        im0 (np.ndarray): The template image
+        im1: The ``image``
+        im2: The transformed ``image`` --- it is supposed to match the template
+        cmap (optional): colormap
+        fig (optional): The figure you would like to have this plotted on
+
+    Returns:
+        matplotlib figure: The figure with subplots
+    """
     from matplotlib import pyplot
 
+    if fig is None:
+        fig = pyplot.figure()
     if cmap is None:
         cmap = 'coolwarm'
-    if im3 is None:
-        # To increase the contrast of the difference, we norm images according
-        # to their near-maximums
-        norm = np.percentile(im2, 95) / np.percentile(im0, 95)
-        im3 = abs(im2 - im0 * norm)
-    pyplot.subplot(221)
-    pyplot.imshow(im0, cmap, **kwargs)
-    pyplot.grid()
-    pyplot.subplot(222)
-    pyplot.imshow(im1, cmap, **kwargs)
-    pyplot.subplot(223)
-    pyplot.imshow(im3, cmap, **kwargs)
-    pyplot.subplot(224)
-    pyplot.imshow(im2, cmap, **kwargs)
-    pyplot.grid()
-    pyplot.show()
+    # We do the difference between the template and the result now
+    # To increase the contrast of the difference, we norm images according
+    # to their near-maximums
+    norm = np.percentile(im2, 95) / np.percentile(im0, 95)
+    im3 = abs(im2 - im0 * norm)
+    pl0 = fig.add_subplot(221)
+    pl0.imshow(im0, cmap, **kwargs)
+    pl0.grid()
+    share = dict(sharex=pl0, sharey=pl0)
+    pl = fig.add_subplot(222, ** share)
+    pl.imshow(im1, cmap, **kwargs)
+    pl.grid()
+    pl = fig.add_subplot(223, ** share)
+    pl.imshow(im3, cmap, **kwargs)
+    pl.grid()
+    pl = fig.add_subplot(224, ** share)
+    pl.imshow(im2, cmap, **kwargs)
+    pl.grid()
+    return fig

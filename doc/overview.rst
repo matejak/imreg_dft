@@ -42,17 +42,16 @@ References
 
 Examples
 --------
-.. code-block:: python
 
-    im0 = imread('t400')
-    im1 = imread('Tr19s1.3')
-    im2, scale, angle, (t0, t1) = similarity(im0, im1)
-    imshow(im0, im1, im2)
+The following examples are located in the `resources/code` directory of the project repository as ``similarity.py`` and ``translation.py``.
+You can launch them from their location once you have installed ``imreg_dft`` to observe the output.
 
-.. code-block:: python
+The full-blown similarity function that returns parameters (and the transormed image):
 
-    im0 = imread('t350380ori')
-    im1 = imread('t350380shf')
-    t0, t1 = translation(im0, im1)
+.. literalinclude:: ../resources/code/similarity.py
+    :language: python
 
+Or just the translation:
 
+.. literalinclude:: ../resources/code/translation.py
+    :language: python
