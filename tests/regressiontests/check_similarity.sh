@@ -10,14 +10,25 @@ almost_equal () {
 	return $?
 }
 
-TX=$3
-TY=$4
-ANGLE=$5
-SCALE=$6
+TPL="$1"
+shift
+IMG="$1"
+shift
+
+TX=$1
+shift
+TY=$1
+shift
+ANGLE=$1
+shift
+SCALE=$1
+shift
+
+# Now $@ refers to the rest we want to pass to ird
 
 test -z "$CMD" && CMD='ird'
 
-TVEC=$($CMD "$1" "$2" --print-result --print-format '%(tx)d,%(ty)d,%(angle).3g,%(scale).3g' --iter 4)
+TVEC=$($CMD "$TPL" "$IMG" --print-result --print-format '%(tx)d,%(ty)d,%(angle).8g,%(scale).8g' $@)
 
 test $? -eq 0 || die "ird terminated with an error"
 
@@ -29,12 +40,14 @@ GOTScale=`echo $TVEC | cut -f 4 -d ,`
 test "$GOTX" -ne "$TX" -o "$GOTY" -ne "$TY" \
 	&& die "Translation didn't work out, expected $TX,$TY got $GOTX,$GOTY"
 
+test -z "$DANGLE" && DANGLE=0.1
 test -n "$ANGLE" && \
-	{ almost_equal "$GOTAng" "$ANGLE" 0.1 \
+	{ almost_equal "$GOTAng" "$ANGLE" "$DANGLE" \
 		|| die "Angle didn't work out, expected $ANGLE got $GOTAng"; }
 
+test -z "$DSCALE" && DSCALE=0.05
 test -n "$SCALE" && \
-	{ almost_equal "$GOTScale" "$SCALE" 0.05 \
+	{ almost_equal "$GOTScale" "$SCALE" "$DSCALE" \
 		|| die "Scale didn't work out, expected $SCALE got $GOTScale"; }
 
 exit 0

@@ -1,0 +1,1 @@
+[user@linuxbox examples]$ ird sample1.png sample3.png --show

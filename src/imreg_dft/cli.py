@@ -38,14 +38,14 @@ import argparse as ap
 import imreg_dft as ird
 
 
-def _float_tuple(st):
+def _float_tuple(string):
     """
     Support function for parsing string of two floats delimited by a comma.
     """
-    vals = st.split(",")
+    vals = string.split(",")
     if len(vals) != 2:
         raise ap.ArgumentTypeError(
-            "'%s' are not two values delimited by comma" % st)
+            "'%s' are not two values delimited by comma" % string)
     try:
         vals = [float(val) for val in vals]
     except ValueError:
@@ -53,14 +53,17 @@ def _float_tuple(st):
     return vals
 
 
-def _exponent(st):
-    if st == 'inf':
-        return st
+def _exponent(string):
+    """
+    Converts the passed string to a float or "inf"
+    """
+    if string == 'inf':
+        return string
     try:
-        ret = float(st)
+        ret = float(string)
     except:
         raise ap.ArgumentTypeError(
-            "'%s' should be either 'inf' or a float value" % st)
+            "'%s' should be either 'inf' or a float value" % string)
     return ret
 
 
@@ -96,8 +99,13 @@ def main():
     parser.add_argument('--highpass', type=_float_tuple,
                         default=None, metavar="HI_THRESH,LOW_THRESH",
                         help="0,0 means no-op, 0.1,0.2 is a mild filter")
+    parser.add_argument('--resample', type=float, default=1,
+                        help="Work with resampled images.")
     parser.add_argument('--exponent', type=_exponent, default="inf",
                         help="Either 'inf' or float. See the docs.")
+    parser.add_argument(
+        '--invert', action="store_true", default=False,
+        help="Whether to invert the template. Don't expect much from it tho.")
     parser.add_argument('--iters', type=int, default=1,
                         help="How many iterations to guess the right scale "
                         "and angle")
@@ -107,6 +115,8 @@ def main():
                         "edge effects)")
     parser.add_argument('--order', type=int, default=1,
                         help="Interpolation order (1 = linear, 3 = cubic etc)")
+    parser.add_argument('--output',
+                        help="Where to save the transformed image.")
     parser.add_argument(
         '--filter-pcorr', type=int, default=0,
         help="Whether to filter during translation detection. Normally not "
@@ -117,7 +127,7 @@ def main():
         help="We don't print anything unless this option is specified")
     parser.add_argument(
         '--print-format', default="scale: %(scale)f\nangle: %(angle)f\nshift: "
-        "%(tx)d, %(ty)d\n", type=outmsg,
+        "%(tx)g, %(ty)g\n", type=outmsg,
         help="Print a string (to stdout) in a given format. A dictionary "
         "containing the 'scale', 'angle', 'tx' and 'ty' keys will be "
         "passed for interpolation")
@@ -139,29 +149,32 @@ def main():
         print_format=print_format,
         iters=args.iters,
         exponent=args.exponent,
+        resample=args.resample,
+        invert=args.invert,
+        output=args.output,
     )
     run(args.template, args.image, opts)
 
 
-def filter_images(ims, low, high):
+def filter_images(imgs, low, high):
     # lazy import so no imports before run() is really called
     from imreg_dft import utils
 
-    ret = [utils.imfilter(im, low, high) for im in ims]
+    ret = [utils.imfilter(img, low, high) for img in imgs]
     return ret
 
 
-def apodize(ims, radius_ratio):
+def apodize(imgs, radius_ratio):
     # lazy import so no imports before run() is really called
     import numpy as np
     from imreg_dft import utils
 
     ret = []
     # They might have different shapes...
-    for im in ims:
-        shape = im.shape
+    for img in imgs:
+        shape = img.shape
 
-        bgval = np.median(im)
+        bgval = np.median(img)
         bg = np.ones(shape) * bgval
 
         radius = radius_ratio * min(shape)
@@ -169,7 +182,7 @@ def apodize(ims, radius_ratio):
 
         bg *= (1 - apofield)
         # not modifying inplace
-        toapp = bg + im * apofield
+        toapp = bg + img * apofield
         ret.append(toapp)
     return ret
 
@@ -179,13 +192,28 @@ def run(template, image, opts):
     from scipy import misc
     from imreg_dft import imreg
 
-    ims = [misc.imread(fname, True) for fname in (template, image)]
-    im2 = process_images(ims, opts)
+    imgs = [misc.imread(fname, True) for fname in (template, image)]
+    if opts["invert"]:
+        imgs[0] *= -1
+    im2 = process_images(imgs, opts)
+
+    if opts["output"] is not None:
+        misc.imsave(opts["output"], im2)
 
     if opts["show"]:
         import pylab as pyl
-        imreg.imshow(ims[0], ims[1], im2)
+        fig = pyl.figure()
+        imreg.imshow(fig, imgs[0], imgs[1], im2)
         pyl.show()
+
+
+def resample(img, coef):
+    from scipy import signal
+    ret = img
+    for axis in range(2):
+        newdim = ret.shape[axis] * coef
+        ret = signal.resample(ret, newdim, axis=axis)
+    return ret
 
 
 def process_images(ims, opts):
@@ -194,13 +222,18 @@ def process_images(ims, opts):
     from imreg_dft import utils
     from imreg_dft import imreg
 
-    ims = [utils.extend_by(im, opts["extend"]) for im in ims]
-    bigshape = np.array([im.shape for im in ims]).max(0)
+    ims = [utils.extend_by(img, opts["extend"]) for img in ims]
+    bigshape = np.array([img.shape for img in ims]).max(0)
 
     ims = filter_images(ims, opts["low"], opts["high"])
+    rcoef = opts["resample"]
+    if rcoef != 1:
+        ims = [resample(img, rcoef) for img in ims]
+        bigshape *= rcoef
 
-    ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(im, 5), im)
-           for im in ims]
+    # Make the shape of images the same
+    ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(img, 5), img)
+           for img in ims]
 
     resdict = imreg.similarity(
         ims[0], ims[1], opts["iters"], opts["order"],
@@ -208,6 +241,8 @@ def process_images(ims, opts):
 
     im2 = resdict.pop("timg")
 
+    # Seems that the reampling simply scales the translation
+    resdict["tvec"] /= rcoef
     ty, tx = resdict["tvec"]
     resdict["tx"] = tx
     resdict["ty"] = ty
@@ -218,6 +253,9 @@ def process_images(ims, opts):
         msg = msg.encode("utf-8")
         msg = msg.decode('unicode_escape')
         sys.stdout.write(msg)
+
+    if rcoef != 1:
+        im2 = resample(im2, 1 / rcoef)
 
     im2 = utils.unextend_by(im2, opts["extend"])
 

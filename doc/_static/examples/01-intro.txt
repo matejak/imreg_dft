@@ -1,0 +1,4 @@
+[user@linuxbox imreg_dft]$ ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result
+scale: 1.000000
+angle: 0.000000
+shift: -19, 79

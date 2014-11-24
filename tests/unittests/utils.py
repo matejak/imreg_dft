@@ -91,6 +91,20 @@ class TestUtils(ut.TestCase):
         src2 = self._addFreq(src.copy(), (0.1, 0.4))
         self._wrapFilter(src2, [(0.8, 0.8), (0.1, 0.2)], (0.8, 1.0), (0.3, 0.4))
 
+    def testArgmax_ext(self):
+        src = np.array([[3, 1, 3.01],
+                        [1, 1, 1],
+                        [0, 0, 0]])
+        src = np.fft.ifftshift(src)
+        # After FFTShift:
+        # [[ 1.    1.    1.  ]
+        #  [ 0.    0.    0.  ]
+        #  [ 1.    3.01  3.  ]]
+        infres = utils._argmax_ext(src, 'inf')  # element 3.01
+        self.assertEqual(tuple(infres), (2, 1))
+        n10res = utils._argmax_ext(src, 10)  # element 1 in the rows with 3s
+        self.assertEqual(tuple(n10res), (2, 0))
+
 
 if __name__ == '__main__':
     ut.main()
