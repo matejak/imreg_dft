@@ -126,13 +126,14 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
             are not even supposed to work.
 
     Returns:
-        dict: Contains following keys: ``scale``, ``angle``, ``tvec`` (Y, X) and
-        ``timg`` (the transformed image)
+        dict: Contains following keys: ``scale``, ``angle``, ``tvec`` (Y, X)
+        and ``timg`` (the transformed image)
 
     .. note:: There are limitations
 
         * Scale change must be less than 1.8.
-        * No subpixel precision (but you can use resampling to get around this).
+        * No subpixel precision (but you can use *resampling* to get
+          around this).
     """
     if im0.shape != im1.shape:
         raise ValueError("Images must have same shapes.")
@@ -258,8 +259,8 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
         angle (float): Degrees of rotation (clock-wise)
         tvec (2-tuple): Pixel translation vector, Y and X component.
         bgval (float): Shade of the background (filling during transformations)
-            If None is passed, :func:`imreg_dft.utils.get_borderval` with radius
-            of 5 is used to get it.
+            If None is passed, :func:`imreg_dft.utils.get_borderval` with
+            radius of 5 is used to get it.
         order (int): Order of approximation (when doing transformations). 1 =
             linear, 3 = cubic etc.
 
@@ -267,18 +268,24 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
         The transformed img, may have another i.e. (bigger) shape than
             the source.
     """
+    if img.ndim == 3:
+        # A bloody painful special case of RGB images
+        ret = np.empty_like(img)
+        for idx in range(img.shape[2]):
+            sli = (slice(None), slice(None), idx)
+            ret[sli] = transform_img(img[sli], scale, angle, tvec,
+                                     bgval, order)
+        return ret
+
     if bgval is None:
         bgval = utils.get_borderval(img, 5)
     dest0 = img.copy()
-    axes = (-1, -2)
     if scale != 1.0:
         dest0 = ndii.zoom(dest0, scale, order=order, cval=bgval)
     if angle != 0.0:
-        dest0 = ndii.rotate(dest0, angle, axes=axes, order=order, cval=bgval)
+        dest0 = ndii.rotate(dest0, angle, order=order, cval=bgval)
 
     if tvec[0] != 0 or tvec[1] != 0:
-        if img.ndim == 3:
-            tvec = (0,) + tvec
         dest0 = ndii.shift(dest0, tvec, order=order, cval=bgval)
 
     bg = np.zeros_like(img) + bgval
@@ -338,18 +345,6 @@ def _logpolar(image, radii, angles=None):
     output = np.empty_like(x)
     ndii.map_coordinates(image, [x, y], output=output)
     return output
-
-
-def imread(fname, norm=True):
-    """Return image data from img&hdr uint8 files."""
-    with open(fname + '.hdr', 'r') as fh:
-        hdr = fh.readlines()
-    img = np.fromfile(fname + '.img', np.uint8, -1)
-    img.shape = int(hdr[4].split()[-1]), int(hdr[3].split()[-1])
-    if norm:
-        img = img.astype(np.float64)
-        img /= 255.0
-    return img
 
 
 def imshow(im0, im1, im2, cmap=None, fig=None, **kwargs):

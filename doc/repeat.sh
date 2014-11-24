@@ -4,7 +4,7 @@
 test -z "$DIR" && DIR=../resources/examples
 
 # We filter out --show from the actual command line
-CMD="$(echo $@ | sed -e 's/ --show//')"
+CMD="$(echo $@ | sed -e 's/ --show//' | sed -e 's/ --output [a-Z\._]*//')"
 
 # Here we capture the output
 OUT="$(cd $DIR && sh -c "$CMD")"

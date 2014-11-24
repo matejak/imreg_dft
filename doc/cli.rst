@@ -84,6 +84,17 @@ Quick reference
 
    #. That's it, the image should now look like the template.
 
+#. Speaking of which, you can have the output saved to a file.
+   This is handy for example if you record the same thing with different means (e.g. a cell recorded with multiple microscopes) and you want to examine the difference between them on a pixel-by-pixel basis.
+   In order to be able to exploit this feature to its limits, read about ``loaders``, but you can simply try this example:
+
+   .. literalinclude:: _static/examples/09-output.txt
+     :language: shell-session
+
+   To sum it up, the registration is a process performed with images somehow converted to grayscale (for example as the average across all color chanels).
+   However, as soon as the transformation is known, an RGB image can be transformed to match the template and saved in full color.
+
+
 Advanced tweaking
 +++++++++++++++++
 

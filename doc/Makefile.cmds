@@ -11,6 +11,7 @@ TEXTS = \
 	06-exponent \
 	07-resample \
 	08-resample2 \
+	09-output \
 	$(NUL)
 
 TARGETS = $(foreach title,$(TEXTS),_static/examples/$(title).txt)
@@ -42,3 +43,6 @@ $(word 7,$(TARGETS)):
 
 $(word 8,$(TARGETS)):
 	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --lowpass 0.9,1.1 --extend 10 --print-result > $@
+
+$(word 9,$(TARGETS)):
+	$(REPEATER) ird sample1.png sample3c.jpg --iter 3 --print-result --output color.jpg > $@

@@ -1,10 +1,46 @@
-import imreg_dft
+class LoaderSet(object):
+    LOADERS = []
+    # singleton-like functionality
+    we = None
+
+    def __init__(self):
+        if LoaderSet.we is not None:
+            return LoaderSet.we
+        loaders = [loader() for loader in LoaderSet.LOADERS]
+        self.loader_dict = {}
+        for loader in loaders:
+            self.loader_dict[loader.name] = loader
+        self.loaders = sorted(loaders, key=lambda x: x.priority)
+        LoaderSet.we = self
+
+    def choose_loader(self, fname):
+        for loader in self.loaders:
+            if loader.guessCanLoad(fname):
+                return loader
+        # Ouch, no loader available!
+        return None
+
+    def get_loader(self, lname):
+        if lname not in self.loader_dict:
+            msg = "No loader named '%s'." % lname
+            msg += " Choose one of %s." % self.loader_dict.keys()
+            raise KeyError(msg)
+        return self.loader_dict(lname)
+
+
+def loader(lname):
+    def wrapped(cls):
+        cls.name = lname
+        LoaderSet.LOADERS.append(cls)
+        return cls
+    return wrapped
 
 
 class Loader(object):
-    def __init__(self, order, priority):
+    name = None
+
+    def __init__(self, priority):
         self.loaded = None
-        self.order = order
         self.priority = priority
 
     def guessCanLoad(self, fname):
@@ -12,7 +48,7 @@ class Loader(object):
         Guess whether we can load a filename just according to the name
         (extension)
         """
-        pass
+        return False
 
     def load2reg(self, fname, opts=None):
         """
@@ -21,7 +57,12 @@ class Loader(object):
         """
         if opts is None:
             opts = {}
-        return self._load2reg
+        return self._load2reg(fname, opts)
+
+    def get2save(self):
+        assert self.loaded is not None, \
+            "lalala"
+        return self.loaded
 
     def _load2reg(self, fname, opts):
         raise NotImplementedError("Use the derived class")
@@ -29,22 +70,19 @@ class Loader(object):
     def _save(self, fname, data, opts):
         raise NotImplementedError("Use the derived class")
 
-    def save(self, fname, tform_dict, save_opts):
+    def save(self, fname, what, save_opts):
         """
         Given the registration result, save the transformed input.
         """
-        assert self.loaded is not None, \
-            "lalala"
-        tformed = imreg_dft.transform_img_dict(self.loaded, tform_dict,
-                                               order=self.order)
         if save_opts is None:
             save_opts = {}
-        self._save(fname, tformed, save_opts)
+        self._save(fname, what, save_opts)
 
 
+@loader("mat")
 class MatLoader(Loader):
-    def __init__(self, order):
-        super(MatLoader, self).__init__(order, 10)
+    def __init__(self):
+        super(MatLoader, self).__init__(10)
 
     def _load2reg(self, fname, opts):
         from scipy import io
@@ -53,8 +91,8 @@ class MatLoader(Loader):
         if "input" not in opts:
             if len(valid) != 1:
                 raise RuntimeError(
-                    "You have to supply an input key, there is an ambiguity of "
-                    "what to load")
+                    "You have to supply an input key, there is an ambiguity "
+                    "of what to load")
             else:
                 key = valid[0]
         else:
@@ -80,15 +118,18 @@ class MatLoader(Loader):
         return fname.endswith(".mat")
 
 
+@loader("pil")
 class PILLoader(Loader):
-    def __init__(self, order):
-        super(PILLoader, self).__init__(order, 50)
+    def __init__(self):
+        super(PILLoader, self).__init__(50)
 
     def _load2reg(self, fname, opts):
         from scipy import misc
         loaded = misc.imread(fname)
         self.loaded = loaded
-        ret = loaded.mean(axis=0)
+        ret = loaded
+        if ret.ndim == 3:
+            ret = loaded.mean(axis=2)
         return ret
 
     def _save(self, fname, tformed, opts):
@@ -101,9 +142,10 @@ class PILLoader(Loader):
         return True
 
 
+@loader("hdr")
 class HDRLoader(Loader):
-    def __init__(self, order):
-        super(HDRLoader, self).__init__(order, 10)
+    def __init__(self):
+        super(HDRLoader, self).__init__(10)
 
     def guessCanLoad(self, fname):
         return fname.endswith(".hdr")
@@ -122,6 +164,13 @@ class HDRLoader(Loader):
         return img
 
     def _save(self, fname, tformed, opts):
-        from scipy import misc
-        img = misc.toimage(tformed)
-        img.save(fname)
+        import numpy as np
+        # Shouldn't happen, just to make sure
+        tformed[tformed > 1.0] = 1.0
+        tformed[tformed < 0.0] = 0.0
+        tformed *= 255.0
+        uint = tformed.astype(np.uint8)
+        uint.tofile(fname)
+
+
+loaders = LoaderSet()

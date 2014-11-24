@@ -115,7 +115,7 @@ def main():
                         "edge effects)")
     parser.add_argument('--order', type=int, default=1,
                         help="Interpolation order (1 = linear, 3 = cubic etc)")
-    parser.add_argument('--output',
+    parser.add_argument('--output', '-o',
                         help="Where to save the transformed image.")
     parser.add_argument(
         '--filter-pcorr', type=int, default=0,
@@ -189,16 +189,25 @@ def apodize(imgs, radius_ratio):
 
 def run(template, image, opts):
     # lazy import so no imports before run() is really called
-    from scipy import misc
     from imreg_dft import imreg
 
-    imgs = [misc.imread(fname, True) for fname in (template, image)]
+    from imreg_dft import loader
+    loaders = loader.loaders
+
+    fnames = (template, image)
+    loaders = [loaders.choose_loader(fname) for fname in fnames]
+    imgs = [loa.load2reg(fname) for fname, loa in zip(fnames, loaders)]
+
+    tosa = None
+    if opts["output"] is not None:
+        tosa = loaders[1].get2save()
+
     if opts["invert"]:
         imgs[0] *= -1
-    im2 = process_images(imgs, opts)
+    im2 = process_images(imgs, opts, tosa)
 
     if opts["output"] is not None:
-        misc.imsave(opts["output"], im2)
+        loaders[1].save(opts["output"], tosa, None)
 
     if opts["show"]:
         import pylab as pyl
@@ -216,7 +225,7 @@ def resample(img, coef):
     return ret
 
 
-def process_images(ims, opts):
+def process_images(ims, opts, tosa=None):
     # lazy import so no imports before run() is really called
     import numpy as np
     from imreg_dft import utils
@@ -247,6 +256,9 @@ def process_images(ims, opts):
     resdict["tx"] = tx
     resdict["ty"] = ty
     tform = resdict
+
+    if tosa is not None:
+        tosa[:] = ird.transform_img_dict(tosa, tform)
 
     if opts["print_format"] is not None:
         msg = opts["print_format"] % tform
