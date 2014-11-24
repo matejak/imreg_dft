@@ -270,12 +270,15 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
     if bgval is None:
         bgval = utils.get_borderval(img, 5)
     dest0 = img.copy()
+    axes = (-1, -2)
     if scale != 1.0:
         dest0 = ndii.zoom(dest0, scale, order=order, cval=bgval)
     if angle != 0.0:
-        dest0 = ndii.rotate(dest0, angle, order=order, cval=bgval)
+        dest0 = ndii.rotate(dest0, angle, axes=axes, order=order, cval=bgval)
 
     if tvec[0] != 0 or tvec[1] != 0:
+        if img.ndim == 3:
+            tvec = (0,) + tvec
         dest0 = ndii.shift(dest0, tvec, order=order, cval=bgval)
 
     bg = np.zeros_like(img) + bgval

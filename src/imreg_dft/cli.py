@@ -203,7 +203,7 @@ def run(template, image, opts):
     if opts["show"]:
         import pylab as pyl
         fig = pyl.figure()
-        imreg.imshow(fig, imgs[0], imgs[1], im2)
+        imreg.imshow(imgs[0], imgs[1], im2, fig=fig)
         pyl.show()
 
 
