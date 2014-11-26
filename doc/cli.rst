@@ -1,3 +1,5 @@
+.. _cli:
+
 Command-line tool overview
 ==========================
 
@@ -94,6 +96,23 @@ Quick reference
    To sum it up, the registration is a process performed with images somehow converted to grayscale (for example as the average across all color chanels).
    However, as soon as the transformation is known, an RGB image can be transformed to match the template and saved in full color.
 
+Loaders
++++++++
+
+``ird`` can support a wide variety of input formats.
+It uses an abstract means of how to load and save an image.
+
+To cut the long story short --- you probably want to autodetection of how to load an image based on the file extension.
+The list of available loaders is obtained by passing the ``--help-loader``.
+To inquire about meaning of individual options, also specify a loader on the same command-line, e.g. pass ``--loader pil``.
+
+To pass an option to change loader properties pass a ``--loader-opts`` argument.
+It accepts comma-separated ``option name=value`` pairs, so for example the ``mat`` loader understands ``--loader-opts in=imgdata,out=timgdata``.
+Note that all loaders have access to passed options.
+
+The loaders concept functionality is limited by now, but it can be extended easily by writing code.
+See the :ref:`developer documentation <loaders_devel>` to learn the background.
+If you miss some functionality, you are kindly invited to create a pull request!
 
 Advanced tweaking
 +++++++++++++++++

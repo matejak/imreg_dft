@@ -1,17 +1,87 @@
+# -*- coding: utf-8 -*-
+# loader.py
+
+# Copyright (c) 2014-?, Matěj Týč
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright
+#   notice, this list of conditions and the following disclaimer.
+# * Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+# * Neither the name of the copyright holders nor the names of any
+#   contributors may be used to endorse or promote products derived
+#   from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+"""
+The module contains a layer of functionality that allows
+abstract saving and loading of files.
+
+A loader class inherits from :class:`Loader`.
+A singleton class :class:`LoaderSet` is the main public interface
+of this module. available as a global variable ``LOADERS``.
+It keeps track of all registered loaders and takes care
+after them (presents them with options, requests etc.)
+Loaders are registered as classes using the decorator :func:`loader`.
+
+Individual loaders absolutely have to implement methods :meth:`Loader._save`
+and :meth:`Loader._load2reg`.
+
+This module facilitates integration of its functionality by defining
+:func:`update_parser` and :func:`settle_loaders`. While the first one can
+add capabilities to a parser (or parser group), the second one updates
+``LOADERS`` accordingly while given parsed arguments.
+"""
+
+import sys
+
+
+def _str2nptype(stri):
+    import numpy as np
+    msg = ("The string '%s' is supposed to correspond to a "
+           "numpy type" % stri)
+    try:
+        typ = eval("np." + stri)
+    except Exception as exc:
+        msg += " but it is not the case at all - %s." % exc.message
+        raise ValueError(msg)
+    typestr = type(typ).__name__
+    # We allow mock object for people who know what they are doing.
+    if typestr not in ("type", "Mock"):
+        msg += " but it is a different animal than 'type': '%s'" % typestr
+        raise ValueError(msg)
+    return typ
+
+
 class LoaderSet(object):
-    LOADERS = []
+    _LOADERS = []
     # singleton-like functionality
-    we = None
+    _we = None
 
     def __init__(self):
-        if LoaderSet.we is not None:
-            return LoaderSet.we
-        loaders = [loader() for loader in LoaderSet.LOADERS]
+        if LoaderSet._we is not None:
+            return LoaderSet._we
+        loaders = [loader() for loader in LoaderSet._LOADERS]
         self.loader_dict = {}
         for loader in loaders:
             self.loader_dict[loader.name] = loader
         self.loaders = sorted(loaders, key=lambda x: x.priority)
-        LoaderSet.we = self
+        LoaderSet._we = self
 
     def choose_loader(self, fname):
         for loader in self.loaders:
@@ -20,28 +90,93 @@ class LoaderSet(object):
         # Ouch, no loader available!
         return None
 
-    def get_loader(self, lname):
+    def get_loader(self, fname, lname=None):
+        if lname is None:
+            ret = self.choose_loader(fname)
+            if ret is None:
+                msg = ("No loader wanted to load '%s' during autodetection"
+                       % fname)
+                raise IOError(msg)
+        ret = self._get_loader(lname)
+        return ret
+
+    def _get_loader(self, lname):
         if lname not in self.loader_dict:
             msg = "No loader named '%s'." % lname
             msg += " Choose one of %s." % self.loader_dict.keys()
             raise KeyError(msg)
         return self.loader_dict(lname)
 
+    def get_loader_names(self):
+        ret = self.loader_dict.keys()
+        return tuple(ret)
 
-def loader(lname):
+    @classmethod
+    def add_loader(cls, loader_cls):
+        cls._LOADERS.append(loader_cls)
+
+    def print_loader_help(self, lname=None):
+        if lname is None:
+            msg = "Available loaders: %s\n" % (self.get_loader_names(),)
+            # Lowest priority first - they are usually the most general ones
+            for loader in self.loaders[::-1]:
+                msg += "\n\t%s: %s\n\tAccepts options: %s\n" % (
+                    loader.name, loader.desc, tuple(loader.opts.keys()))
+        else:
+            loader = self.loader_dict[lname]
+            msg = "Loader '%s':\n" % loader.name
+            msg += "\t%s\n" % loader.desc
+            msg += "Accepts options:\n"
+            for opt in loader.opts:
+                msg += "\t'%s' (default '%s'): %s\n" % (
+                    opt, loader.defaults[opt], loader.opts[opt], )
+        print(msg)
+
+    def distribute_opts(self, opts):
+        if opts is None:
+            # don't return, do something so possible problems surface.
+            opts = {}
+        for loader in self.loaders:
+            loader.setOpts(opts)
+
+
+def loader(lname, priority):
+    """
+    A decorator interconnecting an abstract loader with the rest of imreg_dft
+    It sets the "nickname" of the loader and its priority during autodetection
+    """
     def wrapped(cls):
         cls.name = lname
-        LoaderSet.LOADERS.append(cls)
+        cls.priority = priority
+        LoaderSet.add_loader(cls)
         return cls
     return wrapped
 
 
 class Loader(object):
-    name = None
+    """
 
-    def __init__(self, priority):
+    .. automethod:: _save
+    .. automethod:: _load2reg
+    """
+    name = None
+    priority = 10
+    desc = ""
+    opts = {}
+    defaults = {}
+    str2val = {}
+
+    def __init__(self):
         self.loaded = None
-        self.priority = priority
+        self._opts = {}
+        # First run, the second will hopefully follow later
+        self.setOpts({})
+
+    def setOpts(self, options):
+        for opt in self.opts:
+            stri = options.get(opt, self.defaults[opt])
+            val = self.str2val.get(opt, lambda x: x)(stri)
+            self._opts[opt] = val
 
     def guessCanLoad(self, fname):
         """
@@ -50,45 +185,61 @@ class Loader(object):
         """
         return False
 
-    def load2reg(self, fname, opts=None):
+    def load2reg(self, fname):
         """
         Given a filename, it loads it and returns in a form suitable for
         registration (i.e. float, flattened, ...).
         """
-        if opts is None:
-            opts = {}
-        return self._load2reg(fname, opts)
+        return self._load2reg(fname)
 
     def get2save(self):
         assert self.loaded is not None, \
-            "lalala"
+            "Saving without loading beforehand, which is not supported. "
         return self.loaded
 
-    def _load2reg(self, fname, opts):
+    def _load2reg(self, fname):
+        """
+        To be implemented by derived class.
+        Load data from fname in a way that they can be used in the
+        registration process (so it is a 2D array).
+        Possibly take into account options passed upon the class creation.
+        """
         raise NotImplementedError("Use the derived class")
 
-    def _save(self, fname, data, opts):
+    def _save(self, fname, data):
+        """
+        To be implemented by derived class.
+        Save data to fname, possibly taking into account previous loads
+        and/or options passed upon the class creation.
+        """
         raise NotImplementedError("Use the derived class")
 
-    def save(self, fname, what, save_opts):
+    def save(self, fname, what):
         """
         Given the registration result, save the transformed input.
         """
-        if save_opts is None:
-            save_opts = {}
-        self._save(fname, what, save_opts)
+        self._save(fname, what)
 
 
-@loader("mat")
-class MatLoader(Loader):
+@loader("mat", 10)
+class _MatLoader(Loader):
+    desc = "Loader of .mat (MATLAB v5) binary files"
+    opts = {"in": "The structure to load (empty => autodetect)",
+            "out": "The structure to save the result to (empty => the same "
+                   "as the 'in'",
+            "type": "Name of the numpy data type for the output (such as "
+                    "int, uint8 etc.)"}
+    defaults = {"in": "", "out": "", "type": "float"}
+    str2val = {"type": _str2nptype}
+
     def __init__(self):
-        super(MatLoader, self).__init__(10)
+        super(_MatLoader, self).__init__()
 
-    def _load2reg(self, fname, opts):
+    def _load2reg(self, fname):
         from scipy import io
         mat = io.loadmat(fname)
         valid = [key for key in mat if not key.startswith("_")]
-        if "input" not in opts:
+        if self._opts["input"] == "":
             if len(valid) != 1:
                 raise RuntimeError(
                     "You have to supply an input key, there is an ambiguity "
@@ -96,7 +247,7 @@ class MatLoader(Loader):
             else:
                 key = valid[0]
         else:
-            key = opts["input"]
+            key = self._opts["input"]
             assert key in valid
         ret = mat[key]
         self._loaded_all = mat
@@ -104,35 +255,61 @@ class MatLoader(Loader):
         self.loaded = ret
         return ret
 
-    def _save(self, fname, tformed, opts):
+    def _save(self, fname, tformed):
         from scipy import io
-        if "output" not in opts:
+        if self._opts["output"] == "":
             key = self._key
         else:
-            key = opts["output"]
+            key = self._opts["output"]
         out = self._loaded_all
-        out[key] = tformed
+        out[key] = tformed.astype(self._opts["type"])
         io.savemat(fname, out)
 
     def guessCanLoad(self, fname):
         return fname.endswith(".mat")
 
 
-@loader("pil")
-class PILLoader(Loader):
-    def __init__(self):
-        super(PILLoader, self).__init__(50)
+def _str2flat(stri):
+    assert stri in "R,G,B,V".split(","), \
+        "Flat value has to be one of R, G, B, V, is '%s' instead" % stri
+    return stri
 
-    def _load2reg(self, fname, opts):
+
+@loader("pil", 50)
+class _PILLoader(Loader):
+    desc = "Loader of image formats that Pillow (or PIL) can support"
+    opts = {"flat": "How to flatten (the possibly RGB image) for the "
+                    "registration. Values can be R, G, B or V (V for value - "
+                    "a number proportional to average of R, G and B)",
+            }
+    defaults = {"flat": "V"}
+    str2val = {"flat": _str2flat}
+
+    def __init__(self):
+        super(_PILLoader, self).__init__()
+
+    def _flatten(self, image):
+        char2idx = dict(R=0, G=1, B=2)
+        char = self._opts["flat"]
+        if char == "V":
+            ret = image.mean(axis=2)
+        elif char in char2idx:
+            ret = image[:, :, char2idx[char]]
+        else:
+            # Shouldn't happen
+            assert False, "Unhandled - invalid flat spec '%s'" % char
+        return ret
+
+    def _load2reg(self, fname):
         from scipy import misc
         loaded = misc.imread(fname)
         self.loaded = loaded
         ret = loaded
         if ret.ndim == 3:
-            ret = loaded.mean(axis=2)
+            ret = self._flatten(ret)
         return ret
 
-    def _save(self, fname, tformed, opts):
+    def _save(self, fname, tformed):
         from scipy import misc
         img = misc.toimage(tformed)
         img.save(fname)
@@ -142,15 +319,20 @@ class PILLoader(Loader):
         return True
 
 
-@loader("hdr")
-class HDRLoader(Loader):
+@loader("hdr", 10)
+class _HDRLoader(Loader):
+    desc = ("Loader of .hdr and .img binary files. Supply the '.hdr' as input,"
+            "a '.img' with the same basename is expected.")
+    opts = {"norm": "Whether to divide the value by 255.0 (0 for not to)"}
+    defaults = {"norm": "1"}
+
     def __init__(self):
-        super(HDRLoader, self).__init__(10)
+        super(_HDRLoader, self).__init__()
 
     def guessCanLoad(self, fname):
         return fname.endswith(".hdr")
 
-    def _load2reg(self, fname, opts):
+    def _load2reg(self, fname):
         """Return image data from img&hdr uint8 files."""
         import numpy as np
         basename = fname.rstrip(".hdr")
@@ -158,12 +340,12 @@ class HDRLoader(Loader):
             hdr = fh.readlines()
         img = np.fromfile(basename + '.img', np.uint8, -1)
         img.shape = int(hdr[4].split()[-1]), int(hdr[3].split()[-1])
-        if opts.get("norm", True):
+        if int(self._opts["norm"]):
             img = img.astype(np.float64)
             img /= 255.0
         return img
 
-    def _save(self, fname, tformed, opts):
+    def _save(self, fname, tformed):
         import numpy as np
         # Shouldn't happen, just to make sure
         tformed[tformed > 1.0] = 1.0
@@ -173,4 +355,50 @@ class HDRLoader(Loader):
         uint.tofile(fname)
 
 
-loaders = LoaderSet()
+def _parse_opts(stri):
+    from argparse import ArgumentTypeError
+    components = stri.split(",")
+    ret = {}
+    for comp in components:
+        sides = comp.split("=")
+        if len(sides) != 2:
+            raise ArgumentTypeError(
+                "The options spec has to look like 'option=value', got %s."
+                % comp)
+        lhs, rhs = sides
+        valid_optname = False
+        for loader in LOADERS.loaders:
+            if lhs in loader.opts:
+                valid_optname = True
+                break
+        if not valid_optname:
+            raise ArgumentTypeError(
+                "The option '%s' is not understood by any loader" % lhs)
+        ret[lhs] = rhs
+    return ret
+
+
+def update_parser(parser):
+    parser.add_argument(
+        "--loader", choices=LOADERS.get_loader_names(), default=None,
+        help="Force usage of a concrete loader (default is autodetection). "
+        "If you plan on using two loaders to load input, autodetection is the "
+        "only way of achieving this.")
+    parser.add_argument(
+        "--loader-opts", default=None, type=_parse_opts,
+        help="Options for a loader "
+        "(use --loader to make sure that one is used or read the docs.)")
+    parser.add_argument(
+        "--help-loader", default=False, action="store_true",
+        help="Get help on all loaders or on the current loader "
+        "and its options.")
+
+
+def settle_loaders(args):
+    if args.help_loader:
+        LOADERS.print_loader_help(args.loader)
+        sys.exit(0)
+    LOADERS.distribute_opts(args.loader_opts)
+
+
+LOADERS = LoaderSet()

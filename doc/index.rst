@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    overview.rst
+   quickstart.rst
    cli.rst
    api.rst
    devel.rst

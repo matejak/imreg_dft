@@ -50,10 +50,8 @@ import imreg_dft.utils as utils
 __all__ = ['translation', 'similarity', 'transform_img',
            'transform_img_dict', 'imshow']
 
-EXPO = 'inf'
 
-
-def _get_ang_scale(ims, exponent=EXPO):
+def _get_ang_scale(ims, exponent='inf'):
     """
     Given two images, return their scale and angle difference.
 
@@ -102,7 +100,7 @@ def _get_ang_scale(ims, exponent=EXPO):
     return 1.0 / scale, - angle
 
 
-def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent=EXPO):
+def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent='inf'):
     """
     Return similarity transformed image im1 and transformation parameters.
     Transformation parameters are: isotropic scale factor, rotation angle (in
@@ -254,7 +252,10 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
     Return translation vector to register images.
 
     Args:
-        img (2D numpy array): What will be transformed
+        img (2D or 3D numpy array): What will be transformed.
+            If a 3D array is passed, it is treated in a manner in which RGB
+            images are supposed to be handled - i.e. assume that coordinates
+            are (Y, X, channels).
         scale (float): The scale factor (scale > 1.0 means zooming in)
         angle (float): Degrees of rotation (clock-wise)
         tvec (2-tuple): Pixel translation vector, Y and X component.
@@ -262,7 +263,7 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
             If None is passed, :func:`imreg_dft.utils.get_borderval` with
             radius of 5 is used to get it.
         order (int): Order of approximation (when doing transformations). 1 =
-            linear, 3 = cubic etc.
+            linear, 3 = cubic etc. Linear works surprisingly well.
 
     Returns:
         The transformed img, may have another i.e. (bigger) shape than

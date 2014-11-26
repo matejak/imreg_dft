@@ -36,6 +36,7 @@ import sys
 import argparse as ap
 
 import imreg_dft as ird
+import imreg_dft.loader
 
 
 def _float_tuple(string):
@@ -134,7 +135,12 @@ def main():
     parser.add_argument('--version', action="version",
                         version="imreg_dft %s" % ird.__version__,
                         help="Just print version and exit")
+    ird.loader.update_parser(parser)
+
     args = parser.parse_args()
+
+    loader_stuff = ird.loader.settle_loaders(args)
+
     print_format = args.print_format
     if not args.print_result:
         print_format = None
@@ -191,8 +197,7 @@ def run(template, image, opts):
     # lazy import so no imports before run() is really called
     from imreg_dft import imreg
 
-    from imreg_dft import loader
-    loaders = loader.loaders
+    loaders = ird.loader.LOADERS
 
     fnames = (template, image)
     loaders = [loaders.choose_loader(fname) for fname in fnames]
@@ -207,7 +212,7 @@ def run(template, image, opts):
     im2 = process_images(imgs, opts, tosa)
 
     if opts["output"] is not None:
-        loaders[1].save(opts["output"], tosa, None)
+        loaders[1].save(opts["output"], tosa)
 
     if opts["show"]:
         import pylab as pyl

@@ -18,6 +18,9 @@ image registration [1].
   - 2011-2014, Christoph Gohlke
   - 2014, Matěj Týč
 
+
+.. _requirements:
+ 
 Requirements
 ------------
 See the ``requirements.txt`` file in the project's root for the exact specification.
@@ -25,8 +28,8 @@ Generally, you will need ``numpy`` and ``scipy`` for the algorithm functionality
 
 Notes
 -----
-The API and algorithms are not stable yet and are expected to change between
-revisions.
+The API and algorithms are quite good, but help is appreciated.
+``imreg_dft`` uses semantic versioning, so backward compatibility of any kind will not break across versions with the same major version number.
 
 References
 ----------
@@ -38,20 +41,3 @@ References
     Computers & Geosciences, 29, 1045-1055, 2003.
 (3) Image Registration Using Adaptive Polar Transform. R Matungka, YF Zheng,
     RL Ewing. IEEE Transactions on Image Processing, 18(10), 2009.
-
-
-Examples
---------
-
-The following examples are located in the `resources/code` directory of the project repository as ``similarity.py`` and ``translation.py``.
-You can launch them from their location once you have installed ``imreg_dft`` to observe the output.
-
-The full-blown similarity function that returns parameters (and the transormed image):
-
-.. literalinclude:: ../resources/code/similarity.py
-    :language: python
-
-Or just the translation:
-
-.. literalinclude:: ../resources/code/translation.py
-    :language: python
