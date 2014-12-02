@@ -1,5 +1,8 @@
 REPEATER = ./repeat.sh
 
+PYTHON ?= python
+RSRCDIR = ../resources/examples
+
 NUL =
 
 TEXTS = \
@@ -12,37 +15,77 @@ TEXTS = \
 	07-resample \
 	08-resample2 \
 	09-output \
+	10-testing_help \
 	$(NUL)
+
+TEMPFILE = temp.txt
+MV = mv
 
 TARGETS = $(foreach title,$(TEXTS),_static/examples/$(title).txt)
 
+INTRO_PNG = intro.png
 $(word 1,$(TARGETS)):
-	DIR=../../imreg_dft $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $@
+	DIR=../../imreg_dft PRIV="-o $(PWD)/$(INTRO_PNG)" $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
 
 $(word 2,$(TARGETS)):
-	DIR=../../imreg_dft $(REPEATER) cd resources/examples > $@
-	$(REPEATER) ird sample1.png sample2.png --print-result --print-format "'translation:%(tx)d,%(ty)d\n'" >> $@
+	DIR=../../imreg_dft $(REPEATER) cd resources/examples > $(TEMPFILE)
+	$(REPEATER) ird sample1.png sample2.png --print-result --print-format "'translation:%(tx)d,%(ty)d\n'" >> $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
 
 $(word 3,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --show > $@
+	$(REPEATER) ird sample1.png sample3.png --show > $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
+
+ITER1 = iter1.png
+ITER2 = iter2.png
+ITER3 = iter3.png
 
 $(word 4,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" > $@
-	$(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" --iter 2 >> $@
-	$(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" --iter 4 --show >> $@
+	PRIV="-o $(PWD)/$(ITER1)" $(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" > $(TEMPFILE)
+	PRIV="-o $(PWD)/$(ITER2)" $(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" --iter 2 >> $(TEMPFILE)
+	PRIV="-o $(PWD)/$(ITER3)" $(REPEATER) ird sample1.png sample3.png --print-result --print-format "'scale: %(scale)g, angle: %(angle)g\n'" --iter 4 --show >> $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
 
 $(word 5,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample4.png --extend 20 --show --print-result --iter 4 > $@
+	$(REPEATER) ird sample1.png sample4.png --extend 20 --show --print-result --iter 4 > $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
 
 $(word 6,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --exponent inf --print-result > $@
-	$(REPEATER) ird sample1.png sample3.png --exponent 5 --print-result >> $@
+	$(REPEATER) ird sample1.png sample3.png --exponent inf --print-result > $(TEMPFILE)
+	$(REPEATER) ird sample1.png sample3.png --exponent 5 --print-result >> $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
 
 $(word 7,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --print-result > $@
+	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --print-result > $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
 
 $(word 8,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --lowpass 0.9,1.1 --extend 10 --print-result > $@
+	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --lowpass 0.9,1.1 --extend 10 --print-result > $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
 
 $(word 9,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3c.jpg --iter 3 --print-result --output color.jpg > $@
+	$(REPEATER) ird sample1.png sample3c.jpg --iter 3 --print-result --output color.jpg > $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
+
+$(word 10,$(TARGETS)):
+	DIR=../../imreg_dft $(REPEATER) cd tests > $(TEMPFILE)
+	DIR=../tests $(REPEATER) make help >> $(TEMPFILE)
+	OUT="..." DIR=../tests $(REPEATER) make check >> $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
+
+$(INTRO_PNG): | $(word 1,$(TARGETS))
+	@echo This file is a side-effect product of the rule for $|
+	@echo It is supposed to be already present, so something is wrong.
+	@false
+
+$(ITER1) $(ITER2) $(ITER3): | $(word 4,$(TARGETS))
+	@echo This file is a side-effect product of the rule for $|
+	@echo It is supposed to be already present, so something is wrong.
+	@false
+
+big.png big.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample2.png $(INTRO_PNG)
+	$(PYTHON) stack_imgs.py $^ -o $@ --size 8,2.2
+
+iter.png iter.pdf: $(ITER1) $(ITER2) $(ITER3)
+	$(PYTHON) stack_imgs.py $^ -o $@ --size 8,2.2

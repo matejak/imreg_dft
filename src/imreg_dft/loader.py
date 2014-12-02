@@ -83,7 +83,13 @@ class LoaderSet(object):
         self.loaders = sorted(loaders, key=lambda x: x.priority)
         LoaderSet._we = self
 
-    def choose_loader(self, fname):
+    def _choose_loader(self, fname):
+        """
+        Use autodetection to select a loader to use.
+
+        Returns:
+            Loader instance or None if no loader can be used.
+        """
         for loader in self.loaders:
             if loader.guessCanLoad(fname):
                 return loader
@@ -91,13 +97,19 @@ class LoaderSet(object):
         return None
 
     def get_loader(self, fname, lname=None):
+        """
+        Try to select a loader. Either we know what we want, or an
+        autodetection will take place.
+        Exceptions are raised when things go wrong.
+        """
         if lname is None:
-            ret = self.choose_loader(fname)
+            ret = self._choose_loader(fname)
             if ret is None:
                 msg = ("No loader wanted to load '%s' during autodetection"
                        % fname)
                 raise IOError(msg)
-        ret = self._get_loader(lname)
+        else:
+            ret = self._get_loader(lname)
         return ret
 
     def _get_loader(self, lname):
@@ -108,14 +120,24 @@ class LoaderSet(object):
         return self.loader_dict(lname)
 
     def get_loader_names(self):
+        """
+        What are the names of loaders that we know.
+        """
         ret = self.loader_dict.keys()
         return tuple(ret)
 
     @classmethod
     def add_loader(cls, loader_cls):
+        """
+        Use this method (at early run-time) to register a loader
+        """
         cls._LOADERS.append(loader_cls)
 
     def print_loader_help(self, lname=None):
+        """
+        Print info about loaders.
+        Either print short summary about all loaders, or focus just on one.
+        """
         if lname is None:
             msg = "Available loaders: %s\n" % (self.get_loader_names(),)
             # Lowest priority first - they are usually the most general ones
@@ -133,6 +155,9 @@ class LoaderSet(object):
         print(msg)
 
     def distribute_opts(self, opts):
+        """
+        Propagate loader options to all loaders.
+        """
         if opts is None:
             # don't return, do something so possible problems surface.
             opts = {}
@@ -394,11 +419,19 @@ def update_parser(parser):
         "and its options.")
 
 
-def settle_loaders(args):
+def settle_loaders(args, fnames=None):
     if args.help_loader:
         LOADERS.print_loader_help(args.loader)
         sys.exit(0)
     LOADERS.distribute_opts(args.loader_opts)
+    ret = {}
+    loaders = []
+    if fnames is not None:
+        for fname in fnames:
+            loader = LOADERS.get_loader(fname, args.loader)
+            loaders.append(loader)
+    ret["loaders"] = loaders
+    return ret
 
 
 LOADERS = LoaderSet()

@@ -215,6 +215,9 @@ latex_elements = {
 
 # Additional stuff for the LaTeX preamble.
 #'preamble': '',
+    'papersize': 'a4paper',
+    'classoptions': ',openany,oneside',
+    'babel': '\\usepackage[english]{babel}'
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

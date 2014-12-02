@@ -1,0 +1,8 @@
+[user@linuxbox imreg_dft]$ cd tests
+[user@linuxbox tests]$ make help
+make[1]: Entering directory '/home/user/imreg_dft/tests'
+Run either 'make check' or 'make check COVERAGE=<coverage command name>'
+You may also append 'PYTHON=<python executable>' if you don't use coverage
+make[1]: Leaving directory '/home/user/imreg_dft/tests'
+[user@linuxbox tests]$ make check
+...

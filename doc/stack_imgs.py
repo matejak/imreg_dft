@@ -3,6 +3,11 @@ import argparse as ap
 import scipy as sp
 import scipy.misc
 from matplotlib import pyplot as plt
+import matplotlib.backends.backend_agg as agg
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+
+
+_LABELS = "abcde"
 
 
 def parse():
@@ -10,11 +15,11 @@ def parse():
     parser.add_argument(
         "infiles", nargs="+")
     parser.add_argument(
-        "-s", "--size", default=[5, 4],
+        "-s", "--size", default=[5.8, 2.8],
         type=lambda x: [float(y) for y in x.split(",")],
         help="Size of the image (inches)")
     parser.add_argument(
-        "-d", "--dpi", default=150.0, type=float,
+        "-d", "--dpi", default=200.0, type=float,
         help="Resolution of the image")
     parser.add_argument(
         "-o", "--output", default=None,
@@ -23,18 +28,36 @@ def parse():
     return ret
 
 
+def _imshow(pl, what, label):
+    pl.grid()
+    pl.imshow(what, cmap=plt.cm.gray)
+    pl.tick_params(axis='both', which='major', labelsize=10)
+    at = AnchoredText(
+        label, loc=2)
+    at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    pl.add_artist(at)
+
+
 def mkFig(fig, infiles):
-    imgs = [sp.misc.imread(fname) for fname in infiles]
-    for ii, img in enumerate(imgs):
-        pl = fig.add_subplot(ii, 1, ii)
-        pl.imshow(img)
+    imgs = [sp.misc.imread(fname, True) for fname in infiles]
+    ncols = len(imgs)
+    pl0 = fig.add_subplot(1, ncols, 1)
+    _imshow(pl0, imgs[0], _LABELS[0])
+    for ii, img in enumerate(imgs[1:]):
+        ii += 2
+        pl = fig.add_subplot(1, ncols, ii, sharey=pl0)
+        plt.setp(pl.get_yticklabels(), visible=False)
+        _imshow(pl, img, _LABELS[ii - 1])
 
 
 def run():
     args = parse()
-    fig = plt.Figure(dpi=args.dpi, size=args.size)
+    fig = plt.Figure(dpi=args.dpi, figsize=args.size)
+    fig.set_canvas(agg.FigureCanvasAgg(fig))
+    mkFig(fig, args.infiles)
+    fig.tight_layout()
     fig.savefig(args.output)
 
 
-    if __name__ == "__main__":
-        run()
+if __name__ == "__main__":
+    run()

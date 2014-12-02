@@ -34,12 +34,15 @@ You will need the ``git`` version control system to obtain the source code:
   [user@linuxbox ~]$ git clone https://github.com/matejak/imreg_dft.git
   [user@linuxbox ~]$ cd imreg_dft
   [user@linuxbox imreg_dft]$ python setup.py install
+  ...
 
 As with other Python packages, there is a ``setup.py``.
 To install ``imreg_dft``, run ``python setup.py install`` (add ``--user`` argument after ``install`` to perform user install).
 
 If you want to try ``imreg_dft`` without installing it, feel free to do so.
 The package is in the ``src`` directory.
+
+.. _quickstart:
 
 Quickstart
 ----------
@@ -48,6 +51,8 @@ A succesful installation means that:
 
 * The Python interpreter can import ``imreg_dft``.
 * There is the ``ird`` script available to you, e.g. running ``ird --version`` should not end by errors of any kind.
+
+.. _py_examples:
 
 Python examples
 +++++++++++++++
@@ -69,3 +74,48 @@ Command-line script examples
 ++++++++++++++++++++++++++++
 
 Please see the :ref:`corresponding section <cli>` that is full of examples.
+
+Do not forget
+-------------
+
+These steps should go before the :ref:`quickstart` section, but they come now as this is a quickstart guide.
+
+Tests
++++++
+
+You can run tests after installation.
+There are now unit tests and regression tests.
+You can execute them by going to the ``tests`` subdirectory and running
+
+.. literalinclude:: _static/examples/10-testing_help.txt
+    :language: shell-session
+
+If you have the ``coverage`` module installed, you also have a ``coverage`` (or perhaps ``coverage2``) scripts in your path.
+You can declare that and therefore have the tests ran with coverage support:
+
+.. code-block:: shell-session
+
+  [user@linuxbox tests]$ make check COVERAGE=coverage2
+  ...
+
+In any way, if you see something like
+
+.. code-block:: shell-session
+
+  [user@linuxbox tests]$ make check
+  ...
+  make[1]: Leaving directory '/home/user/imreg_dft/tests'
+  * * * * * * * * * * * * * * * * * * * * *
+   Rejoice, tests have passed successfully!
+  * * * * * * * * * * * * * * * * * * * * *
+
+it is a clear sign that there indeed was no error encountered during the tests at all.
+
+Documentation
++++++++++++++
+
+Although you can read the documentation on `readthedocs.org <http://imreg-dft.readthedocs.org/en/latest/index.html>`_, you can generate your own easily.
+You just have to check out the ``requirements_docs.txt`` file at the root of the project and make sure you have all modules that are mentioned there.
+You also need to have ``imreg_dft`` installed prior documentation generation.
+
+Then, just go to the ``doc`` directory and run ``make html`` or ``make latexpdf`` there.

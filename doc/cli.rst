@@ -160,7 +160,14 @@ There are some extended options you can use, we will explain their meaning now:
 
     Formally: Let :math:`f(x)` be a discrete non-negative function, for instance :math:`f(0) = 3,\ f(1) = 0, f(2) = 2.99, f(3) = 1`.
     Then, the index of the greatest value is denoted by :math:`\mathrm{argmax}\, f(x) = 0`, because :math:`f(0)` is the greatest of :math:`f(x)` for all :math:`x` whete :math:`f(x)` is defined.
-    The coordinate of the center of mass of :math:`f(x)` is :math:`t_f = \sum f(x_i)^c x_i / \sum f(x_i)^c`, where :math:`c` is our exponent, in case of real center of mass, :math:`c = 1`.
+
+    Most importantly, the coordinate of the center of mass of :math:`f(x)` is
+
+    .. math::
+
+      t_f = \frac{\sum f(x_i)^c x_i} {\sum f(x_i)^c},
+
+    where :math:`c` is our exponent, in case of real center of mass, :math:`c = 1`.
     The problem is that in this case, the value of :math:`\mathrm{argmax}\, f(x)` is unstable, since the difference between :math:`f(0)` and :math:`f(2)` is relatively low.
     If we consider real-world conditions, the difference could be below a fraction of the noise standard deviation.
     However, if we select a value of :math:`c = 5`, the value of corresponding :math:`t_f = 0.996`, which is just between the two highest values and not affected by :math:`f(3)`.

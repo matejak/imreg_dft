@@ -139,7 +139,7 @@ def main():
 
     args = parser.parse_args()
 
-    loader_stuff = ird.loader.settle_loaders(args)
+    loader_stuff = ird.loader.settle_loaders(args, (args.template, args.image))
 
     print_format = args.print_format
     if not args.print_result:
@@ -159,6 +159,7 @@ def main():
         invert=args.invert,
         output=args.output,
     )
+    opts.update(loader_stuff)
     run(args.template, args.image, opts)
 
 
@@ -200,7 +201,7 @@ def run(template, image, opts):
     loaders = ird.loader.LOADERS
 
     fnames = (template, image)
-    loaders = [loaders.choose_loader(fname) for fname in fnames]
+    loaders = opts["loaders"]
     imgs = [loa.load2reg(fname) for fname, loa in zip(fnames, loaders)]
 
     tosa = None
