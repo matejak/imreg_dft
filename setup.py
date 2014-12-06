@@ -9,6 +9,8 @@ import imreg_dft
 
 reqs = open('requirements.txt', 'r').read().strip().splitlines()
 
+longdesc = open(os.path.join('doc', 'overview.rst'), 'r').read()
+
 st.setup(
     name="imreg_dft",
     version=imreg_dft.__version__,
@@ -26,16 +28,18 @@ st.setup(
         ],
     },
     install_requires=reqs,
-    extras_require = {
+    extras_require={
         'plotting':  ["matplotlib>=1.2"],
         'loading images': ["pillow>=2.2"],
     },
     classifiers=[
-        "Development Status :: 1 - Beta",
+        "Development Status :: 4 - Beta",
         "Natural Language :: English",
         "Intended Audience :: Scientists",
         "Topic :: Utilities",
+        "Operating System :: OS Independent",
         "License :: OSI Approved :: BSD License",
     ],
+    long_description=longdesc,
     zip_safe=True,
 )

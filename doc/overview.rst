@@ -26,10 +26,25 @@ Requirements
 See the ``requirements.txt`` file in the project's root for the exact specification.
 Generally, you will need ``numpy`` and ``scipy`` for the algorithm functionality and ``matplotlib`` for plotting.
 
+Quickstart
+----------
+
+`Read the docs <http://imreg-dft.readthedocs.org>`_, the full-blown quickstart is there.
+Disregard this section if you actually are reading the docs (and not the project's webpage, where this text also appears).
+
+Or even better, generate the documentation yourself! 
+
+1. Install the package by running ``python setup.py install`` in the project root.
+#. Install packages that are required for the documentation to compile (see the ``requirements_docs.txt`` file.
+#. Go to the ``doc`` directory and run ``make html`` there.
+   The documentation should appear in the ``_build`` subfolder, so you may open ``_build/html/index.html`` with your web browser to see it.
+
 Notes
 -----
 The API and algorithms are quite good, but help is appreciated.
-``imreg_dft`` uses semantic versioning, so backward compatibility of any kind will not break across versions with the same major version number.
+``imreg_dft`` uses `semantic versioning <http://semver.org/>`_, so backward compatibility of any kind will not break across versions with the same major version number.
+
+``imreg_dft`` is based on the `code <http://www.lfd.uci.edu/~gohlke/code/imreg.py.html>`_ by Christoph Gohlke.
 
 References
 ----------

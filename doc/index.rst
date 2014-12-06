@@ -16,6 +16,7 @@ Contents:
    cli.rst
    api.rst
    devel.rst
+   changelog.rst
 
 
 Indices and tables
