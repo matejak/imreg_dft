@@ -2,6 +2,8 @@
 RTESTDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 PROOT = $(RTESTDIR)/../..
 RSRCDIR = $(PROOT)/resources/examples
+
+PYTHON ?= python
 COVERAGE =
 CMD =
 
@@ -10,7 +12,7 @@ ifdef COVERAGE
 export CMD = $(COVERAGE) run -a --source imreg_dft $(PROOT)/src/imreg_dft/cli.py
 endif
 
-check: check-translation check-similarity
+check: check-translation check-similarity check-similarity2
 
 clean:
 	$(RM) .coverage
@@ -26,5 +28,17 @@ check-similarity: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3.png
 	sh $(RTESTDIR)/check_similarity.sh $(word 1,$^) $(word 2,$^) 35 72 -30 1.25 --iter 4
 	sh $(RTESTDIR)/check_similarity.sh $(word 2,$^) $(word 1,$^) -54 -37 30 0.8 --iter 4
 	DANGLE=0.001 DSCALE=0.005 sh $(RTESTDIR)/check_similarity.sh $(word 1,$^) $(word 2,$^) 35 72 -30 1.25 --iter 4
+
+sample1.mat: $(RSRCDIR)/sample1.png
+	$(PYTHON) $(RTESTDIR)/img2mat.py $< $@ --var img --dummy-vars one,two
+
+sample3c.mat: $(RSRCDIR)/sample3c.jpg
+	$(PYTHON) $(RTESTDIR)/img2mat.py $< $@ --var img
+
+# Check that we can compute also other things than translation
+# and on .mat files AND image files
+check-similarity2: sample1.mat $(RSRCDIR)/sample3.png $(RSRCDIR)/sample1.png sample3c.mat
+	sh $(RTESTDIR)/check_similarity.sh $(word 1,$^) $(word 2,$^) 35 72 -30 1.25 --iter 4 --loader-opts in=img
+	sh $(RTESTDIR)/check_similarity.sh $(word 4,$^) $(word 3,$^) -54 -37 30 0.8 --iter 4
 
 .PHONY: check clean check-translation check-similarity

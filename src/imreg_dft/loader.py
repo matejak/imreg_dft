@@ -50,6 +50,15 @@ This module facilitates integration of its functionality by defining
 :func:`update_parser` and :func:`settle_loaders`. While the first one can
 add capabilities to a parser (or parser group), the second one updates
 ``LOADERS`` accordingly while given parsed arguments.
+
+Rough edges (but not rough enough to be worth the trouble):
+
+* You can't force different loaders for image, template and output. If you
+  need this, you have to rely on autodetection based on file extension.
+* Similarly, there is a problem with loader options --- they are shared among
+  all loaders. This is both a bug and a feature though.
+* To show the loaders help, you have to satisfy the parser by specifying
+  a template and image file strings (they don't have to be real filenames tho).
 """
 
 import sys
@@ -316,7 +325,7 @@ class _MatLoader(Loader):
             if len(valid) != 1:
                 raise RuntimeError(
                     "You have to supply an input key, there is an ambiguity "
-                    "of what to load")
+                    "of what to load, candidates are: %s" % (tuple(valid),))
             else:
                 key = valid[0]
         else:
@@ -442,8 +451,8 @@ def update_parser(parser):
     parser.add_argument(
         "--loader", choices=LOADERS.get_loader_names(), default=None,
         help="Force usage of a concrete loader (default is autodetection). "
-        "If you plan on using two loaders to load input, autodetection is the "
-        "only way of achieving this.")
+        "If you plan on using two types of loaders to load input, or save the"
+        " output, autodetection is the only way to achieve this.")
     parser.add_argument(
         "--loader-opts", default=None, type=_parse_opts,
         help="Options for a loader "
