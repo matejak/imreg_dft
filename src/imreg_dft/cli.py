@@ -36,7 +36,7 @@ import sys
 import argparse as ap
 
 import imreg_dft as ird
-import imreg_dft.loader
+import imreg_dft.loader as loader
 
 
 def _float_tuple(string):
@@ -135,11 +135,11 @@ def main():
     parser.add_argument('--version', action="version",
                         version="imreg_dft %s" % ird.__version__,
                         help="Just print version and exit")
-    ird.loader.update_parser(parser)
+    loader.update_parser(parser)
 
     args = parser.parse_args()
 
-    loader_stuff = ird.loader.settle_loaders(args, (args.template, args.image))
+    loader_stuff = loader.settle_loaders(args, (args.template, args.image))
 
     print_format = args.print_format
     if not args.print_result:
@@ -198,22 +198,24 @@ def run(template, image, opts):
     # lazy import so no imports before run() is really called
     from imreg_dft import imreg
 
-    loaders = ird.loader.LOADERS
-
     fnames = (template, image)
     loaders = opts["loaders"]
+    loader_img = loaders[1]
     imgs = [loa.load2reg(fname) for fname, loa in zip(fnames, loaders)]
 
     tosa = None
-    if opts["output"] is not None:
-        tosa = loaders[1].get2save()
+    saver = None
+    outname = opts["output"]
+    if outname is not None:
+        tosa = loader_img.get2save()
+        saver = loader.LOADERS.get_loader(outname)
 
     if opts["invert"]:
         imgs[0] *= -1
     im2 = process_images(imgs, opts, tosa)
 
-    if opts["output"] is not None:
-        loaders[1].save(opts["output"], tosa)
+    if outname is not None:
+        saver.save(outname, tosa, loader_img)
 
     if opts["show"]:
         import pylab as pyl

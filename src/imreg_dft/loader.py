@@ -32,6 +32,10 @@
 The module contains a layer of functionality that allows
 abstract saving and loading of files.
 
+The concept is that there is one loader instance per file loaded.
+When we want to save a file, we use a loading loader to provide data to
+save and then we instantiate a saving loader (if needed) and save the data.
+
 A loader class inherits from :class:`Loader`.
 A singleton class :class:`LoaderSet` is the main public interface
 of this module. available as a global variable ``LOADERS``.
@@ -66,6 +70,27 @@ def _str2nptype(stri):
         msg += " but it is a different animal than 'type': '%s'" % typestr
         raise ValueError(msg)
     return typ
+
+
+def _str2flat(stri):
+    assert stri in "R,G,B,V".split(","), \
+        "Flat value has to be one of R, G, B, V, is '%s' instead" % stri
+    return stri
+
+
+def flatten(image, char):
+    if image.ndim < 3:
+        return image
+    char2idx = dict(R=0, G=1, B=2)
+    ret = None
+    if char == "V":
+        ret = image.mean(axis=2)
+    elif char in char2idx:
+        ret = image[:, :, char2idx[char]]
+    else:
+        # Shouldn't happen
+        assert False, "Unhandled - invalid flat spec '%s'" % char
+    return ret
 
 
 class LoaderSet(object):
@@ -110,6 +135,8 @@ class LoaderSet(object):
                 raise IOError(msg)
         else:
             ret = self._get_loader(lname)
+        # Make sure that we don't return the same instance multiple times
+        ret = ret.spawn()
         return ret
 
     def _get_loader(self, lname):
@@ -196,6 +223,19 @@ class Loader(object):
         self._opts = {}
         # First run, the second will hopefully follow later
         self.setOpts({})
+        # We may record some useful stuff for saving during loading
+        self.saveopts = {}
+
+    def spawn(self):
+        """
+        Makes a new instance of the object's class
+        BUT it conserves vital data.
+        """
+        cls = self.__class__
+        ret = cls()
+        # options passed on command-line
+        ret._opts = self._opts
+        return ret
 
     def setOpts(self, options):
         for opt in self.opts:
@@ -231,7 +271,7 @@ class Loader(object):
         """
         raise NotImplementedError("Use the derived class")
 
-    def _save(self, fname, data):
+    def _save(self, fname):
         """
         To be implemented by derived class.
         Save data to fname, possibly taking into account previous loads
@@ -239,10 +279,12 @@ class Loader(object):
         """
         raise NotImplementedError("Use the derived class")
 
-    def save(self, fname, what):
+    def save(self, fname, what, loader):
         """
         Given the registration result, save the transformed input.
         """
+        sopts = loader.saveopts
+        self.saveopts.update(sopts)
         self._save(fname, what)
 
 
@@ -253,18 +295,24 @@ class _MatLoader(Loader):
             "out": "The structure to save the result to (empty => the same "
                    "as the 'in'",
             "type": "Name of the numpy data type for the output (such as "
-                    "int, uint8 etc.)"}
-    defaults = {"in": "", "out": "", "type": "float"}
-    str2val = {"type": _str2nptype}
+                    "int, uint8 etc.)",
+            "flat": "How to flatten (the possibly RGB image) for the "
+                    "registration. Values can be R, G, B or V (V for value - "
+                    "a number proportional to average of R, G and B)",
+            }
+    defaults = {"in": "", "out": "", "type": "float", "flat": "V"}
+    str2val = {"type": _str2nptype, "flat": _str2flat}
 
     def __init__(self):
         super(_MatLoader, self).__init__()
+        # By default, we have not loaded anything
+        self.saveopts["loaded_all"] = {}
 
     def _load2reg(self, fname):
         from scipy import io
         mat = io.loadmat(fname)
-        valid = [key for key in mat if not key.startswith("_")]
-        if self._opts["input"] == "":
+        if self._opts["in"] == "":
+            valid = [key for key in mat if not key.startswith("_")]
             if len(valid) != 1:
                 raise RuntimeError(
                     "You have to supply an input key, there is an ambiguity "
@@ -272,21 +320,29 @@ class _MatLoader(Loader):
             else:
                 key = valid[0]
         else:
-            key = self._opts["input"]
-            assert key in valid
+            key = self._opts["in"]
+            keys = mat.keys()
+            if not key in keys:
+                raise LookupError(
+                    "You requested load of '%s', but you can only choose from"
+                    " %s" % (tuple(keys),))
         ret = mat[key]
-        self._loaded_all = mat
-        self._key = key
+        self.saveopts["loaded_all"] = mat
+        self.saveopts["key"] = key
         self.loaded = ret
+        # flattening is a no-op on 2D images
+        ret = flatten(ret, self._opts["flat"])
         return ret
 
     def _save(self, fname, tformed):
         from scipy import io
-        if self._opts["output"] == "":
-            key = self._key
+        if self._opts["out"] == "":
+            assert "key" in self.saveopts, \
+                "Don't know how to save the output - what .mat struct?"
+            key = self.saveopts["key"]
         else:
-            key = self._opts["output"]
-        out = self._loaded_all
+            key = self._opts["out"]
+        out = self.saveopts["loaded_all"]
         out[key] = tformed.astype(self._opts["type"])
         io.savemat(fname, out)
 
@@ -294,44 +350,23 @@ class _MatLoader(Loader):
         return fname.endswith(".mat")
 
 
-def _str2flat(stri):
-    assert stri in "R,G,B,V".split(","), \
-        "Flat value has to be one of R, G, B, V, is '%s' instead" % stri
-    return stri
-
-
 @loader("pil", 50)
 class _PILLoader(Loader):
     desc = "Loader of image formats that Pillow (or PIL) can support"
-    opts = {"flat": "How to flatten (the possibly RGB image) for the "
-                    "registration. Values can be R, G, B or V (V for value - "
-                    "a number proportional to average of R, G and B)",
-            }
-    defaults = {"flat": "V"}
-    str2val = {"flat": _str2flat}
+    opts = {"flat": _MatLoader.opts["flat"]}
+    defaults = {"flat": _MatLoader.defaults["flat"]}
+    str2val = {"flat": _MatLoader.str2val["flat"]}
 
     def __init__(self):
         super(_PILLoader, self).__init__()
-
-    def _flatten(self, image):
-        char2idx = dict(R=0, G=1, B=2)
-        char = self._opts["flat"]
-        if char == "V":
-            ret = image.mean(axis=2)
-        elif char in char2idx:
-            ret = image[:, :, char2idx[char]]
-        else:
-            # Shouldn't happen
-            assert False, "Unhandled - invalid flat spec '%s'" % char
-        return ret
 
     def _load2reg(self, fname):
         from scipy import misc
         loaded = misc.imread(fname)
         self.loaded = loaded
         ret = loaded
-        if ret.ndim == 3:
-            ret = self._flatten(ret)
+        # flattening is a no-op on 2D images
+        ret = flatten(ret, self._opts["flat"])
         return ret
 
     def _save(self, fname, tformed):
