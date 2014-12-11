@@ -7,6 +7,18 @@ import numpy.testing
 import imreg_dft.utils as utils
 
 
+np.random.seed(108)
+
+
+def _slice2arr(sli):
+    res = []
+    res.append(sli.start)
+    res.append(sli.stop)
+    res.append(res[1] - res[0])
+    ret = np.array(res, int)
+    return ret
+
+
 class TestUtils(ut.TestCase):
     def setUp(self):
         np.random.seed(10)
@@ -105,6 +117,62 @@ class TestUtils(ut.TestCase):
         n10res = utils._argmax_ext(src, 10)  # element 1 in the rows with 3s
         self.assertEqual(tuple(n10res), (2, 0))
 
+    def test_select(self):
+        inshp = np.array((5, 8))
+
+        start = np.array((0, 0))
+        dim = np.array((2, 3))
+        slis = utils.mkCut(inshp, dim, start)
+
+        sliarrs = np.array([_slice2arr(sli) for sli in slis])
+        np.testing.assert_array_equal(sliarrs[:, 2], dim)
+        np.testing.assert_array_equal(sliarrs[:, 0], start)
+        np.testing.assert_array_equal(sliarrs[:, 1], (2, 3))
+
+        start = np.array((3, 6))
+        dim = np.array((2, 3))
+        slis = utils.mkCut(inshp, dim, start)
+
+        sliarrs = np.array([_slice2arr(sli) for sli in slis])
+        np.testing.assert_array_equal(sliarrs[:, 2], dim)
+        np.testing.assert_array_equal(sliarrs[:, 0], (3, 5))
+        np.testing.assert_array_equal(sliarrs[:, 1], inshp)
+
+    def test_cuts(self):
+        big = np.array((30, 50))
+        small = np.array((20, 20))
+        res = utils.getCuts(big, small, 0.5)
+        # first is (0, 0), second is (0, 1)
+        self.assertEquals(res[1][1], 5)
+        # (50 / 5) + 1 = 11th should be (5, 5) - 2nd of the 2nd row
+        self.assertEquals(res[11], (5, 5))
+
+        small = np.array((10, 20))
+        res = utils.getCuts(big, small, 2.0)
+        self.assertEquals(res[1], (0, 20))
+        self.assertEquals(res[2], (10, 0))
+        self.assertEquals(res[3], (10, 20))
+        self.assertEquals(res[4], (20, 0))
+
+    def test_cut(self):
+        res = utils.getCut(9, 3)
+        np.testing.assert_array_equal(res, (0, 3, 6))
+
+        res = utils.getCut(80, 50)
+        np.testing.assert_array_equal(res, (0,))
+
+    def test_decomps(self):
+        smallshp = (30, 50)
+        inarr = np.random.random(smallshp)
+        recon = np.zeros_like(inarr)
+        tileshp = (7, 6)
+        decomps = utils.decompose(inarr, tileshp)
+        for decarr, start in decomps:
+            sshp = decarr.shape
+            recon[start[0]:start[0] + sshp[0],
+                  start[1]:start[1] + sshp[1]] = decarr
+        self.assertEqual(tileshp, decarr.shape)
+        np.testing.assert_array_equal(inarr, recon)
 
 if __name__ == '__main__':
     ut.main()

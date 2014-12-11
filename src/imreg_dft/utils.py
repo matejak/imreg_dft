@@ -297,3 +297,101 @@ def get_borderval(img, radius):
 
     mean = np.median(img[mask])
     return mean
+
+
+def slices2start(slices):
+    """
+    Convenience function.
+    Given a tuple of slices, it returns an array of their starts.
+    """
+    starts = (slices[0].start, slices[1].start)
+    ret = np.array(starts)
+    return ret
+
+
+def decompose(what, outshp):
+    """
+    Given an array and a shape, it creates a decomposition of the array in form
+    of subarrays and their respective position
+
+    Args
+        what (np.ndarray): The array to be decomposed
+        outshp (tuple-like): The shape of decompositions
+
+    Returns:
+        list - Decompositioni --- a list of tuples (subarray (np.ndarray),
+        coordinate (np.ndarray))
+    """
+    outshp = np.array(outshp)
+    shape = np.array(what.shape)
+    starts = getCuts(shape, outshp)
+    slices = [mkCut(shape, outshp, start) for start in starts]
+    decomps = [(what[slic], slices2start(slic)) for slic in slices]
+    return decomps
+
+
+def getCuts(shp0, shp1, coef=0.8):
+    """
+    Given an array shape, tile shape and density coefficient, return list of
+    possible points of the array decomposition.
+
+    Args:
+        shp0 (np.ndarray): Shape of the big array
+        shp1 (np.ndarray): Shape of the tile
+        coef (float): Density coefficient --- lower means higher density
+
+    Returns:
+        list - List of tuples (y, x) coordinates of possible tile corners.
+    """
+    # * coef = possible increase of density
+    # / 2.0 = default density is ~ 2x of density of disjoint tiles
+    tiledim = (shp1 * coef / 2.0).astype(int)
+    starts = [getCut(shp0[dim], tiledim[dim]) for dim in range(shp0.size)]
+    assert len(starts) == 2
+    res = []
+    for start0 in starts[0]:
+        for start1 in starts[1]:
+            toapp = (start0, start1)
+            res.append(toapp)
+    return res
+
+
+def getCut(big, small):
+    """
+
+    Args:
+        big (int): The source length array
+        small (float): The small length
+
+    Returns:
+        list - list of possible start locations
+    """
+    count = int(big / small)
+    begins = [int(small * ii) for ii in range(count)]
+    return begins
+
+
+def mkCut(shp0, dims, start):
+    """
+    Make a cut from shp0 and keep the given dimensions.
+    Also obey the start, but if it is not possible, shift it backwards
+
+    Returns:
+        list - List of slices defining the subarray.
+    """
+    assert np.all(shp0 > dims), \
+        "The array is too small - shape %s vs shape %s of cuts " % (shp0, dims)
+    end = start + dims
+    diff = shp0 - end
+    for ii, num in enumerate(diff):
+        # no-op, the end fits into our shape
+        if num > 0:
+            diff[ii] = 0
+
+    rstart = start + diff
+    rend = end + diff
+    res = []
+    for dim in range(dims.size):
+        toapp = slice(rstart[dim], rend[dim])
+        res.append(toapp)
+    return res
