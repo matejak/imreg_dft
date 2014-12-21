@@ -79,6 +79,11 @@ def _get_ang_scale(ims, exponent='inf'):
     r0 = abs(stuffs[0]) * abs(stuffs[1])
     ir = abs(fft.ifft2((stuffs[0] * stuffs[1].conjugate()) / r0))
 
+    if 0:
+        import pylab as pyl
+        pyl.figure(); pyl.imshow(np.fft.fftshift(ir) ** 0.2);
+        pyl.show()
+
     i0, i1 = utils._argmax_ext(ir, exponent)
 
     angle = -180.0 * i0 / ir.shape[0]
@@ -208,6 +213,11 @@ def translation(im0, im1, filter_pcorr=0):
     ir = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1) + eps)))
     if filter_pcorr > 0:
         ir = ndi.minimum_filter(ir, filter_pcorr)
+
+    if 0:
+        import pylab as pyl
+        pyl.figure(); pyl.imshow(np.fft.fftshift(ir) ** 0.5);
+        pyl.show()
 
     t0, t1 = np.unravel_index(np.argmax(ir), ir.shape)
 
@@ -384,7 +394,7 @@ def imshow(im0, im1, im2, cmap=None, fig=None, **kwargs):
     # We do the difference between the template and the result now
     # To increase the contrast of the difference, we norm images according
     # to their near-maximums
-    norm = np.percentile(im2, 95) / np.percentile(im0, 95)
+    norm = np.percentile(im2, 99.5) / np.percentile(im0, 99.5)
     im3 = abs(im2 - im0 * norm)
     pl0 = fig.add_subplot(221)
     pl0.imshow(im0, cmap, **kwargs)

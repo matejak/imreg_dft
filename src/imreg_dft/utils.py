@@ -149,10 +149,16 @@ def extend_by(what, dst):
     res = dest.copy() + bgval
     res = embed_to(res, what)
 
+    apofield = get_apofield(what.shape, max(5, dst / 4.0))
+    apoemb = embed_to(dest.copy(), apofield)
+
+    res = apoemb * res + (1 - apoemb) * bgval
+    return res
+
     mask = dest
     mask = embed_to(mask, np.ones_like(what))
 
-    res = frame_img(res, mask, dst)
+    res = frame_img(res, mask, dst, apoemb)
 
     return res
 
@@ -244,7 +250,7 @@ def get_apofield(shape, aporad):
     return apofield
 
 
-def frame_img(img, mask, dst):
+def frame_img(img, mask, dst, apofield=None):
     """
     Given an array, a mask (floats between 0 and 1), and a distance,
     alter the area where the mask is low (and roughly within dst from the edge)
@@ -262,26 +268,38 @@ def frame_img(img, mask, dst):
 
     radius = dst / 1.8
 
-    convmask0 = mask + 1e-8
+    convmask0 = mask + 1e-10
 
-    krad = radius * 2
+    krad_max = radius * 6
     convimg = img
     convmask = convmask0
     convimg0 = img
+    krad0 = 0.8
+    krad = krad0
 
-    while krad > 0.2:
+    while krad < krad_max:
         convimg = ndimg.gaussian_filter(convimg0 * convmask0,
                                         krad, mode='wrap')
         convmask = ndimg.gaussian_filter(convmask0, krad, mode='wrap')
         convimg /= convmask
-        convmask **= 0.5
-        convimg = convimg * convmask + convimg0 * (1 - convmask)
-        krad /= 1.6
+
+        cmask_max = convmask[mask == 0].max()
+        convmask /= cmask_max
+        #convmask[mask >= 1] = 1
+
+        convimg = convimg * (convmask - convmask0) + convimg0 * (1 - convmask + convmask0)
+        krad *= 1.8
+
         convimg0 = convimg
+        convmask0 = convmask
 
-    convimg[mask >= 1] = img[mask >= 1]
+    if apofield is not None:
+        ret = convimg * (1 - apofield) + img * apofield
+    else:
+        ret = convimg
+        ret[mask >= 1] = img[mask >= 1]
 
-    return convimg
+    return ret
 
 
 def get_borderval(img, radius):
@@ -309,7 +327,7 @@ def slices2start(slices):
     return ret
 
 
-def decompose(what, outshp):
+def decompose(what, outshp, coef):
     """
     Given an array and a shape, it creates a decomposition of the array in form
     of subarrays and their respective position
@@ -324,7 +342,7 @@ def decompose(what, outshp):
     """
     outshp = np.array(outshp)
     shape = np.array(what.shape)
-    starts = getCuts(shape, outshp)
+    starts = getCuts(shape, outshp, coef)
     slices = [mkCut(shape, outshp, start) for start in starts]
     decomps = [(what[slic], slices2start(slic)) for slic in slices]
     return decomps

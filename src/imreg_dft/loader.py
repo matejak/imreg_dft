@@ -214,6 +214,7 @@ def loader(lname, priority):
     return wrapped
 
 
+
 class Loader(object):
     """
 
@@ -264,7 +265,13 @@ class Loader(object):
         Given a filename, it loads it and returns in a form suitable for
         registration (i.e. float, flattened, ...).
         """
-        return self._load2reg(fname)
+        try:
+            ret = self._load2reg(fname)
+        except IOError as err:
+            print("Couldn't load '%s': %s" % (fname, err.strerror))
+            sys.exit(1)
+
+        return ret
 
     def get2save(self):
         assert self.loaded is not None, \

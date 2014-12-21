@@ -132,6 +132,10 @@ def main():
         help="Print a string (to stdout) in a given format. A dictionary "
         "containing the 'scale', 'angle', 'tx' and 'ty' keys will be "
         "passed for interpolation")
+    parser.add_argument(
+        '--tile', action="store_true", default=False, help="If the template "
+        "is larger than the image, break the template to pieces of size "
+        "similar to image size.")
     parser.add_argument('--version', action="version",
                         version="imreg_dft %s" % ird.__version__,
                         help="Just print version and exit")
@@ -157,6 +161,7 @@ def main():
         exponent=args.exponent,
         resample=args.resample,
         invert=args.invert,
+        tile=args.tile,
         output=args.output,
     )
     opts.update(loader_stuff)
@@ -212,7 +217,29 @@ def run(template, image, opts):
 
     if opts["invert"]:
         imgs[0] *= -1
-    im2 = process_images(imgs, opts, tosa)
+
+    tiledim = None
+    if opts["tile"]:
+        import numpy as np
+        shapes = np.array([np.array(img.shape) for img in imgs])
+        if (shapes[0] / shapes[1]).max() > 1.7:
+            tiledim = np.min(shapes, axis=0) * 1.2
+
+    if tiledim is not None:
+        tiles = ird.utils.decompose(imgs[0], tiledim, 0.6)
+        for tile, pos in tiles:
+            pass
+
+        tile, pos = tiles[8]
+        tile, pos = tiles[7]
+        im2 = process_images((tile, imgs[1]), opts, tosa)
+
+        import pylab as pyl
+        fig = pyl.figure()
+        imreg.imshow(tile, imgs[1], im2, fig=fig)
+        pyl.show()
+    else:
+        im2 = process_images(imgs, opts, tosa)
 
     if outname is not None:
         saver.save(outname, tosa, loader_img)
