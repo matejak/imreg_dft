@@ -37,7 +37,9 @@ You will need the ``git`` version control system to obtain the source code:
   ...
 
 As with other Python packages, there is a ``setup.py``.
-To install ``imreg_dft``, run ``python setup.py install`` (add ``--user`` argument after ``install`` to perform user install).
+To install ``imreg_dft``, run ``python setup.py install``.
+Add the ``--user`` argument after ``install`` to perform user (i.e. not system-wide) install.
+As stated in the previous paragraph, the `user install <https://pythonhosted.org/setuptools/easy_install.html#custom-installation-locations>`_ does not require administrator priviledges, but you may need to add the installation directories to your system path, otherwise the `ird` script won't be visible.
 
 If you want to try ``imreg_dft`` without installing it, feel free to do so.
 The package is in the ``src`` directory.

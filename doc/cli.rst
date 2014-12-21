@@ -7,6 +7,19 @@ The package contains one Python :abbr:`CLI (command-line interface)` script.
 Although you are more likely to use the ``imreg_dft`` functionality from your own Python programs, you can still have some use to the ``ird`` front-end.
 There are three main reasons why you would want to use it:
 
+General considerations
+++++++++++++++++++++++
+
+The image registration works best if you have images that have features in the middle and their background is mostly uniform.
+If you have a section of a large image and you want to use registration to identify the section in the large image, you are most likely not to succeed:
+
+TODO: Image here
+
+.. note::
+
+   This situation has a solution - the larger image (typically the template) can be decomposed into (overlapping) tiles with shape slightly larger than the smaller image has.
+   Feel free to open a pull request if you feel inspired!
+
 Quick reference
 +++++++++++++++
 
