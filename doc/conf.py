@@ -30,7 +30,12 @@ if have_mock:
     MOCK_MODULES = ['numpy', 'numpy.fft', 'scipy', 'scipy.ndimage',
                     'scipy.ndimage.interpolation']
     for mod_name in MOCK_MODULES:
-        sys.modules[mod_name] = mock.Mock()
+        try:
+            __import__(mod_name)
+        except ImportError:
+            sys.modules[mod_name] = mock.Mock()
+            if mod_name == 'numpy':
+                sys.modules[mod_name].pi = 3.14
 
 sys.path.insert(0, os.path.join(os.path.abspath('.'), '..', 'src'))
 

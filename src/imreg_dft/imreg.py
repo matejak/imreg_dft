@@ -41,7 +41,6 @@ import math
 
 import numpy as np
 import numpy.fft as fft
-import scipy.ndimage as ndi
 import scipy.ndimage.interpolation as ndii
 
 import imreg_dft.utils as utils
@@ -51,12 +50,24 @@ __all__ = ['translation', 'similarity', 'transform_img',
            'transform_img_dict', 'imshow']
 
 
-def _get_ang_scale(ims, exponent='inf'):
+def _logpolar_filter(adft):
+    shape = adft.shape
+    yy = np.linspace(- np.pi / 2., np.pi / 2., shape[0])[:, np.newaxis]
+    xx = np.linspace(- np.pi / 2., np.pi / 2., shape[1])[np.newaxis, :]
+    # Supressing low spatial frequencies is a must when using log-polar
+    # transform. The scale stuff is poorly reflected with low freqs.
+    filt = 1.0 - np.cos(np.sqrt(yy ** 2 + xx ** 2))**2
+    ret = adft * filt
+    return ret
+
+
+def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
     """
     Given two images, return their scale and angle difference.
 
     Args:
         ims (2-tuple-like of 2D ndarrays): The images
+        bgval: We also pad here in the :func:`map_coordinates`
         exponent (float or 'inf'): The exponent stuff, see :func:`similarity`
 
     Returns:
@@ -68,44 +79,58 @@ def _get_ang_scale(ims, exponent='inf'):
     shape = ims[0].shape
 
     adfts = [fft.fftshift(abs(fft.fft2(im))) for im in ims]
+    adfts = [_logpolar_filter(adft) for adft in adfts]
 
     # High-pass filtering used to be here, but we have moved it to a higher
     # level interface
 
-    stuffs = [_logpolar(adft, shape[1]) for adft in adfts]
-    log_base = _get_log_base(shape, shape[1])
-
-    stuffs = [fft.fft2(stuff) for stuff in stuffs]
-    r0 = abs(stuffs[0]) * abs(stuffs[1])
-    ir = abs(fft.ifft2((stuffs[0] * stuffs[1].conjugate()) / r0))
+    pcorr_shape = (int(max(shape) * 1.0),) * 2
+    log_base = _get_log_base(shape, pcorr_shape[1])
+    stuffs = [_logpolar(adft, pcorr_shape, log_base, 0.0) for adft in adfts]
 
     if 0:
         import pylab as pyl
-        pyl.figure(); pyl.imshow(np.fft.fftshift(ir) ** 0.2);
+        pyl.figure(); pyl.imshow(ims[0]);
+        pyl.figure(); pyl.imshow(ims[1]);
         pyl.show()
 
-    i0, i1 = utils._argmax_ext(ir, exponent)
+    (arg_ang, arg_rad), success = _phase_correlation(
+        stuffs[0], stuffs[1],
+        utils.argmax_angscale, log_base, exponent, constraints)
 
-    angle = -180.0 * i0 / ir.shape[0]
-    scale = log_base ** i1
+    angle = -np.pi * arg_ang / float(pcorr_shape[0])
+    angle = np.rad2deg(angle)
+    angle = utils.wrap_angle(angle, 360)
+    scale = log_base ** arg_rad
 
-    if scale > 1.8:
-        ir = abs(fft.ifft2((stuffs[1] * stuffs[0].conjugate()) / r0))
-        i0, i1 = utils._argmax_ext(ir, exponent)
-        angle = 180.0 * i0 / ir.shape[0]
-        scale = 1.0 / (log_base ** i1)
-        if scale > 1.8:
-            raise ValueError("Images are not compatible. Scale change > 1.8")
-
-    if angle < -90.0:
-        angle += 180.0
-    elif angle > 90.0:
-        angle -= 180.0
+    if not 0.5 < scale < 2:
+        raise ValueError(
+            "Images are not compatible. Scale change %g too big."
+            % scale)
 
     return 1.0 / scale, - angle
 
 
-def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent='inf'):
+def _translation(im0, im2, filter_pcorr, odds=1, constraints=None):
+    """
+    Args:
+        odds (float): The greater the odds are, the higher is the preferrence
+            of the angle + 180 over the original angle. Odds of -1 are the same
+            as inifinity.
+    """
+    angle = 0
+    tvec, succ = translation(im0, im2, filter_pcorr, constraints)
+    tvec2, succ2 = translation(im0, utils.rot180(im2),
+                               filter_pcorr, constraints)
+    if succ2 * odds > succ or odds == -1:
+        tvec = tvec2
+        succ = succ2
+        angle += 180
+    return tvec, succ, angle
+
+
+def similarity(im0, im1, numiter=1, order=3, constraints=None,
+               filter_pcorr=0, exponent='inf'):
     """
     Return similarity transformed image im1 and transformation parameters.
     Transformation parameters are: isotropic scale factor, rotation angle (in
@@ -129,12 +154,12 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent='inf'):
             are not even supposed to work.
 
     Returns:
-        dict: Contains following keys: ``scale``, ``angle``, ``tvec`` (Y, X)
-        and ``timg`` (the transformed image)
+        dict: Contains following keys: ``scale``, ``angle``, ``tvec`` (Y, X),
+        ``success`` and ``timg`` (the transformed image)
 
     .. note:: There are limitations
 
-        * Scale change must be less than 1.8.
+        * Scale change must be less than 2.
         * No subpixel precision (but you can use *resampling* to get
           around this).
     """
@@ -148,16 +173,51 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent='inf'):
     angle = 0.0
     im2 = im1
 
+    if constraints is None:
+        constraints = dict(angle=[0, None], scale=[1, None])
+
+    # During iterations, we have to work with constraints too.
+    # So we make the copy in order to leave the original intact
+    constraints_dynamic = constraints.copy()
+    constraints_dynamic["scale"] = list(constraints["scale"])
+    constraints_dynamic["angle"] = list(constraints["angle"])
+
     bgval = utils.get_borderval(im1, 5)
     for ii in range(numiter):
-        newscale, newangle = _get_ang_scale([im0, im2], exponent)
+        newscale, newangle = _get_ang_scale([im0, im2], bgval, exponent,
+                                            constraints_dynamic)
         scale *= newscale
         angle += newangle
 
+        constraints_dynamic["scale"][0] /= newscale
+        constraints_dynamic["angle"][0] -= newangle
+
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
+    odds = 1
+    # Here we look how is the turn-180
+    val, stdev = constraints.get("angle", (0, None))
+    if stdev is not None:
+        diffs = [abs(utils.wrap_angle(ang))
+                 for ang in (val - angle, val - angle + 180)]
+        odds0, odds1 = [np.exp(- diff ** 2 / stdev ** 2) for diff in diffs]
+        if odds0 == 0 and odds1 > 0:
+            # -1 is treated as infinity in _translation
+            odds = -1
+        elif stdev == 0 or (odds0 == 0 and odds1 == 0):
+            odds = -1
+            if diffs[0] < diffs[1]:
+                odds = 0
+        else:
+            odds = odds1 / odds0
+
     # now we can use pcorr to guess the translation
-    tvec = translation(im0, im2, filter_pcorr)
+    tvec, succ, angle2 = _translation(im0, im2, filter_pcorr, odds, constraints)
+
+    # The log-polar transform may have got the angle wrong by 180 degrees.
+    # The phase correlation can help us to correct that
+    angle += angle2
+    angle = utils.wrap_angle(angle, 360)
 
     # don't know what it does, but it alters the scale a little bit
     scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
@@ -166,12 +226,13 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent='inf'):
         scale=scale,
         angle=angle,
         tvec=tvec,
+        success=succ
     )
 
     im2 = transform_img_dict(im1, res, bgval, order)
-    imask = transform_img_dict(np.ones_like(im1), res, 0, order)
-    # for some reason, when using cubic interp, the mask becomes quite strange
-    # and low.
+    # Order of mask should be always 1 - higher values produce strange results.
+    imask = transform_img_dict(np.ones_like(im1), res, 0, 1)
+    # This removes some weird artifacts
     imask[imask > 0.8] = 1.0
 
     # Framing here = just blending the im2 with its BG according to the mask
@@ -180,20 +241,8 @@ def similarity(im0, im1, numiter=1, order=3, filter_pcorr=0, exponent='inf'):
     res["timg"] = im2
     return res
 
-    # correct parameters for ndimage's internal processing
-    # Probably calculated for the case the tform center is 0, 0 (vs center of
-    # the image)
-    if angle > 0.0:
-        dif = int((int(im1.shape[1] / scale) * math.sin(math.radians(angle))))
-        tvec = dif + tvec[1], dif + tvec[0]
-    elif angle < 0.0:
-        dif = int((int(im1.shape[0] / scale) * math.sin(math.radians(angle))))
-        tvec = dif + tvec[1], dif + tvec[0]
 
-    # We don't know what this is supposed to do, so it is here.
-
-
-def translation(im0, im1, filter_pcorr=0):
+def translation(im0, im1, filter_pcorr=0, constraints=None):
     """
     Return translation vector to register images.
     It tells how to translate the im1 to get im0.
@@ -203,30 +252,54 @@ def translation(im0, im1, filter_pcorr=0):
         im1 (2D numpy array): The second image
         filter_pcorr (int): Radius of a spectrum filter for translation
             detection
+
+    Returns:
+        tuple: The translation vector and success number: ((Y, X), success)
+    """
+    ret, succ = _phase_correlation(
+        im0, im1,
+        utils.argmax_translation, filter_pcorr, constraints)
+    return ret, succ
+
+
+def _phase_correlation(im0, im1, callback=None, * args):
+    """
+    Computes phase correlation between im0 and im1
+
+    Args:
+        im0
+        im1
+        callback (function): Process the cross-power spectrum (i.e. choose
+            coordinates of the best element, usually of the highest one).
+            Defaults to :func:`utils.argmax2D`
+
     Returns:
         tuple: The translation vector (Y, X)
     """
-    f0 = fft.fft2(im0)
-    f1 = fft.fft2(im1)
+    if callback is None:
+        callback = utils.argmax2D
+    f0, f1 = [fft.fft2(arr) for arr in (im0, im1)]
     # spectrum can be filtered, so we take precaution against dividing by 0
     eps = abs(f1).max() * 1e-15
-    ir = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1) + eps)))
-    if filter_pcorr > 0:
-        ir = ndi.minimum_filter(ir, filter_pcorr)
+    # cps == cross-power spectrum of im0 and im2
+    cps = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1) + eps)))
+    # scps = shifted cps
+    scps = fft.fftshift(cps)
 
     if 0:
         import pylab as pyl
-        pyl.figure(); pyl.imshow(np.fft.fftshift(ir) ** 0.5);
+        pyl.figure(); pyl.imshow(im0);
+        pyl.figure(); pyl.imshow(im1);
+        pyl.figure(); pyl.imshow(scps);
         pyl.show()
 
-    t0, t1 = np.unravel_index(np.argmax(ir), ir.shape)
+    (t0, t1), success = callback(scps, * args)
 
-    if t0 > f0.shape[0] // 2:
-        t0 -= f0.shape[0]
-    if t1 > f0.shape[1] // 2:
-        t1 -= f0.shape[1]
+    t0 -= f0.shape[0] // 2
+    t1 -= f0.shape[1] // 2
 
-    return np.array((t0, t1), dtype=float)
+    ret = np.array((t0, t1), dtype=float)
+    return ret, success
 
 
 def transform_img_dict(img, tdict, bgval=None, order=1, invert=False):
@@ -290,7 +363,11 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
 
     if bgval is None:
         bgval = utils.get_borderval(img, 5)
-    dest0 = img.copy()
+
+    bigshape = np.array(img.shape) * 1.2
+    bg = np.zeros(bigshape, img.dtype) + bgval
+
+    dest0 = utils.embed_to(bg, img.copy())
     if scale != 1.0:
         dest0 = ndii.zoom(dest0, scale, order=order, cval=bgval)
     if angle != 0.0:
@@ -301,7 +378,6 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
 
     bg = np.zeros_like(img) + bgval
     dest = utils.embed_to(bg, dest0)
-
     return dest
 
 
@@ -328,33 +404,54 @@ def similarity_matrix(scale, angle, vector):
     return np.dot(m_transl, np.dot(m_rot, m_scale))
 
 
-def _get_log_base(shape, radii):
+def _get_log_base(shape, new_r):
     """
     Basically common functionality of :func:`_logpolar`
     and :func:`_get_ang_scale`
+
+    This value can be considered fixed, if you want to mess with the logpolar
+    transform, mess with the shape.
     """
-    center = shape[0] / 2, shape[1] / 2
-    d = np.hypot(shape[0] - center[0], shape[1] - center[1])
-    log_base = 10.0 ** (math.log10(d) / (radii))
+    # The highest radius we have to accomodate is 'old_r',
+    # However, we cut some parts out as only a thin part of the spectra has
+    # these high frequencies
+    old_r = shape[0] * 1.1
+    # We are radius, so we divide the diameter by two.
+    old_r /= 2.0
+    # we have at most 'new_r' of space.
+    # the base is chosen so that 'new_r' = log_'base'('old_r')
+    log_base = np.exp(np.log(old_r) / (new_r))
     return log_base
 
 
-def _logpolar(image, radii, angles=None):
+def _logpolar(image, shape, log_base, bgval=None):
     """Return log-polar transformed image and log base."""
-    shape = image.shape
-    center = shape[0] / 2, shape[1] / 2
-    if angles is None:
-        angles = shape[0]
-    theta = np.empty((angles, radii), dtype=np.float64)
-    theta.T[:] = -np.linspace(0, np.pi, angles, endpoint=False)
-    log_base = _get_log_base(shape, radii)
-    radius = np.empty_like(theta)
-    radius[:] = np.power(log_base, np.arange(radii,
-                                             dtype=np.float64)) - 1.0
-    x = radius * np.sin(theta) + center[0]
-    y = radius * np.cos(theta) + center[1]
-    output = np.empty_like(x)
-    ndii.map_coordinates(image, [x, y], output=output)
+    if bgval is None:
+        bgval = utils.get_borderval(image, 5)
+    imshape = np.array(image.shape)
+    center = imshape[0] / 2.0, imshape[1] / 2.0
+    # 0 .. pi = only half of the spectrum is used
+    theta = utils._get_angles(shape)
+    radius_x = utils._get_scales(shape, log_base)
+    radius_y = radius_x.copy()
+    ellipse_coef = imshape[0] / float(imshape[1])
+    # We have to acknowledge that the frequency spectrum can be deformed
+    # if the image aspect ratio is not 1.0
+    # The image is x-thin, so we acknowledge that the frequency spectra
+    # scale in x is shrunk.
+    radius_x /= ellipse_coef
+
+    y = radius_y * np.sin(theta) + center[0]
+    x = radius_x * np.cos(theta) + center[1]
+    output = np.empty_like(y)
+    ndii.map_coordinates(image, [y, x], output=output, order=3,
+                         mode="constant", cval=bgval)
+    """
+    import pylab as pyl
+    pyl.figure(); pyl.imshow(output);
+    pyl.show()
+    """
+
     return output
 
 

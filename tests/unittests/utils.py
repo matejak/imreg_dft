@@ -106,18 +106,13 @@ class TestUtils(ut.TestCase):
         self._wrapFilter(src2, [(0.8, 0.8), (0.1, 0.2)], (0.8, 1.0), (0.3, 0.4))
 
     def testArgmax_ext(self):
-        src = np.array([[3, 1, 3.01],
-                        [1, 1, 1],
-                        [0, 0, 0]])
-        src = np.fft.ifftshift(src)
-        # After FFTShift:
-        # [[ 1.    1.    1.  ]
-        #  [ 0.    0.    0.  ]
-        #  [ 1.    3.01  3.  ]]
+        src = np.array([[1, 3, 1],
+                        [0, 0, 0],
+                        [1, 3.01, 0]])
         infres = utils._argmax_ext(src, 'inf')  # element 3.01
         self.assertEqual(tuple(infres), (2, 1))
         n10res = utils._argmax_ext(src, 10)  # element 1 in the rows with 3s
-        self.assertEqual(tuple(n10res), (2, 0))
+        self.assertEqual(tuple(n10res), (1, 1))
 
     def test_select(self):
         inshp = np.array((5, 8))
@@ -143,25 +138,32 @@ class TestUtils(ut.TestCase):
     def test_cuts(self):
         big = np.array((30, 50))
         small = np.array((20, 20))
-        res = utils.getCuts(big, small, 0.5)
+        res = utils.getCuts(big, small, 0.25)
         # first is (0, 0), second is (0, 1)
         self.assertEquals(res[1][1], 5)
+        # Last element of the row has beginning at 40
+        self.assertEquals(res[5][1], 25)
+        self.assertEquals(res[6][1], 30)
+        self.assertEquals(res[7][1], 0)
         # (50 / 5) + 1 = 11th should be (5, 5) - 2nd of the 2nd row
-        self.assertEquals(res[11], (5, 5))
+        self.assertEquals(res[8], (5, 5))
 
         small = np.array((10, 20))
-        res = utils.getCuts(big, small, 2.0)
+        res = utils.getCuts(big, small, 1.0)
         self.assertEquals(res[1], (0, 20))
-        self.assertEquals(res[2], (10, 0))
-        self.assertEquals(res[3], (10, 20))
-        self.assertEquals(res[4], (20, 0))
+        self.assertEquals(res[2], (0, 30))
+        self.assertEquals(res[3], (10, 0))
+        self.assertEquals(res[4], (10, 20))
+        self.assertEquals(res[5], (10, 30))
+        self.assertEquals(res[6], (20, 0))
 
     def test_cut(self):
-        res = utils.getCut(9, 3)
-        np.testing.assert_array_equal(res, (0, 3, 6))
+        # Tests of those private functions are ugly
+        res = utils._getCut(9, 3)
+        np.testing.assert_array_equal(res, (0, 3, 6, 9))
 
-        res = utils.getCut(80, 50)
-        np.testing.assert_array_equal(res, (0,))
+        res = utils._getCut(80, 50)
+        np.testing.assert_array_equal(res, (0, 50, 80))
 
     def test_decomps(self):
         smallshp = (30, 50)

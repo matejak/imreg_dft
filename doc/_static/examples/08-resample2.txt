@@ -1,4 +1,4 @@
 [user@linuxbox examples]$ ird sample1.png sample3.png --resample 3 --iter 4 --lowpass 0.9,1.1 --extend 10 --print-result
-scale: 1.250248
+scale: 1.251491
 angle: -30.000000
-shift: 35, 72.6667
+shift: 35.3333, 72.6667

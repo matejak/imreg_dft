@@ -14,6 +14,7 @@ Contents:
    overview.rst
    quickstart.rst
    cli.rst
+   cli-advanced.rst
    api.rst
    devel.rst
    changelog.rst

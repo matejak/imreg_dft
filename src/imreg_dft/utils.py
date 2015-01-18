@@ -34,14 +34,135 @@ FFT based image registration. --- utility functions
 
 import numpy as np
 import numpy.fft as fft
+import scipy.ndimage as ndi
+
+
+def wrap_angle(angles, ceil=2 * np.pi):
+    angles += ceil / 2.0
+    angles %= ceil
+    angles -= ceil / 2.0
+    return angles
+
+
+def rot180(arr):
+    ret = np.rot90(arr, 2)
+    return ret
+
+
+def _get_angles(shape):
+    ret = np.zeros(shape, dtype=np.float64)
+    ret -= np.linspace(0, np.pi, shape[0], endpoint=False)[:, np.newaxis]
+    return ret
+
+
+def _get_scales(shape, log_base):
+    ret = np.zeros(shape, dtype=np.float64)
+    ret += np.power(log_base, np.arange(shape[1], dtype=float))[np.newaxis, :]
+    return ret
+
+
+def argmax_angscale(array, log_base, exponent, constraints=None):
+    if constraints is None:
+        constraints = {}
+
+    mask = np.ones(array.shape, float)
+
+    if "scale" in constraints:
+        scale, sigma = constraints["scale"]
+        scales = fft.ifftshift(_get_scales(array.shape, log_base))
+        scales *= log_base ** (- array.shape[1] / 2.0)
+        scales -= 1.0 / scale
+        if sigma == 0:
+            ascales = np.abs(scales)
+            scale_min = ascales.min()
+            mask[ascales > scale_min] = 0
+        elif sigma is None:
+            pass
+        else:
+            mask *= np.exp(-scales ** 2 / sigma ** 2)
+
+    if "angle" in constraints:
+        angle, sigma = constraints["angle"]
+        angles = _get_angles(array.shape)
+        # We flip the sign on purpose
+        angles += np.deg2rad(angle)
+        wrap_angle(angles, np.pi)
+        angles = np.rad2deg(angles)
+        if sigma == 0:
+            aangles = np.abs(angles)
+            angle_min = aangles.min()
+            mask[aangles > angle_min] = 0
+        elif sigma is None:
+            pass
+        else:
+            mask *= np.exp(-angles ** 2 / sigma ** 2)
+
+    mask = fft.fftshift(mask)
+
+    array *= mask
+    ret = _argmax_ext(array, exponent)
+    success = _get_success(array, array[tuple(ret)])
+    return ret, success
+
+
+def argmax_translation(array, filter_pcorr, constraints=None):
+    if constraints is None:
+        constraints = dict(tx=(0, None), ty=(0, None))
+
+    array_orig = array
+    if filter_pcorr > 0:
+        array = ndi.minimum_filter(array, filter_pcorr)
+
+    mask = np.ones(array.shape, float)
+    # first goes Y, then X
+    for dim, key in enumerate(("ty", "tx")):
+        if constraints.get(key, (0, None))[1] is None:
+            continue
+        pos, sigma = constraints[key]
+        alen = array.shape[dim]
+        dom = np.linspace(-alen // 2, -alen // 2 + alen, alen, False)
+        if sigma == 0:
+            # generate a binary array closest to the position
+            idx = np.argmin(np.abs(dom - pos))
+            vals = np.zeros(dom.size)
+            vals[idx] = 1.0
+        else:
+            vals = np.exp(- (dom - pos) ** 2 / sigma ** 2)
+        if dim == 0:
+            mask *= vals[:, np.newaxis]
+        else:
+            mask *= vals[np.newaxis, :]
+
+    array *= mask
+    tvec = _argmax_ext(array, 'inf')
+    success = _get_success(array_orig, array_orig[tuple(tvec)])
+
+    return np.array(tvec), success
+
+
+def _get_success(array, theval):
+    """
+    TODO: Do we want absolute or relative success? We might want both...
+    """
+    bigval = np.percentile(array, 97)
+    success = theval / bigval
+    success = theval
+    return success
+
+
+def argmax2D(array):
+    """
+    Simple 2D argmax function with simple sharpness indication
+    """
+    amax = np.argmax(array)
+    ret = list(np.unravel_index(amax, array.shape))
+
+    return np.array(ret)
 
 
 def _argmax_ext(array, exponent):
     """
     Calculate coordinates of the COM (center of mass) of the provided array.
-    Assume that the COM has coordinates close to (0, 0), so prior to calculating
-    the COM, the array is fftshifted, then the calculation is performed and
-    finally the result is recalculated to compensate the fftshift.
 
     Args:
         array (ndarray): The array to be examined.
@@ -49,31 +170,27 @@ def _argmax_ext(array, exponent):
             value 'inf' is given, the coordinage of the array maximum is taken.
 
     Returns:
-        list : The COG coordinate tuple
+        np.ndarray: The COG coordinate tuple
     """
 
     # When using an integer exponent for _argmax_ext, it is good to have the
     # neutral rotation/scale in the center rather near the edges
-    sarray = fft.fftshift(array)
 
     ret = None
     if exponent == "inf":
-        amax = np.argmax(sarray)
-        ret = list(np.unravel_index(amax, sarray.shape))
+        ret = argmax2D(array)
     else:
-        col = np.arange(sarray.shape[0])[:, np.newaxis]
-        row = np.arange(sarray.shape[1])[np.newaxis, :]
+        col = np.arange(array.shape[0])[:, np.newaxis]
+        row = np.arange(array.shape[1])[np.newaxis, :]
 
-        arr2 = sarray ** exponent
+        arr2 = array ** exponent
         arrsum = arr2.sum()
         arrprody = np.sum(arr2 * col) / arrsum
         arrprodx = np.sum(arr2 * row) / arrsum
         ret = [arrprody, arrprodx]
         ret = np.round(ret).astype(int)
+        # We don't use it, but it still tells us about value distribution
 
-    # Compensation of the fftshift
-    ret[0] = (ret[0] - sarray.shape[0] // 2) % sarray.shape[0]
-    ret[1] = (ret[1] - sarray.shape[1] // 2) % sarray.shape[1]
     return np.array(ret)
 
 
@@ -135,6 +252,44 @@ def embed_to(where, what):
     return where
 
 
+def extend_to_3D(what, newdim_2D):
+    if what.ndim == 3:
+        height = what.shape[2]
+        res = np.empty(newdim_2D + (height,), what.dtype)
+
+        for dim in range(height):
+            res[:, :, dim] = extend_to(what[:, :, dim], newdim_2D)
+    else:
+        res = extend_to(what, newdim_2D)
+
+    return res
+
+
+def extend_to(what, newdim):
+    dst = (min(what.shape) * 0.1)
+    bgval = get_borderval(what, dst)
+
+    dest = np.zeros(newdim, what.dtype)
+    res = dest.copy() + bgval
+    res = embed_to(res, what)
+
+    aporad = min(10, dst)
+    aporad = max(2, int(aporad))
+    apofield = get_apofield(what.shape, aporad)
+    apoemb = embed_to(dest.copy(), apofield)
+
+    res = apoemb * res + (1 - apoemb) * bgval
+
+    return res
+
+    mask = dest
+    mask = embed_to(mask, np.ones_like(what))
+
+    res = frame_img(res, mask, dst, apoemb)
+
+    return res
+
+
 def extend_by(what, dst):
     """
     Given a source array, extend it by given number of pixels and try
@@ -143,22 +298,7 @@ def extend_by(what, dst):
     olddim = np.array(what.shape, dtype=int)
     newdim = olddim + 2 * dst
 
-    bgval = get_borderval(what, dst)
-
-    dest = np.zeros(newdim)
-    res = dest.copy() + bgval
-    res = embed_to(res, what)
-
-    apofield = get_apofield(what.shape, max(5, dst / 4.0))
-    apoemb = embed_to(dest.copy(), apofield)
-
-    res = apoemb * res + (1 - apoemb) * bgval
-    return res
-
-    mask = dest
-    mask = embed_to(mask, np.ones_like(what))
-
-    res = frame_img(res, mask, dst, apoemb)
+    res = extend_to(what, newdim)
 
     return res
 
@@ -250,7 +390,7 @@ def get_apofield(shape, aporad):
     return apofield
 
 
-def frame_img(img, mask, dst, apofield=None):
+def frame_img2(img, mask, dst, apofield=None):
     """
     Given an array, a mask (floats between 0 and 1), and a distance,
     alter the area where the mask is low (and roughly within dst from the edge)
@@ -285,9 +425,58 @@ def frame_img(img, mask, dst, apofield=None):
 
         cmask_max = convmask[mask == 0].max()
         convmask /= cmask_max
-        #convmask[mask >= 1] = 1
 
-        convimg = convimg * (convmask - convmask0) + convimg0 * (1 - convmask + convmask0)
+        convimg = (convimg * (convmask - convmask0)
+                   + convimg0 * (1 - convmask + convmask0))
+        krad *= 1.8
+
+        convimg0 = convimg
+        convmask0 = convmask
+
+    if apofield is not None:
+        ret = convimg * (1 - apofield) + img * apofield
+    else:
+        ret = convimg
+        ret[mask >= 1] = img[mask >= 1]
+
+    return ret
+
+
+def frame_img(img, mask, dst, apofield=None):
+    """
+    Given an array, a mask (floats between 0 and 1), and a distance,
+    alter the area where the mask is low (and roughly within dst from the edge)
+    so it blends well with the area where the mask is high.
+    The purpose of this is removal of spurious frequencies in the image's
+    Fourier spectrum.
+
+    Args:
+        img (np.array): What we want to alter
+        maski (np.array): The indicator what can be altered (0) and what not (1)
+        dst (int): Parameter controlling behavior near edges, value could be
+            probably deduced from the mask.
+    """
+    import scipy.ndimage as ndimg
+
+    radius = dst / 1.8
+
+    convmask0 = mask + 1e-10
+
+    krad_max = radius * 6
+    convimg = img
+    convmask = convmask0
+    convimg0 = img
+    krad0 = 0.8
+    krad = krad0
+
+    while krad < krad_max:
+        convimg = ndimg.gaussian_filter(convimg0 * convmask0,
+                                        krad, mode='wrap')
+        convmask = ndimg.gaussian_filter(convmask0, krad, mode='wrap')
+        convimg /= convmask
+
+        convimg = (convimg * (convmask - convmask0)
+                   + convimg0 * (1 - convmask + convmask0))
         krad *= 1.8
 
         convimg0 = convimg
@@ -332,7 +521,7 @@ def decompose(what, outshp, coef):
     Given an array and a shape, it creates a decomposition of the array in form
     of subarrays and their respective position
 
-    Args
+    Args:
         what (np.ndarray): The array to be decomposed
         outshp (tuple-like): The shape of decompositions
 
@@ -348,7 +537,7 @@ def decompose(what, outshp, coef):
     return decomps
 
 
-def getCuts(shp0, shp1, coef=0.8):
+def getCuts(shp0, shp1, coef=0.5):
     """
     Given an array shape, tile shape and density coefficient, return list of
     possible points of the array decomposition.
@@ -356,15 +545,19 @@ def getCuts(shp0, shp1, coef=0.8):
     Args:
         shp0 (np.ndarray): Shape of the big array
         shp1 (np.ndarray): Shape of the tile
-        coef (float): Density coefficient --- lower means higher density
+        coef (float): Density coefficient --- lower means higher density and
+            1.0 means no overlap, 0.5 50% overlap, 0.1 90% overlap etc.
 
     Returns:
         list - List of tuples (y, x) coordinates of possible tile corners.
     """
     # * coef = possible increase of density
     # / 2.0 = default density is ~ 2x of density of disjoint tiles
-    tiledim = (shp1 * coef / 2.0).astype(int)
-    starts = [getCut(shp0[dim], tiledim[dim]) for dim in range(shp0.size)]
+    offset = (shp1 * coef).astype(int)
+    shp0_eff = [shp0[dim] - shp1[dim] for dim in range(2)]
+    # Because we pretend that the tile dim is half of the real one, we skip
+    # the last tile - we are too fat.  vvvvv
+    starts = [_getCut(shp, offset[dim]) for dim, shp in enumerate(shp0_eff)]
     assert len(starts) == 2
     res = []
     for start0 in starts[0]:
@@ -374,7 +567,7 @@ def getCuts(shp0, shp1, coef=0.8):
     return res
 
 
-def getCut(big, small):
+def _getCut(big, small):
     """
 
     Args:
@@ -385,7 +578,12 @@ def getCut(big, small):
         list - list of possible start locations
     """
     count = int(big / small)
-    begins = [int(small * ii) for ii in range(count)]
+    begins = [int(small * ii) for ii in range(count + 1)]
+    # big:   ----------------| - hidden small -
+    # small: +---
+    # begins:*...*...*...*..*
+    if not small * count == big:
+        begins.append(big)
     return begins
 
 

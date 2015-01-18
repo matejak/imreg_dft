@@ -156,6 +156,16 @@ There are some extended options you can use, we will explain their meaning now:
     For example, passing ``--lowpass 0.2,0.4`` means that spatial frequencies with value ranging from 0 to 0.2 will pass and those with value higher than 0.4 won't.
     Spatial frequencies with values in-between will be progressively attenuated. 
 
+    Therefore, the filter value :math:`f(x)` based on spatial frequency value :math:`x` is
+
+    .. math::
+
+       f(x) =  0, 1, (x - 0.2) / (0.4 - 0.2)
+        
+    .. note::
+       A continuous high-pass filtration is already applied to the image. 
+       The filter is :math:`(1 - \cos[x \pi / 2])^2`
+
 ``--filter-pcorr``
     Fitering of phase correlation applies when determining the right translation vector.
     If the image pattern is not sampled very densely (i.e. close or even below the Nyquist frequency), ripples may appear near edges in the image.
@@ -194,7 +204,7 @@ There are some extended options you can use, we will explain their meaning now:
     .. literalinclude:: _static/examples/06-exponent.txt
       :language: shell-session
 
-    We can see that with only one iteration, setting the ``--exponent`` to ``5`` brings a more accurate result than the default value of ``'inf'`` --- the correct value is 1.25 for the scale and -30 for the angle.
+    We can see that with only one iteration, setting the ``--exponent`` to ``5`` brings a more accurate result (or at least not a worse one) than the default value of ``'inf'`` --- the correct value is 1.25 for the scale and -30 for the angle.
     However, if we increase the number of iterations, the exponent won't make a difference any more.
 
 ``--resample``

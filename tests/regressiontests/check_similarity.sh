@@ -40,7 +40,7 @@ GOTScale=`echo $TVEC | cut -f 4 -d ,`
 test "$GOTX" -ne "$TX" -o "$GOTY" -ne "$TY" \
 	&& die "Translation didn't work out, expected $TX,$TY got $GOTX,$GOTY"
 
-test -z "$DANGLE" && DANGLE=0.1
+test -z "$DANGLE" && DANGLE=0.2
 test -n "$ANGLE" && \
 	{ almost_equal "$GOTAng" "$ANGLE" "$DANGLE" \
 		|| die "Angle didn't work out, expected $ANGLE got $GOTAng"; }

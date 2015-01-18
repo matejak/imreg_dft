@@ -39,6 +39,52 @@ import imreg_dft as ird
 import imreg_dft.loader as loader
 
 
+def assure_constraint(possible_constraints):
+    pass
+
+
+def _constraints(what):
+    BOUNDS = dict(
+        angle=(-180, 180),
+        scale=(0.5, 2.0),
+    )
+
+    def constraint(string):
+        components = string.split(",")
+        if not (0 < len(components) <= 2):
+            raise ap.ArgumentTypeError(
+                "We accept at most %d (but at least 1) comma-delimited numbers,"
+                " you have passed us %d" % (len(components), 2))
+        try:
+            mean = float(components[0])
+        except Exception:
+            raise ap.ArgumentTypeError(
+                "The %s value must be a float number, got '%s'."
+                % (what, components[0]))
+        if what in BOUNDS:
+            lo, hi = BOUNDS[what]
+            if not lo <= mean <= hi:
+                raise ap.ArgumentTypeError(
+                    "The %s value must be a number between %g and %g, got %g."
+                    % (lo, hi, mean))
+        std = 0
+        if len(components) == 2:
+            std = components[1]
+            if len(std) == 0:
+                std = None
+            else:
+                try:
+                    std = float(std)
+                except Exception:
+                    raise ap.ArgumentTypeError(
+                        "The %s standard deviation spec must be either"
+                        "either a float number or nothing, got '%s'."
+                        % (what, std))
+        ret = (mean, std)
+        return ret
+    return constraint
+
+
 def _float_tuple(string):
     """
     Support function for parsing string of two floats delimited by a comma.
@@ -88,7 +134,7 @@ def outmsg(msg):
     return msg
 
 
-def main():
+def create_parser():
     parser = ap.ArgumentParser()
     parser.add_argument('template')
     parser.add_argument('image')
@@ -104,9 +150,6 @@ def main():
                         help="Work with resampled images.")
     parser.add_argument('--exponent', type=_exponent, default="inf",
                         help="Either 'inf' or float. See the docs.")
-    parser.add_argument(
-        '--invert', action="store_true", default=False,
-        help="Whether to invert the template. Don't expect much from it tho.")
     parser.add_argument('--iters', type=int, default=1,
                         help="How many iterations to guess the right scale "
                         "and angle")
@@ -139,11 +182,41 @@ def main():
     parser.add_argument('--version', action="version",
                         version="imreg_dft %s" % ird.__version__,
                         help="Just print version and exit")
+    parser.add_argument(
+        "--angle", type=_constraints("angle"),
+        metavar="MEAN[,STD=0]", default=(0, None),
+        help="The mean and standard deviation of the expected angle. ")
+    parser.add_argument(
+        "--scale", type=_constraints("scale"),
+        metavar="MEAN[,STD=0]", default=(1, None),
+        help="The mean and standard deviation of the expected scale. ")
+    parser.add_argument(
+        "--tx", type=_constraints("shift"),
+        metavar="MEAN[,STD=0]", default=(0, None),
+        help="The mean and standard deviation of the expected X translation. ")
+    parser.add_argument(
+        "--ty", type=_constraints("shift"),
+        metavar="MEAN[,STD=0]", default=(0, None),
+        help="The mean and standard deviation of the expected Y translation. ")
     loader.update_parser(parser)
+    return parser
+
+
+def main():
+    parser = create_parser()
 
     args = parser.parse_args()
 
     loader_stuff = loader.settle_loaders(args, (args.template, args.image))
+
+    # We need tuples in the parser and lists further in the code.
+    # So we have to do it like this.
+    constraints = dict(
+        angle=list(args.angle),
+        scale=list(args.scale),
+        tx=list(args.tx),
+        ty=list(args.ty),
+    )
 
     print_format = args.print_format
     if not args.print_result:
@@ -160,8 +233,8 @@ def main():
         iters=args.iters,
         exponent=args.exponent,
         resample=args.resample,
-        invert=args.invert,
         tile=args.tile,
+        constraints=constraints,
         output=args.output,
     )
     opts.update(loader_stuff)
@@ -202,6 +275,7 @@ def apodize(imgs, radius_ratio):
 def run(template, image, opts):
     # lazy import so no imports before run() is really called
     from imreg_dft import imreg
+    import numpy as np
 
     fnames = (template, image)
     loaders = opts["loaders"]
@@ -214,40 +288,68 @@ def run(template, image, opts):
     if outname is not None:
         tosa = loader_img.get2save()
         saver = loader.LOADERS.get_loader(outname)
-
-    if opts["invert"]:
-        imgs[0] *= -1
+        tosa = ird.utils.extend_to_3D(tosa, imgs[0].shape[:3])
 
     tiledim = None
     if opts["tile"]:
-        import numpy as np
         shapes = np.array([np.array(img.shape) for img in imgs])
         if (shapes[0] / shapes[1]).max() > 1.7:
-            tiledim = np.min(shapes, axis=0) * 1.2
+            tiledim = np.min(shapes, axis=0) * 1.1
+            # TODO: Establish a translate region constraint of width tiledim * coef
 
     if tiledim is not None:
-        tiles = ird.utils.decompose(imgs[0], tiledim, 0.6)
-        for tile, pos in tiles:
-            pass
+        tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
+        resdicts = []
+        shifts = np.empty((len(tiles), 2), float)
+        succs = np.empty((len(tiles), 1), float)
+        for ii, (tile, pos) in enumerate(tiles):
+            try:
+                resdict = process_images((tile, imgs[1]), opts, None)
+            except ValueError:
+                # probably incompatible images due to high scale change, so we
+                # just add some harmless stuff here and proceed.
+                resdict = dict(tx=0, ty=0, success=0)
+            resdicts.append(resdict)
+            shifts[ii] = np.array((resdict["ty"], resdict["tx"])) + pos
+            succs[ii] = resdict["success"]
+            print ii, succs[ii]
+            if 0:
+                import pylab as pyl
+                pyl.figure(); pyl.imshow(tile)
+                pyl.show()
+        cog_coords = np.sum(shifts * succs, 0) / np.sum(succs)
+        weights = succs / (shifts - cog_coords)
+        best = np.argmax(weights)
+        best = np.argmax(succs)
 
-        tile, pos = tiles[8]
-        tile, pos = tiles[7]
-        im2 = process_images((tile, imgs[1]), opts, tosa)
+        resdict = resdicts[best]
 
-        import pylab as pyl
-        fig = pyl.figure()
-        imreg.imshow(tile, imgs[1], im2, fig=fig)
-        pyl.show()
+        tosa_offset = np.array(imgs[0].shape)[:2] - np.array(tiledim)[:2] + 0.5
+        resdict["tvec"] = shifts[best] - tosa_offset / 2.0
+        resdict["ty"], resdict["tx"] = resdict["tvec"]
+        # In non-tile cases, tosa is transformed in process_images
+        if tosa is not None:
+            tosa = ird.transform_img_dict(tosa, resdict)
     else:
-        im2 = process_images(imgs, opts, tosa)
+        resdict = process_images(imgs, opts, tosa)
+
+    im0, im1, im2 = resdict['unextended']
+
+    if opts["print_format"] is not None:
+        msg = opts["print_format"] % resdict
+        msg = msg.encode("utf-8")
+        msg = msg.decode('unicode_escape')
+        sys.stdout.write(msg)
 
     if outname is not None:
         saver.save(outname, tosa, loader_img)
 
     if opts["show"]:
+        # import ipdb; ipdb.set_trace()
         import pylab as pyl
         fig = pyl.figure()
-        imreg.imshow(imgs[0], imgs[1], im2, fig=fig)
+        imreg.imshow(im0, im1, im2, fig=fig)
+        # imreg.imshow(imgs[0], imgs[1], im2, fig=fig)
         pyl.show()
 
 
@@ -280,7 +382,7 @@ def process_images(ims, opts, tosa=None):
            for img in ims]
 
     resdict = imreg.similarity(
-        ims[0], ims[1], opts["iters"], opts["order"],
+        ims[0], ims[1], opts["iters"], opts["order"], opts["constraints"],
         opts["filter_pcorr"], opts["exponent"])
 
     im2 = resdict.pop("timg")
@@ -290,23 +392,20 @@ def process_images(ims, opts, tosa=None):
     ty, tx = resdict["tvec"]
     resdict["tx"] = tx
     resdict["ty"] = ty
+    resdict["imgs"] = ims
     tform = resdict
 
     if tosa is not None:
         tosa[:] = ird.transform_img_dict(tosa, tform)
 
-    if opts["print_format"] is not None:
-        msg = opts["print_format"] % tform
-        msg = msg.encode("utf-8")
-        msg = msg.decode('unicode_escape')
-        sys.stdout.write(msg)
-
     if rcoef != 1:
-        im2 = resample(im2, 1 / rcoef)
+        ims = [resample(img, 1.0 / rcoef) for img in ims]
+        im2 = resample(im2, 1.0 / rcoef)
 
-    im2 = utils.unextend_by(im2, opts["extend"])
+    resdict["unextended"] = [utils.unextend_by(img, opts["extend"])
+                             for img in ims + [im2]]
 
-    return im2
+    return resdict
 
 
 if __name__ == "__main__":
