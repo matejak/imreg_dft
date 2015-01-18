@@ -312,8 +312,8 @@ def run(template, image, opts):
             resdicts.append(resdict)
             shifts[ii] = np.array((resdict["ty"], resdict["tx"])) + pos
             succs[ii] = resdict["success"]
-            print ii, succs[ii]
             if 0:
+                print(ii, succs[ii])
                 import pylab as pyl
                 pyl.figure(); pyl.imshow(tile)
                 pyl.show()
