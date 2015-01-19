@@ -1,6 +1,6 @@
 [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n'
-scale: 1.24687, angle: -30.15
+scale: 1.24235, angle: -30.15
 [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n' --iter 2
-scale: 1.24687, angle: -30.15
+scale: 1.24235, angle: -30.15
 [user@linuxbox examples]$ ird sample1.png sample3.png --print-result --print-format 'scale: %(scale)g, angle: %(angle)g\n' --iter 4 --show
-scale: 1.24687, angle: -30.15
+scale: 1.24235, angle: -30.15

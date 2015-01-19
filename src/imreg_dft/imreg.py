@@ -61,6 +61,11 @@ def _logpolar_filter(adft):
     return ret
 
 
+def _get_pcorr_shape(shape):
+    ret = (int(max(shape) * 1.0),) * 2
+    return ret
+
+
 def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
     """
     Given two images, return their scale and angle difference.
@@ -84,7 +89,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
     # High-pass filtering used to be here, but we have moved it to a higher
     # level interface
 
-    pcorr_shape = (int(max(shape) * 1.0),) * 2
+    pcorr_shape = _get_pcorr_shape(shape)
     log_base = _get_log_base(shape, pcorr_shape[1])
     stuffs = [_logpolar(adft, pcorr_shape, log_base, 0.0) for adft in adfts]
 
@@ -105,7 +110,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
 
     if not 0.5 < scale < 2:
         raise ValueError(
-            "Images are not compatible. Scale change %g too big."
+            "Images are not compatible. Scale change %g too big to be true."
             % scale)
 
     return 1.0 / scale, - angle
@@ -127,6 +132,17 @@ def _translation(im0, im2, filter_pcorr, odds=1, constraints=None):
         succ = succ2
         angle += 180
     return tvec, succ, angle
+
+
+def _get_precision(shape, scale=1):
+    pcorr_shape = _get_pcorr_shape(shape)
+    log_base = _get_log_base(shape, pcorr_shape[1])
+    # * 0.5 <= max deviation is half of the step
+    # sccale: Scale deviation depends on the scale value
+    Dscale = scale * (log_base - 1) * 0.5
+    # angle: Angle deviation is constant
+    Dangle = 180.0 / pcorr_shape[0] * 0.5
+    return Dangle, Dscale
 
 
 def similarity(im0, im1, numiter=1, order=3, constraints=None,
@@ -163,7 +179,8 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
         * No subpixel precision (but you can use *resampling* to get
           around this).
     """
-    if im0.shape != im1.shape:
+    shape = im0.shape
+    if shape != im1.shape:
         raise ValueError("Images must have same shapes.")
     elif im0.ndim != 2:
         raise ValueError("Images must be 2-dimensional.")
@@ -220,12 +237,17 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
     angle = utils.wrap_angle(angle, 360)
 
     # don't know what it does, but it alters the scale a little bit
-    scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
+    # scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
+
+    Dangle, Dscale = _get_precision(shape, scale)
 
     res = dict(
         scale=scale,
         angle=angle,
         tvec=tvec,
+        Dscale=Dscale,
+        Dangle=Dangle,
+        Dt=0.5,
         success=succ
     )
 
@@ -425,7 +447,19 @@ def _get_log_base(shape, new_r):
 
 
 def _logpolar(image, shape, log_base, bgval=None):
-    """Return log-polar transformed image and log base."""
+    """
+    Return log-polar transformed image and log base.
+    Takes into account anisotropicity of the freq spectrum of rectangular images
+
+    Args:
+        image: The image to be transformed
+        shape: Shape of the transformed image
+        log_base: Parameter of the transformation, convoluted with
+            :func:`_get_log_base`
+
+    Returns:
+        The transformed image
+    """
     if bgval is None:
         bgval = utils.get_borderval(image, 5)
     imshape = np.array(image.shape)
@@ -451,7 +485,6 @@ def _logpolar(image, shape, log_base, bgval=None):
     pyl.figure(); pyl.imshow(output);
     pyl.show()
     """
-
     return output
 
 

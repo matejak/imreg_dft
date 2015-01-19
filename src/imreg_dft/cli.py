@@ -119,7 +119,8 @@ def outmsg(msg):
     Support function for checking of validity of the output format string.
     A test interpolation is performed and exceptions handled.
     """
-    fake_data = dict(scale=1.0, angle=2.0, tx=2, ty=2)
+    fake_data = dict(scale=1.0, angle=2.0, tx=2, ty=2,
+                     Dscale=0.1, Dangle=0.2, Dt=0.5, success=0.99)
     tpl = "The string '%s' is not a good format string"
     try:
         msg % fake_data
@@ -170,11 +171,12 @@ def create_parser():
         '--print-result', action="store_true", default=False,
         help="We don't print anything unless this option is specified")
     parser.add_argument(
-        '--print-format', default="scale: %(scale)f\nangle: %(angle)f\nshift: "
-        "%(tx)g, %(ty)g\n", type=outmsg,
+        '--print-format', default="scale: %(scale)f +-%(Dscale)g\n"
+        "angle: %(angle)f +-%(Dangle)g\n"
+        "shift: %(tx)g, %(ty)g +-%(Dt)g\nSuccess: %(success)g\n", type=outmsg,
         help="Print a string (to stdout) in a given format. A dictionary "
-        "containing the 'scale', 'angle', 'tx' and 'ty' keys will be "
-        "passed for interpolation")
+        "containing the 'scale', 'angle', 'tx', 'ty' and 'success' keys "
+        "will be passed for interpolation")
     parser.add_argument(
         '--tile', action="store_true", default=False, help="If the template "
         "is larger than the image, break the template to pieces of size "
@@ -272,23 +274,8 @@ def apodize(imgs, radius_ratio):
     return ret
 
 
-def run(template, image, opts):
-    # lazy import so no imports before run() is really called
-    from imreg_dft import imreg
+def _get_resdict(imgs, opts, tosa=None):
     import numpy as np
-
-    fnames = (template, image)
-    loaders = opts["loaders"]
-    loader_img = loaders[1]
-    imgs = [loa.load2reg(fname) for fname, loa in zip(fnames, loaders)]
-
-    tosa = None
-    saver = None
-    outname = opts["output"]
-    if outname is not None:
-        tosa = loader_img.get2save()
-        saver = loader.LOADERS.get_loader(outname)
-        tosa = ird.utils.extend_to_3D(tosa, imgs[0].shape[:3])
 
     tiledim = None
     if opts["tile"]:
@@ -333,6 +320,27 @@ def run(template, image, opts):
     else:
         resdict = process_images(imgs, opts, tosa)
 
+    return resdict
+
+
+def run(template, image, opts):
+    # lazy import so no imports before run() is really called
+    from imreg_dft import imreg
+
+    fnames = (template, image)
+    loaders = opts["loaders"]
+    loader_img = loaders[1]
+    imgs = [loa.load2reg(fname) for fname, loa in zip(fnames, loaders)]
+
+    tosa = None
+    saver = None
+    outname = opts["output"]
+    if outname is not None:
+        tosa = loader_img.get2save()
+        saver = loader.LOADERS.get_loader(outname)
+        tosa = ird.utils.extend_to_3D(tosa, imgs[0].shape[:3])
+
+    resdict = _get_resdict(imgs, opts, tosa)
     im0, im1, im2 = resdict['unextended']
 
     if opts["print_format"] is not None:
@@ -401,6 +409,7 @@ def process_images(ims, opts, tosa=None):
     if rcoef != 1:
         ims = [resample(img, 1.0 / rcoef) for img in ims]
         im2 = resample(im2, 1.0 / rcoef)
+        resdict["Dt"] /= rcoef
 
     resdict["unextended"] = [utils.unextend_by(img, opts["extend"])
                              for img in ims + [im2]]
