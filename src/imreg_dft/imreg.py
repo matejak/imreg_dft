@@ -211,22 +211,9 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
 
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
-    odds = 1
     # Here we look how is the turn-180
-    val, stdev = constraints.get("angle", (0, None))
-    if stdev is not None:
-        diffs = [abs(utils.wrap_angle(ang))
-                 for ang in (val - angle, val - angle + 180)]
-        odds0, odds1 = [np.exp(- diff ** 2 / stdev ** 2) for diff in diffs]
-        if odds0 == 0 and odds1 > 0:
-            # -1 is treated as infinity in _translation
-            odds = -1
-        elif stdev == 0 or (odds0 == 0 and odds1 == 0):
-            odds = -1
-            if diffs[0] < diffs[1]:
-                odds = 0
-        else:
-            odds = odds1 / odds0
+    target, stdev = constraints.get("angle", (0, None))
+    odds = _get_odds(angle, target, stdev)
 
     # now we can use pcorr to guess the translation
     tvec, succ, angle2 = _translation(im0, im2, filter_pcorr, odds, constraints)
@@ -262,6 +249,34 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
 
     res["timg"] = im2
     return res
+
+
+def _get_odds(angle, target, stdev):
+    """
+    Args:
+
+    Return:
+        float: The greater the odds are, the higher is the preferrence
+            of the angle + 180 over the original angle. Odds of -1 are the same
+            as inifinity.
+    """
+    ret = 1
+    if stdev is not None:
+        diffs = [abs(utils.wrap_angle(ang, 360))
+                 for ang in (target - angle, target - angle + 180)]
+        odds0, odds1 = 0, 0
+        if stdev > 0:
+            odds0, odds1 = [np.exp(- diff ** 2 / stdev ** 2) for diff in diffs]
+        if odds0 == 0 and odds1 > 0:
+            # -1 is treated as infinity in _translation
+            ret = -1
+        elif stdev == 0 or (odds0 == 0 and odds1 == 0):
+            ret = -1
+            if diffs[0] < diffs[1]:
+                ret = 0
+        else:
+            ret = odds1 / odds0
+    return ret
 
 
 def translation(im0, im1, filter_pcorr=0, constraints=None):

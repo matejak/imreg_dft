@@ -86,6 +86,7 @@ def argmax_angscale(array, log_base, exponent, constraints=None):
         angles = _get_angles(array.shape)
         # We flip the sign on purpose
         angles += np.deg2rad(angle)
+        # TODO: Check out the wrapping. It may be tricky since pi+1 != 1
         wrap_angle(angles, np.pi)
         angles = np.rad2deg(angles)
         if sigma == 0:
@@ -109,7 +110,9 @@ def argmax_translation(array, filter_pcorr, constraints=None):
     if constraints is None:
         constraints = dict(tx=(0, None), ty=(0, None))
 
-    array_orig = array
+    # We want to keep the original and here is obvious that
+    # it won't get changed inadvertently
+    array_orig = array.copy()
     if filter_pcorr > 0:
         array = ndi.minimum_filter(array, filter_pcorr)
 
@@ -144,8 +147,8 @@ def _get_success(array, theval):
     """
     TODO: Do we want absolute or relative success? We might want both...
     """
-    bigval = np.percentile(array, 97)
-    success = theval / bigval
+    # bigval = np.percentile(array, 97)
+    # success = theval / bigval
     success = theval
     return success
 

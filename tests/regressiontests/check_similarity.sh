@@ -5,8 +5,15 @@ die () {
        	exit 1
 }
 
+
+# + 0.0001 <= handling of tricky corner cases
 almost_equal () {
-	python -c 'import sys; sys.exit(1 - ('"abs($1 - $2) < $3"'))'
+	python -c 'import sys; sys.exit(1 - ('"abs($1 - $2) <= $3 + 0.0001"'))'
+	return $?
+}
+
+almost_equal_angle () {
+	python -c 'import sys; sys.exit(1 - ('"abs(($1 - $2 + 180) % 360 - 180) <= $3 + 0.0001"'))'
 	return $?
 }
 
@@ -28,7 +35,8 @@ shift
 
 test -z "$CMD" && CMD='ird'
 
-TVEC=$($CMD "$TPL" "$IMG" --print-result --print-format '%(tx)d,%(ty)d,%(angle).8g,%(scale).8g' $@)
+# Precision of value and error has to be the same! There are some corner cases (e.g. angle = 90)
+TVEC=$($CMD "$TPL" "$IMG" --print-result --print-format '%(tx)d,%(ty)d,%(angle).6g,%(scale).6g,%(Dangle).6g,%(Dscale).6g' $@)
 
 test $? -eq 0 || die "ird terminated with an error"
 
@@ -36,17 +44,22 @@ GOTX=`echo $TVEC | cut -f 1 -d ,`
 GOTY=`echo $TVEC | cut -f 2 -d ,`
 GOTAng=`echo $TVEC | cut -f 3 -d ,`
 GOTScale=`echo $TVEC | cut -f 4 -d ,`
+DANGLE=`echo $TVEC | cut -f 5 -d ,`
+DSCALE=`echo $TVEC | cut -f 6 -d ,`
 
-test "$GOTX" -ne "$TX" -o "$GOTY" -ne "$TY" \
-	&& die "Translation didn't work out, expected $TX,$TY got $GOTX,$GOTY"
 
-test -z "$DANGLE" && DANGLE=0.2
-test -n "$ANGLE" && \
-	{ almost_equal "$GOTAng" "$ANGLE" "$DANGLE" \
+# x$... because $... may be '-' and the test command may understand it its own way
+test "x$TX" != 'x-' && test "$GOTX" -ne "$TX" \
+	&& die "X translation didn't work out, expected $TX, got $GOTX"
+
+test "x$TY" != 'x-' && test "$GOTY" -ne "$TY" \
+	&& die "Y translation didn't work out, expected $TY, got $GOTY"
+
+test -n "$ANGLE" -a "x$ANGLE" != 'x-' && \
+	{ almost_equal_angle "$GOTAng" "$ANGLE" "$DANGLE" \
 		|| die "Angle didn't work out, expected $ANGLE got $GOTAng"; }
 
-test -z "$DSCALE" && DSCALE=0.05
-test -n "$SCALE" && \
+test -n "$SCALE" -a "x$SCALE" != 'x-' && \
 	{ almost_equal "$GOTScale" "$SCALE" "$DSCALE" \
 		|| die "Scale didn't work out, expected $SCALE got $GOTScale"; }
 

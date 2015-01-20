@@ -34,9 +34,9 @@ You can either:
 
   .. note::
      
-     The Python argument parsing may not like argument value ``-30,2`` because ``-`` is the single-letter argument prefix and ``-30,2`` is not a number.
-     On unix-like systems, you may circumvent this by writing ``--angle ' -30,2``.
-     Now, the argument value begins by space and this doesn't make any trouble down the road.
+     The Python argument parsing may not like argument value ``-30,2`` because ``-`` is the single-letter argument prefix and ``-30,2`` is not a number (unlike ``-30.2``).
+     On unix-like systems, you may circumvent this by writing ``--angle ' -30,2'``.
+     Now, the argument value begins by space (and not by the dash) which doesn't make any trouble further down the road.
 
 Large templates
 ---------------
