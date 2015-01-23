@@ -45,18 +45,6 @@ Quick reference
    .. literalinclude:: _static/examples/03-bad.txt
      :language: shell-session
 
-   Uh-oh, that didn't turn out very well, did it?
-   The result is somehow better than a no-op, but highly unsatisfactory nevertheless.
-
-   However, we have a triumph in our sleeve.
-   We can force ``ir_dft`` to try to guess scale and rotation multiple times in a row.
-   The correct values are -30° for the rotation and 1 / 80% = 1.25 for the scale:
-
-   .. literalinclude:: _static/examples/04-iter.txt
-     :language: shell-session
-
-   So, four iterations are enough for a precise result!
-
 #. And now something even more tricky - when a part of the image is cut out.
    The difference between the fourth and third sample is their mutual translation which also causes that the feature we are matching against is cut out from the fourth image.
 

@@ -143,6 +143,18 @@ def argmax_translation(array, filter_pcorr, constraints=None):
     return np.array(tvec), success
 
 
+def _extend_array(arr, point, radius):
+    ret = arr
+    if point[0] - radius < 0:
+        diff = - (point[0] - radius)
+        ret = np.append(arr[-diff - 1: -1], arr)
+        point[0] += diff
+    elif point[0] + radius > arr.shape[0]:
+        diff = point[0] + radius - arr.shape[0]
+        ret = np.append(arr, arr[:diff])
+    return ret, point
+
+
 def _get_success(array, theval):
     """
     TODO: Do we want absolute or relative success? We might want both...
