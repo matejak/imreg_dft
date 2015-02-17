@@ -2,8 +2,12 @@ import argparse as ap
 
 import scipy as sp
 import scipy.misc
+
+import matplotlib
+
+matplotlib.use('Cairo')
+
 from matplotlib import pyplot as plt
-import matplotlib.backends.backend_agg as agg
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 
@@ -50,14 +54,13 @@ def mkFig(fig, infiles):
         _imshow(pl, img, _LABELS[ii - 1])
 
 
-def run():
+def main():
     args = parse()
     fig = plt.Figure(dpi=args.dpi, figsize=args.size)
-    fig.set_canvas(agg.FigureCanvasAgg(fig))
     mkFig(fig, args.infiles)
     fig.tight_layout()
     fig.savefig(args.output)
 
 
 if __name__ == "__main__":
-    run()
+    main()

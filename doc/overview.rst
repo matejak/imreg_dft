@@ -1,10 +1,20 @@
 General overview
 ================
 
-FFT based image registration.
+``imreg_dft`` implements DFT\ [*]_ -based technique for translation, rotation and scale-invariant image registration.
 
-Implements an FFT-based technique for translation, rotation and scale-invariant
-image registration [1].
+In plain language, ``imreg_dft`` implements means of guessing translation, rotation and scale variation between two images.
+It doesn't work with those images directly, but it works with their spectrum, using the log-polar transformation.
+The algorithm is described in [1]_ and possibly also in [2]_ and [3]_.
+
+.. [*] DFT stands for Discrete Fourier Transform.
+   Usually the acronym FFT (Fast Fourier Transform) is used in this context, but this is incorrect.
+   DFT is the name of the operation, whereas FFT is just one of possible algorithms that can be used to calculate it.
+
+.. figure:: big.*
+
+   The template (a), image (b) and registered image (c).
+   This is the actual output of :ref:`sample in the cli section <sample-intro>`
 
 :Authors:
   - `Christoph Gohlke <http://www.lfd.uci.edu/~gohlke/>`_
@@ -16,8 +26,7 @@ image registration [1].
 
 :Copyright:
   - 2011-2014, Christoph Gohlke
-  - 2014, Matěj Týč
-
+  - 2014-2015, Matěj Týč
 
 .. _requirements:
  
@@ -48,11 +57,11 @@ The API and algorithms are quite good, but help is appreciated.
 
 References
 ----------
-(1) An FFT-based technique for translation, rotation and scale-invariant
+.. [1] An FFT-based technique for translation, rotation and scale-invariant
     image registration. BS Reddy, BN Chatterji.
     IEEE Transactions on Image Processing, 5, 1266-1271, 1996
-(2) An IDL/ENVI implementation of the FFT-based algorithm for automatic
+.. [2] An IDL/ENVI implementation of the FFT-based algorithm for automatic
     image registration. H Xiea, N Hicksa, GR Kellera, H Huangb, V Kreinovich.
     Computers & Geosciences, 29, 1045-1055, 2003.
-(3) Image Registration Using Adaptive Polar Transform. R Matungka, YF Zheng,
+.. [3] Image Registration Using Adaptive Polar Transform. R Matungka, YF Zheng,
     RL Ewing. IEEE Transactions on Image Processing, 18(10), 2009.

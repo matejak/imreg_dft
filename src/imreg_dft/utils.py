@@ -101,8 +101,8 @@ def argmax_angscale(array, log_base, exponent, constraints=None):
     mask = fft.fftshift(mask)
 
     array *= mask
-    ret = _argmax_ext(array, exponent)
-    success = _get_success(array, array[tuple(ret)])
+    ret = argmax_ext(array, exponent)
+    success = _get_success(array, tuple(ret), 0)
     return ret, success
 
 
@@ -116,13 +116,14 @@ def argmax_translation(array, filter_pcorr, constraints=None):
     if filter_pcorr > 0:
         array = ndi.minimum_filter(array, filter_pcorr)
 
-    mask = np.ones(array.shape, float)
+    ashape = np.array(array.shape, int)
+    mask = np.ones(ashape, float)
     # first goes Y, then X
     for dim, key in enumerate(("ty", "tx")):
         if constraints.get(key, (0, None))[1] is None:
             continue
         pos, sigma = constraints[key]
-        alen = array.shape[dim]
+        alen = ashape[dim]
         dom = np.linspace(-alen // 2, -alen // 2 + alen, alen, False)
         if sigma == 0:
             # generate a binary array closest to the position
@@ -137,10 +138,25 @@ def argmax_translation(array, filter_pcorr, constraints=None):
             mask *= vals[np.newaxis, :]
 
     array *= mask
-    tvec = _argmax_ext(array, 'inf')
-    success = _get_success(array_orig, array_orig[tuple(tvec)])
 
-    return np.array(tvec), success
+    # WE ARE FFTSHIFTED already.
+    # ban translations that are too big
+    thresh = ashape // 6
+    mask2 = np.zeros(ashape, int)
+    mask2[thresh[0]:-thresh[0], thresh[1]:-thresh[1]] = 1
+    array *= mask2
+    # Find what we look for
+    tvec = argmax_ext(array, 'inf')
+    if 0:
+        import pylab as pyl
+        pyl.figure(); pyl.imshow(array, cmap=pyl.cm.gray)
+        pyl.show()
+
+    # If we use constraints or min filter,
+    # array_orig[tvec] may not be the maximum
+    success = _get_success(array_orig, tuple(tvec), 2)
+
+    return tvec, success
 
 
 def _extend_array(arr, point, radius):
@@ -155,17 +171,47 @@ def _extend_array(arr, point, radius):
     return ret, point
 
 
-def _get_success(array, theval):
+def _compensate_fftshift(vec, shape):
+    vec -= shape // 2
+    vec %= shape
+    return vec
+
+
+def _get_success(array, coord, radius=2):
     """
-    TODO: Do we want absolute or relative success? We might want both...
+    Args:
+        radius: Get the success as a sum of neighbor of coord of this radius
+        coord: Coordinates of the maximum. Float numbers are allowed
+            (and converted to int inside)
+
+    Returns:
+        Success as float between 0 and 1. The meaning of the number is loose,
+        but the higher the better.
     """
+    coord = np.round(coord).astype(int)
+    coord = tuple(coord)
+    slices = []
+    for dim in range(2):
+        assert radius <= coord[dim] < array.shape[dim] - radius, \
+            "The result %s is too close to array boundaries" % (coord,)
+        slices.append(slice(coord[dim] - radius, coord[dim] + radius + 1))
+    slices = tuple(slices)
+
+    if 0:
+        import pylab as pyl
+        pyl.figure(); pyl.imshow(array[slices], cmap=pyl.cm.gray, interpolation="none"); pyl.colorbar()
+        pyl.show()
+
+    theval = array[slices].sum()
+    theval2 = array[coord]
     # bigval = np.percentile(array, 97)
     # success = theval / bigval
-    success = theval
+    # TODO: Think this out
+    success = np.sqrt(theval * theval2)
     return success
 
 
-def argmax2D(array):
+def _argmax2D(array):
     """
     Simple 2D argmax function with simple sharpness indication
     """
@@ -175,7 +221,7 @@ def argmax2D(array):
     return np.array(ret)
 
 
-def _argmax_ext(array, exponent):
+def argmax_ext(array, exponent):
     """
     Calculate coordinates of the COM (center of mass) of the provided array.
 
@@ -185,15 +231,15 @@ def _argmax_ext(array, exponent):
             value 'inf' is given, the coordinage of the array maximum is taken.
 
     Returns:
-        np.ndarray: The COG coordinate tuple
+        np.ndarray: The COM coordinate tuple, float values are allowed!
     """
 
-    # When using an integer exponent for _argmax_ext, it is good to have the
+    # When using an integer exponent for argmax_ext, it is good to have the
     # neutral rotation/scale in the center rather near the edges
 
     ret = None
     if exponent == "inf":
-        ret = argmax2D(array)
+        ret = _argmax2D(array)
     else:
         col = np.arange(array.shape[0])[:, np.newaxis]
         row = np.arange(array.shape[1])[np.newaxis, :]
@@ -203,7 +249,6 @@ def _argmax_ext(array, exponent):
         arrprody = np.sum(arr2 * col) / arrsum
         arrprodx = np.sum(arr2 * row) / arrsum
         ret = [arrprody, arrprodx]
-        ret = np.round(ret).astype(int)
         # We don't use it, but it still tells us about value distribution
 
     return np.array(ret)
@@ -467,7 +512,8 @@ def frame_img(img, mask, dst, apofield=None):
 
     Args:
         img (np.array): What we want to alter
-        maski (np.array): The indicator what can be altered (0) and what not (1)
+        maski (np.array): The indicator what can be altered (0)
+            and what can not (1)
         dst (int): Parameter controlling behavior near edges, value could be
             probably deduced from the mask.
     """

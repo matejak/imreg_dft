@@ -109,9 +109,10 @@ class TestUtils(ut.TestCase):
         src = np.array([[1, 3, 1],
                         [0, 0, 0],
                         [1, 3.01, 0]])
-        infres = utils._argmax_ext(src, 'inf')  # element 3.01
-        self.assertEqual(tuple(infres), (2, 1))
-        n10res = utils._argmax_ext(src, 10)  # element 1 in the rows with 3s
+        infres = utils.argmax_ext(src, 'inf')  # element 3.01
+        self.assertEqual(tuple(infres), (2.0, 1.0))
+        n10res = utils.argmax_ext(src, 10)  # element 1 in the rows with 3s
+        n10res = np.round(n10res)
         self.assertEqual(tuple(n10res), (1, 1))
 
     def test_select(self):
@@ -177,6 +178,22 @@ class TestUtils(ut.TestCase):
                   start[1]:start[1] + sshp[1]] = decarr
         self.assertEqual(tileshp, decarr.shape)
         np.testing.assert_array_equal(inarr, recon)
+
+    def test_fftshift(self):
+        orig_arr = np.arange(12)
+        shape = np.array((4, 3))
+        orig_arr = orig_arr.reshape(shape)
+
+        shifted_arr = np.fft.fftshift(orig_arr)
+
+        for yy, shifted_row in enumerate(shifted_arr):
+            for xx, val in enumerate(shifted_row):
+                shifted_coord = np.array((yy, xx))
+                # Of course this is equal
+                self.assertEqual(val, shifted_arr[tuple(shifted_coord)])
+                fixed_coord = utils._compensate_fftshift(shifted_coord, shape)
+                # The actual test
+                self.assertEqual(val, orig_arr[tuple(fixed_coord)])
 
 
 if __name__ == '__main__':

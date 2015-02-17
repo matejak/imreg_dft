@@ -23,8 +23,6 @@ TEXTS = \
 TEMPFILE = temp.txt
 MV = mv
 
-TARGETS = $(foreach title,$(TEXTS),_static/examples/$(title).txt)
-
 INTRO_PNG = intro.png
 $(word 1,$(TARGETS)):
 	DIR=../../imreg_dft PRIV="-o $(PWD)/$(INTRO_PNG)" $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $(TEMPFILE)
@@ -75,3 +73,14 @@ $(INTRO_PNG): | $(word 1,$(TARGETS))
 
 big.png big.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample2.png $(INTRO_PNG)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8,2.2
+
+IMGS = \
+	big.png \
+	big.pdf \
+	$(NUL)
+
+TARGETS = \
+	  $(foreach title,$(TEXTS),_static/examples/$(title).txt) \
+	  $(IMGS) \
+	  $(NUL)
+

@@ -8,20 +8,17 @@ Although you are more likely to use the ``imreg_dft`` functionality from your ow
 There are three main reasons why you would want to use it:
 
 General considerations
-++++++++++++++++++++++
+----------------------
 
 The image registration works best if you have images that have features in the middle and their background is mostly uniform.
-If you have a section of a large image and you want to use registration to identify the section in the large image, you are most likely not to succeed:
+If you have a section of a large image and you want to use registration to identify the section in the large image, `you are most likely not to succeed <weak-big_>`_.
 
-TODO: Image here
-
-.. note::
-
-   This situation has a solution - the larger image (typically the template) can be decomposed into (overlapping) tiles with shape slightly larger than the smaller image has.
-   Feel free to open a pull request if you feel inspired!
+For more exhaustive list of known limitation, see the section Caveats_.
 
 Quick reference
-+++++++++++++++
+---------------
+
+.. _sample-intro:
 
 #. Quickly find out whether it works for you, having the results (optionally) shown in a pop-up window and printed out.
    We assume you stand in the root of ``imreg_dft`` cloned from the git repo.
@@ -74,7 +71,7 @@ Quick reference
    So the idea is as follows.
    Let's assume you have an image, an ``imreg_dft`` output and all you want is to perform the image transformation yourself.
    The output describes what operations to perform on the image so it is close to the template.
-   All transformations are performed using ``scipy.ndimage.interpolate`` package and you need to do the following:
+   All transformations are performed using `scipy.ndimage.interpolate <http://docs.scipy.org/doc/scipy/reference/ndimage.html#module-scipy.ndimage.interpolation>`_ package and you need to do the following:
 
    i. Call the ``zoom`` function with the provided scale.
       The center of the zoom is the center of the image.
@@ -98,7 +95,7 @@ Quick reference
    However, as soon as the transformation is known, an RGB image can be transformed to match the template and saved in full color.
 
 Loaders
-+++++++
+-------
 
 ``ird`` can support a wide variety of input formats.
 It uses an abstract means of how to load and save an image.
@@ -116,7 +113,7 @@ See the :ref:`developer documentation <loaders_devel>` to learn the background.
 If you miss some functionality, you are kindly invited to create a pull request!
 
 Advanced tweaking
-+++++++++++++++++
+-----------------
 
 There are some extended options you can use, we will explain their meaning now:
 
@@ -224,3 +221,27 @@ There are some extended options you can use, we will explain their meaning now:
       However, when using it, be sure to start off with (let's say) ``--extend 10`` and ``--lowpass 0.9,1.1`` to exploit it.
       Then, experiment with the settings until the results look best.
     
+Caveats
+-------
+
+There are known weak points of ``ird``.
+Although they are explained in other places in the text, we sum them up here:
+
+.. _weak-extend:
+
+Extending images.
+    Due to the fact that the spatial frequencies spectrum is used, the border of images are become important.
+    We address it here by extending the image, but it often doesn't work well.
+
+.. _weak-subpixel:
+
+Sub-pixel resolution.
+    This is a tricky matter.
+    Since the frequency spectrum is used, neither linear or cubic interpolation will produce the right result.
+    You can try resampling if you are after the sub-pixel precision, but beware --- you have to have correctly sampled (i.e. not `undersampled <http://en.wikipedia.org/wiki/Undersampling>`_) input for it to work.
+
+.. _weak-big:
+
+Big template.
+   If the template presents a wider field of view than the image, you may or may not be successful when using the ``--tile`` option.
+   The current implementation is flaky.

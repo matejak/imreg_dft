@@ -131,6 +131,11 @@ def _translation(im0, im2, filter_pcorr, odds=1, constraints=None):
         tvec = tvec2
         succ = succ2
         angle += 180
+
+    if 0:
+        import pylab as pyl
+        pyl.figure(); pyl.imshow(im0, cmap=pyl.cm.gray)
+        pyl.show()
     return tvec, succ, angle
 
 
@@ -331,11 +336,13 @@ def _phase_correlation(im0, im1, callback=None, * args):
         pyl.show()
 
     (t0, t1), success = callback(scps, * args)
+    ret = np.array((t0, t1))
 
+    # _compensate_fftshift is not appropriate here, this is OK.
     t0 -= f0.shape[0] // 2
     t1 -= f0.shape[1] // 2
 
-    ret = np.array((t0, t1), dtype=float)
+    ret -= np.array(f0.shape, int) // 2
     return ret, success
 
 
