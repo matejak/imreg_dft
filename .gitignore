@@ -6,3 +6,4 @@
 doc/_build
 build
 dist
+.pypirc

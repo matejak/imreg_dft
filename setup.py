@@ -35,8 +35,10 @@ st.setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Natural Language :: English",
-        "Intended Audience :: Scientists",
+        "Intended Audience :: Science/Research",
+        "Intended Audience :: Education",
         "Topic :: Utilities",
+        "Topic :: Scientific/Engineering :: Image Recognition",
         "Operating System :: OS Independent",
         "License :: OSI Approved :: BSD License",
     ],

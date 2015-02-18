@@ -260,7 +260,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'imreg_dft', u'imreg_dft Documentation',
-     [u'Christoph Gohlke, Matěj Týč'], 1)
+     [u'Matěj Týč, Christoph Gohlke'], 1)
 ]
 
 # If true, show URL addresses after external links.

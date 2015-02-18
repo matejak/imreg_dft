@@ -10,9 +10,6 @@ Before installing ``imreg_dft``, it is good to have :ref:`dependencies <requirem
 The easy(_install) way
 ++++++++++++++++++++++
 
-.. warning::
-  We are not on PyPi for the time being, so you can skip the entire paragraph.
-
 You can get the package from PyPi, which means that if you have Python ``setuptools`` installed, you can install ``imreg_dft`` using ``easy_install``.
 For a user (i.e. not system-wide) install, insert ``--user`` between ``easy_install`` and ``imreg_dft``.
 `User install <https://pythonhosted.org/setuptools/easy_install.html#custom-installation-locations>`_ does not require administrator priviledges, but you may need to add the installation directories to your system path, otherwise the `ird` script won't be visible.
@@ -116,7 +113,7 @@ it is a clear sign that there indeed was no error encountered during the tests a
 Documentation
 +++++++++++++
 
-Although you can read the documentation on `readthedocs.org <http://imreg-dft.readthedocs.org/en/latest/index.html>`_, you can generate your own easily.
+Although you can read the documentation on `readthedocs.org <http://imreg-dft.readthedocs.org/en/latest/index.html>`_ (bleeding-edge) and `pythonhosted.org <http://pythonhosted.org//imreg_dft/>` (with images), you can generate your own easily.
 You just have to check out the ``requirements_docs.txt`` file at the root of the project and make sure you have all modules that are mentioned there.
 You also need to have ``imreg_dft`` installed prior documentation generation.
 
