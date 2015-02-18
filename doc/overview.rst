@@ -50,6 +50,7 @@ Or even better, generate the documentation yourself!
 
 Notes
 -----
+
 The API and algorithms are quite good, but help is appreciated.
 ``imreg_dft`` uses `semantic versioning <http://semver.org/>`_, so backward compatibility of any kind will not break across versions with the same major version number.
 

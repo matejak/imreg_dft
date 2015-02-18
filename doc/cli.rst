@@ -112,115 +112,6 @@ The loaders concept functionality is limited by now, but it can be extended easi
 See the :ref:`developer documentation <loaders_devel>` to learn the background.
 If you miss some functionality, you are kindly invited to create a pull request!
 
-Advanced tweaking
------------------
-
-There are some extended options you can use, we will explain their meaning now:
-
-``--lowpass``, ``--highpass``
-    These two concern filtration of the image prior to the registration.
-    There can be multiple reasons why to filter images:
-
-    * One of them is filtered already due to conditions beyond your control, so by filtering them again just brings the other one on the par with the first one.
-      As a side note, filtering in this case should make little to no difference.
-
-    * A part of spectrum contains noise which you want to remove.
-
-    * You want to filter out low frequencies since they are of no good when registering images anyway.
-
-    The filtering works like this:
-
-    The domain of the spectrum is a set of spatial frequencies.
-    Each spatial frequency in an image is a vector with a :math:`x` and :math:`y` components.
-    We norm the frequencies by stating that the highest value of a compnent is 1. 
-    Next, define the *value* of spatial frequency as the (euclidean) length of the normed vector.
-    Therefore the spatial frequencies of greatest values (:math:`\sqrt 2`) are (1, 1), (1, -1) etc.
-
-    An argument to a ``--lowpass`` or ``--highpass`` option is a tuple composed of numbers between 0 and 1.
-    Those relate to the value of spatial frequencies it affects.
-    For example, passing ``--lowpass 0.2,0.4`` means that spatial frequencies with value ranging from 0 to 0.2 will pass and those with value higher than 0.4 won't.
-    Spatial frequencies with values in-between will be progressively attenuated. 
-
-    Therefore, the filter value :math:`f(x)` based on spatial frequency value :math:`x` is
-
-    .. math::
-
-       f(x) =  0, 1, (x - 0.2) / (0.4 - 0.2)
-        
-    .. note::
-       A continuous high-pass filtration is already applied to the image. 
-       The filter is :math:`(1 - \cos[x \pi / 2])^2`
-
-``--filter-pcorr``
-    Fitering of phase correlation applies when determining the right translation vector.
-    If the image pattern is not sampled very densely (i.e. close or even below the Nyquist frequency), ripples may appear near edges in the image.
-    These ripples basically interfere with the algorithm and the phase correlation filtration may overcome this problem.
-
-``--exponent``
-    When finding the right angle and scale, the highest element in an array is searched for.
-    However, again due to incorrect sampling, it might not be the best guess --- for instance, this approach has the obvious flaw of being numerically unstable.
-    There may be several extreme values close together and picking the center of them can be much better.
-    This option plays the following role in the process:
-    
-    * The array is powered by the exponent.
-
-    * The coordinates of the center of mass of the array are determined. 
-
-    Formally: Let :math:`f(x)` be a discrete non-negative function, for instance :math:`f(0) = 3,\ f(1) = 0, f(2) = 2.99, f(3) = 1`.
-    Then, the index of the greatest value is denoted by :math:`\mathrm{argmax}\, f(x) = 0`, because :math:`f(0)` is the greatest of :math:`f(x)` for all :math:`x` whete :math:`f(x)` is defined.
-
-    Most importantly, the coordinate of the center of mass of :math:`f(x)` is
-
-    .. math::
-
-      t_f = \frac{\sum f(x_i)^c x_i} {\sum f(x_i)^c},
-
-    where :math:`c` is our exponent, in case of real center of mass, :math:`c = 1`.
-    The problem is that in this case, the value of :math:`\mathrm{argmax}\, f(x)` is unstable, since the difference between :math:`f(0)` and :math:`f(2)` is relatively low.
-    If we consider real-world conditions, the difference could be below a fraction of the noise standard deviation.
-    However, if we select a value of :math:`c = 5`, the value of corresponding :math:`t_f = 0.996`, which is just between the two highest values and not affected by :math:`f(3)`.
-    And this is actually exactly what we want --- the interpolation during image transformations is not perfect and an analogous situation can occur in the spectrum.
-    The center of few extreme values close together is more representative than the location of just one extreme value.
-
-    One can generalize this to the case of 2D discrete functions and that's our case.
-    Obviously, the higher the exponent is, the closer are we to picking the coordinate of the greatest array element.
-    To neutralize the influence of points with low value, set the value of the exponent to greater or equal to 5.
-
-    .. literalinclude:: _static/examples/06-exponent.txt
-      :language: shell-session
-
-    We can see that with only one iteration, setting the ``--exponent`` to ``5`` brings a more accurate result (or at least not a worse one) than the default value of ``'inf'`` --- the correct value is 1.25 for the scale and -30 for the angle.
-    However, if we increase the number of iterations, the exponent won't make a difference any more.
-
-``--resample``
-    You can try to go for sub-pixel precision if you request resampling of the input prior to the registration.
-    Resampling can be regarded as an interpolation method that is the only correct one in the case when the data are sampled correctly.
-    As opposed to well-known 2D interpolation methods such as bilinear or bicubic, resampling uses the :math:`sinc(x) = sin(x) / x` function, but it is usually implemented by taking a discrete Fourier transform of the input, padding the spectrum with zeros and then performing an inverse transform.
-    If you try it, results are not so great:
-
-    .. literalinclude:: _static/examples/07-resample.txt
-      :language: shell-session
-
-    However, resampling can result in artifacts near the image edges.
-    This is a known phenomenon that occurs when you have an unbounded signal (i.e. signal that goes beyond the field of view) and you manipulate its spectrum.
-    Extending the image and applying a mild low-pass filter can improve things considerably.
-
-    The first operation removes the edge artifact problem by making the opposing edges the same and making the image seamless.
-    This removes spurious spatial frequencies that appear as a ``+`` pattern in the image's power spectrum.
-    The second one then ensures that the power spectrum is mostly smooth after the zero-pading, which is also good.
-
-    .. literalinclude:: _static/examples/08-resample2.txt
-      :language: shell-session
-
-    As we can see, both the scale and angle were determined extremely precisely.
-    So, a warning for those who skip the ordinary text:
-
-    .. warning::
-
-      The ``--resample`` option offers the potential of sub-pixel resolution.
-      However, when using it, be sure to start off with (let's say) ``--extend 10`` and ``--lowpass 0.9,1.1`` to exploit it.
-      Then, experiment with the settings until the results look best.
-    
 Caveats
 -------
 
@@ -245,3 +136,9 @@ Sub-pixel resolution.
 Big template.
    If the template presents a wider field of view than the image, you may or may not be successful when using the ``--tile`` option.
    The current implementation is flaky.
+
+.. _weak-succ:
+
+Success value.
+   The ``Success`` that is reported has an unclear meaning.
+   And its behavior is also quite dodgy.

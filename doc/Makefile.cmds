@@ -13,74 +13,106 @@ TEXTS = \
 	03-bad \
 	03-bad \
 	05-extend \
-	06-exponent \
+	03-bad \
 	07-resample \
 	08-resample2 \
 	09-output \
 	10-testing_help \
+	11-constraints \
+	12-difficult \
 	$(NUL)
-
-TEMPFILE = temp.txt
-MV = mv
-
-INTRO_PNG = intro.png
-$(word 1,$(TARGETS)):
-	DIR=../../imreg_dft PRIV="-o $(PWD)/$(INTRO_PNG)" $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-$(word 2,$(TARGETS)):
-	DIR=../../imreg_dft $(REPEATER) cd resources/examples > $(TEMPFILE)
-	$(REPEATER) ird sample1.png sample2.png --print-result --print-format "'translation:%(tx)d,%(ty)d\n'" >> $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-$(word 3,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --show > $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-# $(word 4,$(TARGETS)) is skipped intentionally
-
-$(word 5,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample4.png --extend 20 --show --print-result --iter 4 > $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-$(word 6,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --exponent inf --print-result > $(TEMPFILE)
-	$(REPEATER) ird sample1.png sample3.png --exponent 5 --print-result >> $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-$(word 7,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --print-result > $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-$(word 8,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --lowpass 0.9,1.1 --extend 10 --print-result > $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-$(word 9,$(TARGETS)):
-	$(REPEATER) ird sample1.png sample3c.jpg --iter 3 --print-result --output color.jpg > $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-$(word 10,$(TARGETS)):
-	DIR=../../imreg_dft $(REPEATER) cd tests > $(TEMPFILE)
-	DIR=../tests $(REPEATER) make help >> $(TEMPFILE)
-	OUT="..." DIR=../tests $(REPEATER) make check >> $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
-$(INTRO_PNG): | $(word 1,$(TARGETS))
-	@echo This file is a side-effect product of the rule for $|
-	@echo It is supposed to be already present, so something is wrong.
-	@false
-
-big.png big.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample2.png $(INTRO_PNG)
-	$(PYTHON) stack_imgs.py $^ -o $@ --size 8,2.2
 
 IMGS = \
 	big.png \
 	big.pdf \
+	difficult.png \
+	difficult.pdf \
+	constraints.png \
+	constraints.pdf \
 	$(NUL)
 
 TARGETS = \
 	  $(foreach title,$(TEXTS),_static/examples/$(title).txt) \
 	  $(IMGS) \
 	  $(NUL)
+
+
+MV = mv
+
+INTRO_PNG = intro.png
+CONS_PNG_OK = consreg-ok.png
+CONS_PNG_BAD = consreg-bad.png
+DIFFICULT_PNG = difreg.png
+
+$(word 1,$(TARGETS)):
+	DIR=../../imreg_dft PRIV="-o $(PWD)/$(INTRO_PNG)" $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $@
+
+$(word 2,$(TARGETS)):
+	DIR=../../imreg_dft $(REPEATER) cd resources/examples > $@
+	$(REPEATER) ird sample1.png sample2.png --print-result --print-format "'translation:%(tx)d,%(ty)d\n'" >> $@
+
+$(word 3,$(TARGETS)):
+	$(REPEATER) ird sample1.png sample3.png --show > $@
+
+# $(word 4,$(TARGETS)) is skipped intentionally
+
+$(word 5,$(TARGETS)):
+	$(REPEATER) ird sample1.png sample4.png --extend 20 --show --print-result --iter 4 > $@
+
+$(word 7,$(TARGETS)):
+	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --print-result > $@
+
+$(word 8,$(TARGETS)):
+	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --lowpass 0.9,1.1 --extend 10 --print-result > $@
+
+$(word 9,$(TARGETS)):
+	$(REPEATER) ird sample1.png sample3c.jpg --iter 3 --print-result --output color.jpg > $@
+
+$(word 10,$(TARGETS)):
+	DIR=../../imreg_dft $(REPEATER) cd tests > $@
+	DIR=../tests $(REPEATER) make help >> $@
+	OUT="..." DIR=../tests $(REPEATER) make check >> $@
+
+CONSDIR = $(RSRCDIR)/constraints
+$(word 11,$(TARGETS)):
+	$(REPEATER) cd constraints > $@
+	DIR=$(CONSDIR) PRIV="-o $(PWD)/$(CONS_PNG_BAD)" $(REPEATER) ird tricky.png tricky.png --angle 170,1 --scale 1,0.05 --print-result >> $@
+
+$(CONS_PNG_OK):
+	ird $(CONSDIR)/tricky.png $(CONSDIR)/tricky.png --angle 170,10 -o $(CONS_PNG_OK)
+
+CELLDIR = $(RSRCDIR)/cells
+$(word 12,$(TARGETS)):
+	$(REPEATER) cd cells > $@
+	DIR=$(CELLDIR) PRIV="-o $(PWD)/$(DIFFICULT_PNG)" $(REPEATER) ird big-fluo.jpg small-dhm.jpg --tile --filter-pcorr 4 --scale 1.0,0.1 --angle 0,20 --lowpass 0.7,0.8 --print-result >> $@
+
+big.png big.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample2.png $(INTRO_PNG)
+	$(PYTHON) stack_imgs.py $^ -o $@ --size 8,2.2
+
+constraints.png constraints.pdf: $(CONSDIR)/tricky.png $(CONS_PNG_OK) $(CONS_PNG_BAD)
+	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2
+
+difficult.png difficult.pdf: $(CELLDIR)/big-fluo.jpg $(CELLDIR)/small-dhm.jpg $(DIFFICULT_PNG)
+	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2 --colormap gray_r
+
+$(INTRO_PNG): | $(word 1,$(TARGETS))
+	@echo This file is a side-effect product of the rule for $|
+	@echo It is supposed to be already present, so something is wrong.
+	$(RM) $|
+	@echo We have deleted it, so try again :-)
+	@false
+
+$(CONS_PNG_BAD): | $(word 11,$(TARGETS))
+	@echo This file is a side-effect product of the rule for $|
+	@echo It is supposed to be already present, so something is wrong.
+	$(RM) $|
+	@echo 'We have deleted it, so try again :-)'
+	@false
+
+$(DIFFICULT_PNG): | $(word 12,$(TARGETS))
+	@echo This file is a side-effect product of the rule for $|
+	@echo It is supposed to be already present, so something is wrong.
+	$(RM) $|
+	@echo 'We have deleted it, so try again :-)'
+	@false
 

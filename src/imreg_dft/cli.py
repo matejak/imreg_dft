@@ -67,7 +67,6 @@ def _constraints(what):
                 raise ap.ArgumentTypeError(
                     "The %s value must be a number between %g and %g, got %g."
                     % (lo, hi, mean))
-        std = 0
         if len(components) == 2:
             std = components[1]
             if len(std) == 0:
@@ -149,8 +148,8 @@ def create_parser():
                         help="0,0 means no-op, 0.1,0.2 is a mild filter")
     parser.add_argument('--resample', type=float, default=1,
                         help="Work with resampled images.")
-    parser.add_argument('--exponent', type=_exponent, default="inf",
-                        help="Either 'inf' or float. See the docs.")
+    # parser.add_argument('--exponent', type=_exponent, default="inf",
+    #                     help="Either 'inf' or float. See the docs.")
     parser.add_argument('--iters', type=int, default=1,
                         help="How many iterations to guess the right scale "
                         "and angle")
@@ -175,8 +174,8 @@ def create_parser():
         "angle: %(angle)f +-%(Dangle)g\n"
         "shift: %(tx)g, %(ty)g +-%(Dt)g\nSuccess: %(success)g\n", type=outmsg,
         help="Print a string (to stdout) in a given format. A dictionary "
-        "containing the 'scale', 'angle', 'tx', 'ty' and 'success' keys "
-        "will be passed for interpolation")
+        "containing the 'scale', 'angle', 'tx', 'ty', 'Dscale', 'Dangle', "
+        "'Dt' and 'success' keys will be passed for string interpolation")
     parser.add_argument(
         '--tile', action="store_true", default=False, help="If the template "
         "is larger than the image, break the template to pieces of size "
@@ -233,7 +232,7 @@ def main():
         show=args.show,
         print_format=print_format,
         iters=args.iters,
-        exponent=args.exponent,
+        exponent="inf",
         resample=args.resample,
         tile=args.tile,
         constraints=constraints,
