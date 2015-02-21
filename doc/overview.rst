@@ -17,16 +17,16 @@ The algorithm is described in [1]_ and possibly also in [2]_ and [3]_.
    This is the actual output of :ref:`sample in the cli section <sample-intro>`
 
 :Authors:
-  - `Christoph Gohlke <http://www.lfd.uci.edu/~gohlke/>`_
   - `Matěj Týč <https://github.com/matejak>`_
+  - `Christoph Gohlke <http://www.lfd.uci.edu/~gohlke/>`_
 
 :Organization:
   - Laboratory for Fluorescence Dynamics, University of California, Irvine
   - Brno University of Technology, Brno, Czech Republic
 
 :Copyright:
-  - 2011-2014, Christoph Gohlke
   - 2014-2015, Matěj Týč
+  - 2011-2014, Christoph Gohlke
 
 .. _requirements:
  
@@ -38,10 +38,8 @@ Generally, you will need ``numpy`` and ``scipy`` for the algorithm functionality
 Quickstart
 ----------
 
-`Read the docs <http://imreg-dft.readthedocs.org>`_, the full-blown quickstart is there.
-Disregard this section if you actually are reading the docs (and not the project's webpage, where this text also appears).
-
-Or even better, generate the documentation yourself! 
+Head for the `corresponding section of the documentationi <quickstart>_`.
+Note that you can generate the documentation yourself! 
 
 1. Install the package by running ``python setup.py install`` in the project root.
 #. Install packages that are required for the documentation to compile (see the ``requirements_docs.txt`` file.

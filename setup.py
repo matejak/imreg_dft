@@ -9,15 +9,15 @@ import imreg_dft
 
 reqs = open('requirements.txt', 'r').read().strip().splitlines()
 
-longdesc = open(os.path.join('doc', 'overview.rst'), 'r').read()
+longdesc = open(os.path.join('doc', 'description.rst'), 'r').read()
 
 st.setup(
     name="imreg_dft",
     version=imreg_dft.__version__,
     author=u"Matěj Týč",
     author_email="matej.tyc@gmail.com",
-    description=("Image registration procedure based on discrete Fourier"
-                 "transform (DFT)"),
+    description=("Image registration utility using algorithms based on "
+                 "discrete Fourier transform (DFT, FFT)"),
     license="BSD",
     url="https://github.com/matejak/imreg_dft",
     package_dir = {'': 'src'},

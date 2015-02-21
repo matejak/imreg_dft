@@ -113,7 +113,7 @@ it is a clear sign that there indeed was no error encountered during the tests a
 Documentation
 +++++++++++++
 
-Although you can read the documentation on `readthedocs.org <http://imreg-dft.readthedocs.org/en/latest/index.html>`_ (bleeding-edge) and `pythonhosted.org <http://pythonhosted.org//imreg_dft/>` (with images), you can generate your own easily.
+Although you can read the documentation on `readthedocs.org <http://imreg-dft.readthedocs.org/en/latest/index.html>`_ (bleeding-edge) and `pythonhosted.org <http://pythonhosted.org//imreg_dft/>`_ (with images), you can generate your own easily.
 You just have to check out the ``requirements_docs.txt`` file at the root of the project and make sure you have all modules that are mentioned there.
 You also need to have ``imreg_dft`` installed prior documentation generation.
 

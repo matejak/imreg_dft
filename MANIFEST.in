@@ -1,0 +1,15 @@
+include resources/code/similarity.py
+include resources/code/translation.py
+
+include resources/examples/cells/big-fluo.jpg
+include resources/examples/cells/small-dhm.jpg
+
+include resources/examples/constraints/three.png
+include resources/examples/constraints/tricky.png
+include resources/examples/constraints/two.png
+
+include resources/examples/sample1.png
+include resources/examples/sample2.png
+include resources/examples/sample3.png
+include resources/examples/sample3c.jpg
+include resources/examples/sample4.png

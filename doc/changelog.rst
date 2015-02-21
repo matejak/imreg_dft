@@ -1,6 +1,11 @@
 User-centric changelog
 ======================
 
+1.0.2 --- 2015-02-??
+--------------------
+
+* Doc refresh, fix of adding data files to the distribution
+
 1.0.1 --- 2015-02-19
 --------------------
 
