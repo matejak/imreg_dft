@@ -5,19 +5,19 @@ General overview
 It doesn't work with those images directly, but it works with their spectrum (DFT using FFT), and its log-polar transformation [1]_.
 
 Basically, if you want to align two images that have different scale and are rotated and shifted against each other, ``imreg_dft`` is the tool you want to check out.
-`Get started <Quickstart>`_ in five minutes and see how it works for you!
+`Get started <http://pythonhosted.org/imreg_dft/quickstart.html#quickstart>`_ in five minutes and see how it works for you!
 
 :Authors:
   - `Matěj Týč <https://github.com/matejak>`_
   - `Christoph Gohlke <http://www.lfd.uci.edu/~gohlke/>`_
 
 :Organization:
-  - Laboratory for Fluorescence Dynamics, University of California, Irvine
   - Brno University of Technology, Brno, Czech Republic
+  - Laboratory for Fluorescence Dynamics, University of California, Irvine
 
 :Copyright:
-  - 2011-2014, Christoph Gohlke
   - 2014-2015, Matěj Týč
+  - 2011-2014, Christoph Gohlke
 
 .. _requirements:
  

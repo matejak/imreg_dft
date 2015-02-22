@@ -1,6 +1,10 @@
 User-centric changelog
 ======================
 
+**1.0.4 --- TBA**
+
+ * Fixed project description typo
+
 **1.0.3 --- 2015-02-22**
 
   * Fixed the ``MANIFEST.in`` so the package is finally ``easy_install``-able
