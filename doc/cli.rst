@@ -21,7 +21,7 @@ Quick reference
 .. _sample-intro:
 
 #. Quickly find out whether it works for you, having the results (optionally) shown in a pop-up window and printed out.
-   We assume you stand in the root of ``imreg_dft`` cloned from the git repo.
+   We assume you stand in the root of ``imreg_dft`` cloned from the git repo (or :ref:`downloaded from the web <source-files>`).
 
    .. literalinclude:: _static/examples/01-intro.txt
      :language: shell-session

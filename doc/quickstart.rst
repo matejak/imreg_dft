@@ -19,6 +19,11 @@ For a user (i.e. not system-wide) install, insert ``--user`` between ``easy_inst
   [user@linuxbox ~]$ easy_install imreg_dft
 
 If you have ``pip`` installed, you can `use it <https://pip.pypa.io/en/latest/user_guide.html#installing-packages>`_ instead of ``easy_install``.
+``pip`` even allows you to install from the source code repository:
+
+.. code-block:: shell-session
+
+  [user@linuxbox ~]$ pip install git+https://github.com/matejak/imreg_dft.git
 
 The source way (also easy)
 ++++++++++++++++++++++++++
@@ -51,12 +56,19 @@ A succesful installation means that:
 * The Python interpreter can import ``imreg_dft``.
 * There is the ``ird`` script available to you, e.g. running ``ird --version`` should not end by errors of any kind.
 
+.. _source-files:
+
+.. note::
+
+   If you have installed the package using ``pip`` or ``easy_install``, you don't have the example files, images nor test files.
+   To get them, download the source archive from `PyPi <https://pypi.python.org/pypi/imreg_dft/>`_ or release archive from `Github <https://github.com/matejak/imreg_dft/releases>`_ and unpack them.
+
 .. _py_examples:
 
 Python examples
 +++++++++++++++
 
-The following examples are located in the ``resources/code`` directory of the project repository as ``similarity.py`` and ``translation.py``.
+The following examples are located in the ``resources/code`` directory of the project repository :ref:`or its source tree <source-files>` as ``similarity.py`` and ``translation.py``.
 You can launch them from their location once you have installed ``imreg_dft`` to observe the output.
 
 The full-blown similarity function that returns parameters (and the transormed image):
@@ -82,7 +94,7 @@ These steps should go before the :ref:`quickstart` section, but they come now as
 Tests
 +++++
 
-You can run tests after installation.
+If you have :ref:`downloaded the source files <source-files>`, you can run tests after installation.
 There are now unit tests and regression tests.
 You can execute them by going to the ``tests`` subdirectory and running
 
@@ -117,4 +129,5 @@ Although you can read the documentation on `readthedocs.org <http://imreg-dft.re
 You just have to check out the ``requirements_docs.txt`` file at the root of the project and make sure you have all modules that are mentioned there.
 You also need to have ``imreg_dft`` installed prior documentation generation.
 
-Then, just go to the ``doc`` directory and run ``make html`` or ``make latexpdf`` there.
+So, be sure to have :ref:`the source files <source-files>`.
+In the source tree, go to the ``doc`` directory there and run ``make html`` or ``make latexpdf`` there.

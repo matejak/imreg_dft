@@ -29,7 +29,7 @@ For the command-line tool, reading images is useful, so make sure you have ``pil
 Quickstart
 ----------
 
-Check the documentation on `readthedocs.ort <http://imreg-dft.readthedocs.org/en/latest/quickstart.html>`_ (bleeding-edge) or `pythonhosted.org <`http://pythonhosted.org//imreg_dft/quickstart.html>`_ (with images).
+Check the documentation on `readthedocs.ort <http://imreg-dft.readthedocs.org/en/latest/quickstart.html>`_ (bleeding-edge) or `pythonhosted.org <http://pythonhosted.org/imreg_dft/quickstart.html>`_ (with images).
 Or even better, generate the documentation yourself! 
 
 1. Install the package by running ``python setup.py install`` in the project root.

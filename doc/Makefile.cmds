@@ -31,11 +31,17 @@ IMGS = \
 	constraints.pdf \
 	$(NUL)
 
+EXAMPLEDIR = _static/examples
 TARGETS = \
-	  $(foreach title,$(TEXTS),_static/examples/$(title).txt) \
+	  $(foreach title,$(TEXTS),$(EXAMPLEDIR)/$(title).txt) \
 	  $(IMGS) \
 	  $(NUL)
 
+$(EXAMPLEDIR):
+	mkdir -p $@
+
+# The directory deps are order-only ones, therefore there is the |
+EXAMPLEDEPS = | $(EXAMPLEDIR)
 
 MV = mv
 
@@ -44,37 +50,37 @@ CONS_PNG_OK = consreg-ok.png
 CONS_PNG_BAD = consreg-bad.png
 DIFFICULT_PNG = difreg.png
 
-$(word 1,$(TARGETS)):
-	DIR=../../imreg_dft $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $@
+$(word 1,$(TARGETS)): $(EXAMPLEDEPS)
+	DIR=.. $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $@
 
-$(word 2,$(TARGETS)):
-	DIR=../../imreg_dft $(REPEATER) cd resources/examples > $@
+$(word 2,$(TARGETS)): $(EXAMPLEDEPS)
+	DIR=.. $(REPEATER) cd resources/examples > $@
 	$(REPEATER) ird sample1.png sample2.png --print-result --print-format "'translation:%(tx)d,%(ty)d\n'" >> $@
 
-$(word 3,$(TARGETS)):
+$(word 3,$(TARGETS)): $(EXAMPLEDEPS)
 	PRIV="-o $(PWD)/$(INTRO_PNG)" $(REPEATER) ird sample1.png sample3.png --show > $@
 
 # $(word 4,$(TARGETS)) is skipped intentionally
 
-$(word 5,$(TARGETS)):
+$(word 5,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) ird sample1.png sample4.png --extend 20 --show --print-result --iter 4 > $@
 
-$(word 7,$(TARGETS)):
+$(word 7,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --print-result > $@
 
-$(word 8,$(TARGETS)):
+$(word 8,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) ird sample1.png sample3.png --resample 3 --iter 4 --lowpass 0.9,1.1 --extend 10 --print-result > $@
 
-$(word 9,$(TARGETS)):
+$(word 9,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) ird sample1.png sample3c.jpg --iter 3 --print-result --output color.jpg > $@
 
-$(word 10,$(TARGETS)):
-	DIR=../../imreg_dft $(REPEATER) cd tests > $@
+$(word 10,$(TARGETS)): $(EXAMPLEDEPS)
+	DIR=.. $(REPEATER) cd tests > $@
 	DIR=../tests $(REPEATER) make help >> $@
 	OUT="..." DIR=../tests $(REPEATER) make check >> $@
 
 CONSDIR = $(RSRCDIR)/constraints
-$(word 11,$(TARGETS)):
+$(word 11,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) cd constraints > $@
 	DIR=$(CONSDIR) PRIV="-o $(PWD)/$(CONS_PNG_BAD)" $(REPEATER) ird tricky.png tricky.png --angle 170,1 --scale 1,0.05 --print-result >> $@
 
@@ -82,7 +88,7 @@ $(CONS_PNG_OK):
 	ird $(CONSDIR)/tricky.png $(CONSDIR)/tricky.png --angle 170,10 -o $(CONS_PNG_OK)
 
 CELLDIR = $(RSRCDIR)/cells
-$(word 12,$(TARGETS)):
+$(word 12,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) cd cells > $@
 	DIR=$(CELLDIR) PRIV="-o $(PWD)/$(DIFFICULT_PNG)" $(REPEATER) ird big-fluo.jpg small-dhm.jpg --tile --filter-pcorr 4 --scale 1.0,0.1 --angle 0,20 --lowpass 0.7,0.8 --print-result >> $@
 
@@ -95,23 +101,19 @@ constraints.png constraints.pdf: $(CONSDIR)/tricky.png $(CONS_PNG_OK) $(CONS_PNG
 difficult.png difficult.pdf: $(CELLDIR)/big-fluo.jpg $(CELLDIR)/small-dhm.jpg $(DIFFICULT_PNG)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2 --colormap gray_r
 
+define already-have-it
+@echo This file is a side-effect product of the rule for $|
+@echo It is supposed to be already present, so something is wrong.
+$(RM) $|
+@echo We have deleted it, so try again :-)
+@false
+endef
+
 $(INTRO_PNG): | $(word 3,$(TARGETS))
-	@echo This file is a side-effect product of the rule for $|
-	@echo It is supposed to be already present, so something is wrong.
-	$(RM) $|
-	@echo We have deleted it, so try again :-)
-	@false
+	$(already-have-it)
 
 $(CONS_PNG_BAD): | $(word 11,$(TARGETS))
-	@echo This file is a side-effect product of the rule for $|
-	@echo It is supposed to be already present, so something is wrong.
-	$(RM) $|
-	@echo 'We have deleted it, so try again :-)'
-	@false
+	$(already-have-it)
 
 $(DIFFICULT_PNG): | $(word 12,$(TARGETS))
-	@echo This file is a side-effect product of the rule for $|
-	@echo It is supposed to be already present, so something is wrong.
-	$(RM) $|
-	@echo 'We have deleted it, so try again :-)'
-	@false
+	$(already-have-it)

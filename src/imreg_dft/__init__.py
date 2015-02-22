@@ -1,4 +1,4 @@
 from imreg_dft.imreg import *
 
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"

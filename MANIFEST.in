@@ -1,3 +1,8 @@
+include requirements.txt
+include requirements_docs.txt
+include LICENSE
+include README.md
+
 include resources/code/similarity.py
 include resources/code/translation.py
 
@@ -13,3 +18,30 @@ include resources/examples/sample2.png
 include resources/examples/sample3.png
 include resources/examples/sample3c.jpg
 include resources/examples/sample4.png
+
+include tests/Makefile
+
+include tests/regressiontests/Makefile
+include tests/regressiontests/check_similarity.sh
+include tests/regressiontests/img2mat.py
+
+include tests/unittests/__init__.py
+include tests/unittests/imreg.py
+include tests/unittests/utils.py
+
+include doc/Makefile
+include doc/Makefile.cmds
+include doc/repeat.sh
+include doc/stack_imgs.py
+
+include doc/api.rst
+include doc/changelog.rst
+include doc/cli-advanced.rst
+include doc/cli.rst
+include doc/conf.py
+include doc/description.rst
+include doc/devel.rst
+include doc/index.rst
+include doc/make.bat
+include doc/overview.rst
+include doc/quickstart.rst

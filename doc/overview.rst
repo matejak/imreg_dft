@@ -38,7 +38,7 @@ Generally, you will need ``numpy`` and ``scipy`` for the algorithm functionality
 Quickstart
 ----------
 
-Head for the `corresponding section of the documentationi <quickstart>_`.
+Head for the `corresponding section of the documentationi <quickstart>`_.
 Note that you can generate the documentation yourself! 
 
 1. Install the package by running ``python setup.py install`` in the project root.

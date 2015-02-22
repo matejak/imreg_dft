@@ -19,7 +19,7 @@ test -n "$OUT" || OUT="$(cd $DIR && sh -c "$CMD $PRIV")"
 RC=$?
 
 # Shell line imitation. $@ stands for the unfiltered command-line
-echo "[user@linuxbox $(basename $DIR)]$ $@"
+echo "[user@linuxbox $(basename $(cd $DIR && pwd))]$ $@"
 
 # We transform /home/myname/somewhere/imreg_dft to /home/user/imreg_dft
 # just to be consistent with the rest of the docs :-)
