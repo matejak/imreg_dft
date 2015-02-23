@@ -7,19 +7,19 @@ Apart from simple problems, the command-line is able to solve more tricky cases 
 * one of the images has its spectrum cut (e.g. when different objectives were used),
 * you want to apply interpolation (you have nice images and desire sub-pixel precision),
 * one (or more) of rotation, scaling, or translation is known (so you want to help the process by narrowing possible values down) and
-* the image field of view is a (small) subset of the template's (which is a huge obstacle when not taken care of in any way).
+* the subject's field of view is a (small) subset of the template's (which is a huge obstacle when not taken care of in any way).
 
 Frequency spectrum filtering
 ----------------------------
 
-If you want to even image spectra, you want to use low-pass filters.
+If you want to even images spectra, you want to use low-pass filters.
 This happens for example if you acquire photos of sample under a microscope using objective lenses with different numerical aperture.
 The fact that spectra don't match in high frequencies may confuse the method.
 
 On the contrary, if you have some low-frequency noise (such as working with inverted images), you need a high-pass filter.
 
 ``--lowpass``, ``--highpass``
-    These two concern filtration of the image prior to the registration.
+    These two concern filtration of images prior to the registration.
     There can be multiple reasons why to filter images:
 
     * One of them is filtered already due to conditions beyond your control, so by filtering them again just brings the other one on the par with the first one.
@@ -97,7 +97,7 @@ As we can see, both the scale and angle were determined extremely precisely.
 So, a warning for those who skip the ordinary text:
 
 ``--resample``
-    The option accepts a (float) number specifying the resampling coefficient, so passing 2.0 means that the image will be resampled so its dimension become twice as big.
+    The option accepts a (float) number specifying the resampling coefficient, so passing 2.0 means that the images will be resampled so its dimension become twice as big.
 
 .. warning::
 
@@ -115,7 +115,7 @@ You can specify the expected value and the uncertainity by specifying a mean (:m
 Values is proportionally reduced in the phase correlation phase of the algorithm.
 Here is what happens if we force a wrong angle:
 
-When the template and image are the same, the algorithm would have no problems with the registration.
+When the template and subject are the same, the algorithm would have no problems with the registration.
 If we force a certain angle by specifying a value with a low :math:`\sigma`, the result is obeyed.
 However, the algorithm is actually quite puzzled and it would fail if we didn't specify the scale constraint.
 
@@ -126,7 +126,7 @@ When we place a less restrictive constraint, a locally optimal registration diff
 
 .. figure:: constraints.*
 
-   The template and the image at the same time (a), registered with ``--angle 170,10`` (b) and registered with ``--angle 170,1`` (c).
+   The template and the subject at the same time (a), registered with ``--angle 170,10`` (b) and registered with ``--angle 170,1`` (c).
 
 You can use (separately or all at once) options ``--angle``, ``--scale``, ``--tx`` and ``ty``.
 Notice that since the translation comes after scale change and rotation, it doesn't make much sense to use either ``--tx`` or ``--ty`` without having strong control over ``--angle`` *and* ``--scale``.
@@ -151,25 +151,25 @@ You can either:
 Large templates
 ---------------
 
-``imreg_dft`` works well on images that show the same object that is contained within the field of view.
+``imreg_dft`` works well on images that show the same object that is contained within the field of view with an uniform background.
 However, the method fails when the fields of view don't match and are in subset-superset relationship.
 
 Normally, the image will be "extended", but that may not work.
-Therefore, if the ``image`` is the *smaller* of the two, i.e. ``template`` encompasses it, you can use the ``--tile`` argument.
-Then, the template will be internally subdivided into tiles (of similar size to the image size) and individual tiles will be matched against the image and the tile that matches the best will determine the transformation.
+Therefore, if the subject is the *smaller* of the two, i.e. ``template`` encompasses it, you can use the ``--tile`` argument.
+Then, the template will be internally subdivided into tiles (of similar size to the subject's size) and individual tiles will be matched against the subject and the tile that matches the best will determine the transformation.
 
-The ``--show`` option will show matching over the best fitting tile and you can use the ``--output`` option to save the registered image (that is enlarged to the shape of the template).
+The ``--show`` option will show matching over the best fitting tile and you can use the ``--output`` option to save the registered subject (that is enlarged to the shape of the template).
 
 Result
 ------
 
 The following result demonstrates usage of ``ird`` under hard conditions.
-There are two images, the template is taken from confocal microscope (a), the image is a phase acquired using a digital holographic microscope [4]_.
+There are two images, the template is taken from confocal microscope (a), the subject is a phase acquired using a digital holographic microscope [4]_.
 
 Pretty much everything that could go wrong indeed went:
 
-* Spectrums were not matching (the template is sharper than the image).
-* The template is obviously a wider area than the image.
+* Spectrums were not matching (the template is sharper than the subject).
+* The template obviously shows a wider area than the subject.
 * The images actually differ in many aspects.
 
 Well, at least the scale and angle are somehow known, so it is possible to use constraints in a mild way.
@@ -186,7 +186,7 @@ One of the right commands is
 
 .. figure:: difficult.*
 
-   The template (a), image (b) and registered image (c).
+   The template (a), subject (b) and registered subject (c).
    Try for yourself with the ``--show`` argument and be impressed!
 
 .. [4] Coherence-controlled holographic microscope. Pavel Kolman and Radim Chmelík, Opt. Express 18, 21990-22003 (2010) http://www.opticsinfobase.org/vjbo/abstract.cfm?URI=oe-18-21-21990

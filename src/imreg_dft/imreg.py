@@ -76,7 +76,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
         exponent (float or 'inf'): The exponent stuff, see :func:`similarity`
 
     Returns:
-        tuple: Scale, angle. Describes the relationship of the second image to
+        tuple: Scale, angle. Describes the relationship of the subject  image to
         the first one.
     """
     assert len(ims) == 2, \
@@ -162,7 +162,7 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
 
     Args:
         im0 (2D numpy array): The first (template) image
-        im1 (2D numpy array): The second image
+        im1 (2D numpy array): The second (subject) image
         numiter (int): How many times to iterate when determining scale and
             rotation
         order (int): Order of approximation (when doing transformations). 1 =
@@ -176,7 +176,7 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
 
     Returns:
         dict: Contains following keys: ``scale``, ``angle``, ``tvec`` (Y, X),
-        ``success`` and ``timg`` (the transformed image)
+        ``success`` and ``timg`` (the transformed subject image)
 
     .. note:: There are limitations
 
@@ -291,7 +291,7 @@ def translation(im0, im1, filter_pcorr=0, constraints=None):
 
     Args:
         im0 (2D numpy array): The first (template) image
-        im1 (2D numpy array): The second image
+        im1 (2D numpy array): The second (subject) image
         filter_pcorr (int): Radius of a spectrum filter for translation
             detection
 
@@ -519,18 +519,18 @@ def imshow(im0, im1, im2, cmap=None, fig=None, **kwargs):
 
       +---------------------+---------------------+
       |                     |                     |
-      |   <template image>  |       <image>       |
+      |   <template image>  |   <subject image>   |
       |                     |                     |
       +---------------------+---------------------+
       | <difference between |                     |
-      |   template and the  | <transformed image> |
-      |  transformed image> |                     |
+      |  template and the   |<transformed subject>|
+      |transformed subject> |                     |
       +---------------------+---------------------+
 
     Args:
         im0 (np.ndarray): The template image
-        im1: The ``image``
-        im2: The transformed ``image`` --- it is supposed to match the template
+        im1 (np.ndarray): The subject image
+        im2: The transformed subject --- it is supposed to match the template
         cmap (optional): colormap
         fig (optional): The figure you would like to have this plotted on
 

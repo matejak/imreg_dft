@@ -137,7 +137,7 @@ def outmsg(msg):
 def create_parser():
     parser = ap.ArgumentParser()
     parser.add_argument('template')
-    parser.add_argument('image')
+    parser.add_argument('subject')
     parser.add_argument('--show', action="store_true", default=False,
                         help="Whether to show registration result")
     parser.add_argument('--lowpass', type=_float_tuple,
@@ -160,7 +160,7 @@ def create_parser():
     parser.add_argument('--order', type=int, default=1,
                         help="Interpolation order (1 = linear, 3 = cubic etc)")
     parser.add_argument('--output', '-o',
-                        help="Where to save the transformed image.")
+                        help="Where to save the transformed subject.")
     parser.add_argument(
         '--filter-pcorr', type=int, default=0,
         help="Whether to filter during translation detection. Normally not "
@@ -178,26 +178,26 @@ def create_parser():
         "'Dt' and 'success' keys will be passed for string interpolation")
     parser.add_argument(
         '--tile', action="store_true", default=False, help="If the template "
-        "is larger than the image, break the template to pieces of size "
-        "similar to image size.")
+        "is larger than the subject, break the template to pieces of size "
+        "similar to subject size.")
     parser.add_argument('--version', action="version",
                         version="imreg_dft %s" % ird.__version__,
                         help="Just print version and exit")
     parser.add_argument(
         "--angle", type=_constraints("angle"),
-        metavar="MEAN[,STD=0]", default=(0, None),
+        metavar="MEAN[,STD]", default=(0, None),
         help="The mean and standard deviation of the expected angle. ")
     parser.add_argument(
         "--scale", type=_constraints("scale"),
-        metavar="MEAN[,STD=0]", default=(1, None),
+        metavar="MEAN[,STD]", default=(1, None),
         help="The mean and standard deviation of the expected scale. ")
     parser.add_argument(
         "--tx", type=_constraints("shift"),
-        metavar="MEAN[,STD=0]", default=(0, None),
+        metavar="MEAN[,STD]", default=(0, None),
         help="The mean and standard deviation of the expected X translation. ")
     parser.add_argument(
         "--ty", type=_constraints("shift"),
-        metavar="MEAN[,STD=0]", default=(0, None),
+        metavar="MEAN[,STD]", default=(0, None),
         help="The mean and standard deviation of the expected Y translation. ")
     loader.update_parser(parser)
     return parser
@@ -208,7 +208,7 @@ def main():
 
     args = parser.parse_args()
 
-    loader_stuff = loader.settle_loaders(args, (args.template, args.image))
+    loader_stuff = loader.settle_loaders(args, (args.template, args.subject))
 
     # We need tuples in the parser and lists further in the code.
     # So we have to do it like this.
@@ -239,7 +239,7 @@ def main():
         output=args.output,
     )
     opts.update(loader_stuff)
-    run(args.template, args.image, opts)
+    run(args.template, args.subject, opts)
 
 
 def filter_images(imgs, low, high):
@@ -322,11 +322,11 @@ def _get_resdict(imgs, opts, tosa=None):
     return resdict
 
 
-def run(template, image, opts):
+def run(template, subject, opts):
     # lazy import so no imports before run() is really called
     from imreg_dft import imreg
 
-    fnames = (template, image)
+    fnames = (template, subject)
     loaders = opts["loaders"]
     loader_img = loaders[1]
     imgs = [loa.load2reg(fname) for fname, loa in zip(fnames, loaders)]

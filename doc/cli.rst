@@ -5,13 +5,39 @@ Command-line tool overview
 
 The package contains one Python :abbr:`CLI (command-line interface)` script.
 Although you are more likely to use the ``imreg_dft`` functionality from your own Python programs, you can still have some use to the ``ird`` front-end.
-There are three main reasons why you would want to use it:
+
+There are these main reasons why you would want to use it:
+
+* Quickly learn whether ``imreg_dft`` is relevant for your use case.
+* Quickly tune the advanced image registration settings.
+* Use ``ird`` in a script and process batches of images instead of one-by-one.
+  (``ird`` can't do it, but you can call it in the script, possibly using `GNU Paralell <http://www.gnu.org/software/parallel>`_.)
 
 General considerations
 ----------------------
 
+Generally, you call ``ird`` with two images, the first one being the ``template`` and the second one simply the ``subject``.
+If you are not sure about other program options, run it with ``--help`` or ``--usage`` arguments:
+
+   .. literalinclude:: _static/examples/11-usage.txt
+     :language: shell-session
+
+The notation ``[foo]`` means that specifying content of brackets (in this case ``foo``) is optional.
+For example, let's look at a part of help ``[--angle MEAN[,STD]]``.
+The outer square bracket means that specifying ``--angle`` is optional.
+However, if you specify it, you have to include the mean value as an argument, i.e. ``--angle 30``.
+The inner square brackets then point out that you may also specify a standard deviation, in which case and you separate it from the mean using comma: ``--angle 30,1.5``.
+There are sanity checks present, so you will be notified if you commit a mistake.
+
+So only the input arguments are obligatory.
+Typically though, you will want to add arguments to also get the result:
+
+#. Take an instant look at the registration result --- use the ``--show`` argument.
+#. Learn the registration parameters: Use the ``--print-result`` argument (explained in greater detail below).
+#. Save the transformed subject: Use the ``--output`` argument.
+
 The image registration works best if you have images that have features in the middle and their background is mostly uniform.
-If you have a section of a large image and you want to use registration to identify the section in the large image, `you are most likely not to succeed <weak-big_>`_.
+If you have a section of a large image and you want to use registration to identify it, :ref:`most likely, you will not succeed <weak-big>`.
 
 For more exhaustive list of known limitation, see the section Caveats_.
 
@@ -25,6 +51,8 @@ Quick reference
 
    .. literalinclude:: _static/examples/01-intro.txt
      :language: shell-session
+
+   The output tells you what has to be done with the ``subject`` so it looks like the ``template``.
 
    .. warning::
 
@@ -42,8 +70,8 @@ Quick reference
    .. literalinclude:: _static/examples/03-bad.txt
      :language: shell-session
 
-#. And now something even more tricky - when a part of the image is cut out.
-   The difference between the fourth and third sample is their mutual translation which also causes that the feature we are matching against is cut out from the fourth image.
+#. And now something even more tricky - when a part of the subject is cut out.
+   The difference between the fourth and third image is their mutual translation which also causes that the feature we are matching against is cut out from the fourth one.
 
    Generally, we have to address the this
    The ``--extend`` option here serves exactly this purpose.
@@ -67,22 +95,23 @@ Quick reference
 
 #. Buy what do we actually get on output?
    You may wonder what those numbers mean.
+   *The output tells you what has to be done with the ``image`` so it looks like the ``template``.*
    The scale and angle information is quite clear, but the translation depends on the center of scaling and the center of rotation...
-   So the idea is as follows.
-   Let's assume you have an image, an ``imreg_dft`` output and all you want is to perform the image transformation yourself.
+
+   So the idea is as follows --- let's assume you have an image, an ``imreg_dft`` print output and all you want is to perform the image transformation yourself.
    The output describes what operations to perform on the image so it is close to the template.
    All transformations are performed using `scipy.ndimage.interpolate <http://docs.scipy.org/doc/scipy/reference/ndimage.html#module-scipy.ndimage.interpolation>`_ package and you need to do the following:
 
    i. Call the ``zoom`` function with the provided scale.
-      The center of the zoom is the center of the image.
+      The center of the zoom is the center of the subject.
 
-   #. Then, rotate the image using the ``rotate`` function, specifying the given angle.
-      The center of the rotation is again the center of the image.
+   #. Then, rotate the subject using the ``rotate`` function, specifying the given angle.
+      The center of the rotation is again the center of the subject.
 
-   #. Finally, translate the image using the ``shift`` function.
+   #. Finally, translate the subject using the ``shift`` function.
       Remember that the ``y`` axis is the first one and ``x`` the second one.
 
-   #. That's it, the image should now look like the template.
+   #. That's it, the subject should now look like the template.
 
 #. Speaking of which, you can have the output saved to a file.
    This is handy for example if you record the same thing with different means (e.g. a cell recorded with multiple microscopes) and you want to examine the difference between them on a pixel-by-pixel basis.

@@ -1,8 +1,9 @@
 General overview
 ================
 
-``imreg_dft`` implements means of guessing translation, rotation and scale variation between two images.
-It doesn't work with those images directly, but it works with their spectrum (DFT using FFT), and its log-polar transformation [1]_.
+``imreg_dft`` is your first-choice Python image registration utility.
+In plain language, it implements means of guessing translation, rotation and scale variation between two images.
+The name comes from the fact that it doesn't work with those images directly, but it works with their spectrum (DFT using FFT), and its log-polar transformation [1]_, hence the ``_dft`` after ``imreg``.
 
 Basically, if you want to align two images that have different scale and are rotated and shifted against each other, ``imreg_dft`` is the tool you want to check out.
 `Get started <http://pythonhosted.org/imreg_dft/quickstart.html#quickstart>`_ in five minutes and see how it works for you!

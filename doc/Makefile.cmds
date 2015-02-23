@@ -20,6 +20,7 @@ TEXTS = \
 	10-testing_help \
 	11-constraints \
 	12-difficult \
+	13-usage \
 	$(NUL)
 
 IMGS = \
@@ -84,8 +85,13 @@ $(word 11,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) cd constraints > $@
 	DIR=$(CONSDIR) PRIV="-o $(PWD)/$(CONS_PNG_BAD)" $(REPEATER) ird tricky.png tricky.png --angle 170,1 --scale 1,0.05 --print-result >> $@
 
+
 $(CONS_PNG_OK):
 	ird $(CONSDIR)/tricky.png $(CONSDIR)/tricky.png --angle 170,10 -o $(CONS_PNG_OK)
+
+$(word 13,$(TARGETS)):
+	$(REPEATER) ird --usage > $(TEMPFILE)
+	$(MV) $(TEMPFILE) $@
 
 CELLDIR = $(RSRCDIR)/cells
 $(word 12,$(TARGETS)): $(EXAMPLEDEPS)
