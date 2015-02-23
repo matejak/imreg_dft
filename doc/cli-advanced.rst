@@ -124,11 +124,11 @@ However, the algorithm is actually quite puzzled and it would fail if we didn't 
 
 When we place a less restrictive constraint, a locally optimal registration different from the mean (180° vs 170°) is found:
 
-.. figure:: constraints.*
+.. figure:: _build/images/constraints.*
 
    The template and the subject at the same time (a), registered with ``--angle 170,10`` (b) and registered with ``--angle 170,1`` (c).
 
-You can use (separately or all at once) options ``--angle``, ``--scale``, ``--tx`` and ``ty``.
+You can use (separately or all at once) options ``--angle``, ``--scale``, ``--tx`` and ``--ty``.
 Notice that since the translation comes after scale change and rotation, it doesn't make much sense to use either ``--tx`` or ``--ty`` without having strong control over ``--angle`` *and* ``--scale``.
 
 You can either:
@@ -184,7 +184,7 @@ One of the right commands is
    :language: shell-session
 
 
-.. figure:: difficult.*
+.. figure:: _build/images/difficult.*
 
    The template (a), subject (b) and registered subject (c).
    Try for yourself with the ``--show`` argument and be impressed!

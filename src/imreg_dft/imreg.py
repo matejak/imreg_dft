@@ -517,15 +517,15 @@ def imshow(im0, im1, im2, cmap=None, fig=None, **kwargs):
 
     ::
 
-      +---------------------+---------------------+
-      |                     |                     |
-      |   <template image>  |   <subject image>   |
-      |                     |                     |
-      +---------------------+---------------------+
-      | <difference between |                     |
-      |  template and the   |<transformed subject>|
-      |transformed subject> |                     |
-      +---------------------+---------------------+
+      +----------------------+---------------------+
+      |                      |                     |
+      |   <template image>   |   <subject image>   |
+      |                      |                     |
+      +----------------------+---------------------+
+      | <difference between  |                     |
+      |  template and the    |<transformed subject>|
+      | transformed subject> |                     |
+      +----------------------+---------------------+
 
     Args:
         im0 (np.ndarray): The template image

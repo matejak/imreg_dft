@@ -24,6 +24,7 @@ check: \
 
 clean:
 	$(RM) .coverage
+	$(RM) sample1.mat sample3c.mat
 
 # Check that we can compute the translation and it is antisymetric
 check-translation: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample2.png

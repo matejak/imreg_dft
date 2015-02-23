@@ -11,7 +11,7 @@ The algorithm is described in [1]_ and possibly also in [2]_ and [3]_.
    Usually the acronym FFT (Fast Fourier Transform) is used in this context, but this is incorrect.
    DFT is the name of the operation, whereas FFT is just one of possible algorithms that can be used to calculate it.
 
-.. figure:: big.*
+.. figure:: _build/images/big.*
 
    The template (a), image (b) and registered image (c).
    This is the actual output of :ref:`sample in the cli section <sample-intro>`

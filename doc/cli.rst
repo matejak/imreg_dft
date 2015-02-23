@@ -19,8 +19,10 @@ General considerations
 Generally, you call ``ird`` with two images, the first one being the ``template`` and the second one simply the ``subject``.
 If you are not sure about other program options, run it with ``--help`` or ``--usage`` arguments:
 
-   .. literalinclude:: _static/examples/11-usage.txt
+   .. literalinclude:: _static/examples/13-usage.txt
      :language: shell-session
+     :end-before: positional
+     :append: ...
 
 The notation ``[foo]`` means that specifying content of brackets (in this case ``foo``) is optional.
 For example, let's look at a part of help ``[--angle MEAN[,STD]]``.
@@ -63,6 +65,10 @@ Quick reference
 
    .. literalinclude:: _static/examples/02-print.txt
      :language: shell-session
+
+   You can get an up-to-date listing of possible values you can print using the help argument.
+   Generally, you can get back the values as well as confidence interval half-widths that have a ``D`` prefix.
+   For example there is ``angle`` and ``Dangle``; in case that the method doesn't fail misreably, the true angle will not differ from ``angle`` more than over ``Dangle``.
 
 #. Let's try something more tricky!
    The first and third examples are rotated against each other and also have a different scale.

@@ -21,6 +21,7 @@ help:
 check:
 	$(RUNUNIT) $(TESTDIR)/unittests/__init__.py
 	$(MAKE) -f regressiontests/Makefile check
+	$(MAKE) -f regressiontests/Makefile clean
 	@echo '* * * * * * * * * * * * * * * * * * * * *'
 	@echo ' Rejoice, tests have passed successfully!'
 	@echo '* * * * * * * * * * * * * * * * * * * * *'

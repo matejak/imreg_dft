@@ -1,0 +1,60 @@
+[user@linuxbox examples]$ ird -h
+usage: ird [-h] [--show] [--lowpass HI_THRESH,LOW_THRESH]
+           [--highpass HI_THRESH,LOW_THRESH] [--resample RESAMPLE]
+           [--iters ITERS] [--extend PIXELS] [--order ORDER] [--output OUTPUT]
+           [--filter-pcorr FILTER_PCORR] [--print-result]
+           [--print-format PRINT_FORMAT] [--tile] [--version]
+           [--angle MEAN[,STD]] [--scale MEAN[,STD]] [--tx MEAN[,STD]]
+           [--ty MEAN[,STD]] [--loader {pil,mat,hdr}]
+           [--loader-opts LOADER_OPTS] [--help-loader]
+           template subject
+
+positional arguments:
+  template
+  subject
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --show                Whether to show registration result
+  --lowpass HI_THRESH,LOW_THRESH
+                        1,1 means no-op, 0.8,0.9 is a mild filter
+  --highpass HI_THRESH,LOW_THRESH
+                        0,0 means no-op, 0.1,0.2 is a mild filter
+  --resample RESAMPLE   Work with resampled images.
+  --iters ITERS         How many iterations to guess the right scale and angle
+  --extend PIXELS       Extend images by the specified amount of pixels before
+                        the processing (thus eliminating edge effects)
+  --order ORDER         Interpolation order (1 = linear, 3 = cubic etc)
+  --output OUTPUT, -o OUTPUT
+                        Where to save the transformed subject.
+  --filter-pcorr FILTER_PCORR
+                        Whether to filter during translation detection.
+                        Normally not needed, but when using low-pass
+                        filtering, you may need to increase filter radius (0
+                        means no filtering, 4 should be enough)
+  --print-result        We don't print anything unless this option is
+                        specified
+  --print-format PRINT_FORMAT
+                        Print a string (to stdout) in a given format. A
+                        dictionary containing the 'scale', 'angle', 'tx',
+                        'ty', 'Dscale', 'Dangle', 'Dt' and 'success' keys will
+                        be passed for string interpolation
+  --tile                If the template is larger than the subject, break the
+                        template to pieces of size similar to subject size.
+  --version             Just print version and exit
+  --angle MEAN[,STD]    The mean and standard deviation of the expected angle.
+  --scale MEAN[,STD]    The mean and standard deviation of the expected scale.
+  --tx MEAN[,STD]       The mean and standard deviation of the expected X
+                        translation.
+  --ty MEAN[,STD]       The mean and standard deviation of the expected Y
+                        translation.
+  --loader {pil,mat,hdr}
+                        Force usage of a concrete loader (default is
+                        autodetection). If you plan on using two types of
+                        loaders to load input, or save the output,
+                        autodetection is the only way to achieve this.
+  --loader-opts LOADER_OPTS
+                        Options for a loader (use --loader to make sure that
+                        one is used or read the docs.)
+  --help-loader         Get help on all loaders or on the current loader and
+                        its options.

@@ -1,2 +1,3 @@
 [user@linuxbox imreg_dft]$ cd resources/examples
 [user@linuxbox examples]$ ird sample1.png sample2.png --print-result --print-format 'translation:%(tx)d,%(ty)d\n'
+translation:-19,79

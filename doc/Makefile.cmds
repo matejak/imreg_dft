@@ -33,23 +33,28 @@ IMGS = \
 	$(NUL)
 
 EXAMPLEDIR = _static/examples
+IMGDIR = _build/images
 TARGETS = \
 	  $(foreach title,$(TEXTS),$(EXAMPLEDIR)/$(title).txt) \
-	  $(IMGS) \
+	  $(foreach img,$(IMGS),$(IMGDIR)/$(img)) \
 	  $(NUL)
 
 $(EXAMPLEDIR):
 	mkdir -p $@
 
+EXAMPLEDIR = _static/examples
+$(IMGDIR):
+	mkdir -p $@
+
 # The directory deps are order-only ones, therefore there is the |
-EXAMPLEDEPS = | $(EXAMPLEDIR)
+EXAMPLEDEPS = | $(EXAMPLEDIR) $(IMGDIR)
 
 MV = mv
 
-INTRO_PNG = intro.png
-CONS_PNG_OK = consreg-ok.png
-CONS_PNG_BAD = consreg-bad.png
-DIFFICULT_PNG = difreg.png
+INTRO_PNG = $(IMGDIR)/intro.png
+CONS_PNG_OK = $(IMGDIR)/consreg-ok.png
+CONS_PNG_BAD = $(IMGDIR)/consreg-bad.png
+DIFFICULT_PNG = $(IMGDIR)/difreg.png
 
 $(word 1,$(TARGETS)): $(EXAMPLEDEPS)
 	DIR=.. $(REPEATER) ird resources/examples/sample1.png resources/examples/sample2.png --show --print-result > $@
@@ -89,29 +94,28 @@ $(word 11,$(TARGETS)): $(EXAMPLEDEPS)
 $(CONS_PNG_OK):
 	ird $(CONSDIR)/tricky.png $(CONSDIR)/tricky.png --angle 170,10 -o $(CONS_PNG_OK)
 
-$(word 13,$(TARGETS)):
-	$(REPEATER) ird --usage > $(TEMPFILE)
-	$(MV) $(TEMPFILE) $@
-
 CELLDIR = $(RSRCDIR)/cells
 $(word 12,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) cd cells > $@
 	DIR=$(CELLDIR) PRIV="-o $(PWD)/$(DIFFICULT_PNG)" $(REPEATER) ird big-fluo.jpg small-dhm.jpg --tile --filter-pcorr 4 --scale 1.0,0.1 --angle 0,20 --lowpass 0.7,0.8 --print-result >> $@
 
-big.png big.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3.png $(INTRO_PNG)
+$(word 13,$(TARGETS)): $(EXAMPLEDEPS)
+	$(REPEATER) ird -h  > $@
+
+$(IMGDIR)/big.png $(IMGDIR)/big.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3.png $(INTRO_PNG)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8,2.2
 
-constraints.png constraints.pdf: $(CONSDIR)/tricky.png $(CONS_PNG_OK) $(CONS_PNG_BAD)
+$(IMGDIR)/constraints.png $(IMGDIR)/constraints.pdf: $(CONSDIR)/tricky.png $(CONS_PNG_OK) $(CONS_PNG_BAD)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2
 
-difficult.png difficult.pdf: $(CELLDIR)/big-fluo.jpg $(CELLDIR)/small-dhm.jpg $(DIFFICULT_PNG)
+$(IMGDIR)/difficult.png $(IMGDIR)/difficult.pdf: $(CELLDIR)/big-fluo.jpg $(CELLDIR)/small-dhm.jpg $(DIFFICULT_PNG)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2 --colormap gray_r
 
 define already-have-it
 @echo This file is a side-effect product of the rule for $|
 @echo It is supposed to be already present, so something is wrong.
 $(RM) $|
-@echo We have deleted it, so try again :-)
+@echo 'We have deleted it, so try again :-)'
 @false
 endef
 
@@ -123,3 +127,9 @@ $(CONS_PNG_BAD): | $(word 11,$(TARGETS))
 
 $(DIFFICULT_PNG): | $(word 12,$(TARGETS))
 	$(already-have-it)
+
+clean-cmds:
+	$(RM) $(INTRO_PNG) $(CONS_PNG_BAD) $(DIFFICULT_PNG)
+	$(RM) $(TARGETS)
+
+PHONIES = clean-cmds
