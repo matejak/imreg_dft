@@ -27,5 +27,5 @@ Project facts
 * Essentially requires only `numpy` and `scipy` (`RHEL7`-safe).
 * Includes quickstart documentation and example data files.
 * Per-commit tests and documentation (see badges under the heading).
-* Originally developed by Cristoph Gohlke (University of California, USA)
+* Originally developed by Christoph Gohlke (University of California, Irvine, USA)
 * Currently developed by Matěj Týč (Brno University of Technology, CZ)
