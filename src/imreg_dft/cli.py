@@ -311,10 +311,11 @@ def _get_resdict(imgs, opts, tosa=None):
         tosa_offset = np.array(imgs[0].shape)[:2] - np.array(tiledim)[:2] + 0.5
         shifts -= tosa_offset / 2.0
 
-        import ipdb
-        ipdb.set_trace()
-
-        cluster, amax = utils.get_best_cluster(shifts, succs, 3)
+        # Get the cluster of the tiles that have similar results and that look
+        # most promising along with the index of the best tile
+        cluster, amax = utils.get_best_cluster(shifts, succs, 5)
+        # Make the quantities estimation even more precise by taking
+        # the average of all good tiles
         shift, angle, scale, score = utils.get_values(
             cluster, shifts, succs, angles, scales)
 

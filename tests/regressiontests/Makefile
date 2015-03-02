@@ -4,7 +4,7 @@ PROOT = $(RTESTDIR)/../..
 RSRCDIR = $(PROOT)/resources/examples
 
 PYTHON ?= python
-COVERAGE =
+COVERAGE ?=
 CMD =
 
 NUL =
@@ -15,6 +15,7 @@ export CMD = $(COVERAGE) run -a --source imreg_dft $(PROOT)/src/imreg_dft/cli.py
 endif
 
 check: \
+	check-cells \
 	check-translation \
 	check-similarity \
 	check-similarity2 \
@@ -57,4 +58,13 @@ check-constraints2: $(RSRCDIR)/constraints/three.png $(RSRCDIR)/constraints/two.
 	sh $(RTESTDIR)/check_similarity.sh $^ 0 0 90 1
 	sh $(RTESTDIR)/check_similarity.sh $^ 179 0 90 1 --tx 200,100
 
-.PHONY: check clean check-translation check-similarity
+check-cells: $(RSRCDIR)/cells/big-fluo.jpg $(RSRCDIR)/cells/small-dhm.jpg
+	TOLER=4 sh $(RTESTDIR)/check_similarity.sh $^ 32 26 0.3 1 --tile --filter-pcorr 4 --lowpass 0.6,0.7 --angle 0,20 --scale 1,0.2
+
+.PHONY: \
+	check \
+	clean \
+	check-translation \
+	check-similarity \
+	check-cells \
+	$(NUL)

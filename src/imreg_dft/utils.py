@@ -675,22 +675,46 @@ def mkCut(shp0, dims, start):
 
 
 def _get_dst1(pt, pts):
+    """
+    Given a point in 2D and vector of points, return vector of distances
+    according to Manhattan metrics
+    """
     dsts = np.abs(pts - pt)
     ret = np.max(dsts, axis=1)
     return ret
 
 
-def get_clusters(shifts, rad=0):
-    num = len(shifts)
+def get_clusters(points, rad=0):
+    """
+    Given set of points and radius upper bound, return a binary matrix
+    telling whether a given point is close to other points according to
+    :func:`_get_dst1`.
+    (point = matrix row).
+
+    The result matrix has always True on diagonals.
+    """
+    num = len(points)
     clusters = np.zeros((num, num), bool)
-    for ii, shift in enumerate(shifts):
-        clusters[ii] = _get_dst1(shift, shifts) <= rad
+    for ii, shift in enumerate(points):
+        clusters[ii] = _get_dst1(shift, points) <= rad
     return clusters
 
 
-def get_best_cluster(shifts, scores, rad=0):
-    clusters = get_clusters(shifts, rad)
-    cluster_scores = np.zeros(len(shifts))
+def get_best_cluster(points, scores, rad=0):
+    """
+    Given some additional data, choose the best cluster and the index
+    of the best point in the best cluster.
+    Score of a cluster is sum of scores of points in it.
+
+    Note that the point of the best score may not be in the best cluster
+    and a point may be members of multiple cluster.
+
+    Args:
+        points
+        scores: Rates a point by a number --- higher is better.
+    """
+    clusters = get_clusters(points, rad)
+    cluster_scores = np.zeros(len(points))
     for ii, cluster in enumerate(clusters):
         cluster_scores[ii] = sum(cluster * scores)
     amax = np.argmax(cluster_scores)
@@ -699,18 +723,29 @@ def get_best_cluster(shifts, scores, rad=0):
 
 
 def _ang2complex(angles):
+    """
+    Transform angle in degrees to complex phasor
+    """
     angles = np.deg2rad(angles)
     ret = np.exp(1j * angles)
     return ret
 
 
 def _complex2ang(cplx):
+    """
+    Inversion of :func:`_ang2complex`
+    """
     ret = np.angle(cplx)
     ret = np.rad2deg(ret)
     return ret
 
 
 def get_values(cluster, shifts, scores, angles, scales):
+    """
+    Given a cluster and some vectors, return average values of the data
+    in the cluster.
+    Treat the angular data carefully.
+    """
     weights = cluster * scores
     weights /= sum(weights)
 

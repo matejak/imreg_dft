@@ -19,12 +19,15 @@ help:
 # Unittests rewrite the coverage data and the regtests makefile
 # runs them so they append to the coverage data
 check:
+ifdef COVERAGE
+	$(RM) .coverage
+endif
 	$(RUNUNIT) $(TESTDIR)/unittests/__init__.py
 	$(MAKE) -f regressiontests/Makefile check
-	$(MAKE) -f regressiontests/Makefile clean
 	@echo '* * * * * * * * * * * * * * * * * * * * *'
 	@echo ' Rejoice, tests have passed successfully!'
 	@echo '* * * * * * * * * * * * * * * * * * * * *'
 ifdef COVERAGE
 	$(COVERAGE) report
 endif
+	$(MAKE) -f regressiontests/Makefile clean
