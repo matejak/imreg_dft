@@ -672,3 +672,54 @@ def mkCut(shp0, dims, start):
         toapp = slice(rstart[dim], rend[dim])
         res.append(toapp)
     return res
+
+
+def _get_dst1(pt, pts):
+    dsts = np.abs(pts - pt)
+    ret = np.max(dsts, axis=1)
+    return ret
+
+
+def get_clusters(shifts, rad=0):
+    num = len(shifts)
+    clusters = np.zeros((num, num), bool)
+    for ii, shift in enumerate(shifts):
+        clusters[ii] = _get_dst1(shift, shifts) <= rad
+    return clusters
+
+
+def get_best_cluster(shifts, scores, rad=0):
+    clusters = get_clusters(shifts, rad)
+    cluster_scores = np.zeros(len(shifts))
+    for ii, cluster in enumerate(clusters):
+        cluster_scores[ii] = sum(cluster * scores)
+    amax = np.argmax(cluster_scores)
+    ret = clusters[amax]
+    return ret, amax
+
+
+def _ang2complex(angles):
+    angles = np.deg2rad(angles)
+    ret = np.exp(1j * angles)
+    return ret
+
+
+def _complex2ang(cplx):
+    ret = np.angle(cplx)
+    ret = np.rad2deg(ret)
+    return ret
+
+
+def get_values(cluster, shifts, scores, angles, scales):
+    weights = cluster * scores
+    weights /= sum(weights)
+
+    shift = sum(shifts * weights[:, np.newaxis])
+    scale = sum(scales * weights)
+    score = sum(scores * weights)
+
+    angles = _ang2complex(angles)
+    angle = sum(angles * weights)
+    angle = _complex2ang(angle)
+
+    return shift, angle, scale, score

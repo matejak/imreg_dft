@@ -196,5 +196,13 @@ class TestUtils(ut.TestCase):
                 self.assertEqual(val, orig_arr[tuple(fixed_coord)])
 
 
+class TestTiles(ut.TestCase):
+    def testClusters(self):
+        shifts = [(0, 1), (0, 1.1), (0.2, 1), (-0.1, 0.9), (-0.1, 0.8)]
+        shifts = np.array(shifts)
+        clusters = utils.get_clusters(shifts, 0.11)
+        np.testing.assert_array_equal(clusters[0], (1, 1, 0, 1, 0))
+
+
 if __name__ == '__main__':
     ut.main()

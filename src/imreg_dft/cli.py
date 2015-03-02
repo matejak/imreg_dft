@@ -36,6 +36,7 @@ import sys
 import argparse as ap
 
 import imreg_dft as ird
+import imreg_dft.utils as utils
 import imreg_dft.loader as loader
 
 
@@ -287,7 +288,9 @@ def _get_resdict(imgs, opts, tosa=None):
         tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
         resdicts = []
         shifts = np.empty((len(tiles), 2), float)
-        succs = np.empty((len(tiles), 1), float)
+        succs = np.empty(len(tiles), float)
+        angles = np.empty(len(tiles), float)
+        scales = np.empty(len(tiles), float)
         for ii, (tile, pos) in enumerate(tiles):
             try:
                 resdict = process_images((tile, imgs[1]), opts, None)
@@ -298,21 +301,30 @@ def _get_resdict(imgs, opts, tosa=None):
             resdicts.append(resdict)
             shifts[ii] = np.array((resdict["ty"], resdict["tx"])) + pos
             succs[ii] = resdict["success"]
+            angles[ii] = resdict["angle"]
+            scales[ii] = resdict["scale"]
             if 0:
                 print(ii, succs[ii])
                 import pylab as pyl
                 pyl.figure(); pyl.imshow(tile)
                 pyl.show()
-        cog_coords = np.sum(shifts * succs, 0) / np.sum(succs)
-        weights = succs / (shifts - cog_coords)
-        best = np.argmax(weights)
-        best = np.argmax(succs)
-
-        resdict = resdicts[best]
-
         tosa_offset = np.array(imgs[0].shape)[:2] - np.array(tiledim)[:2] + 0.5
-        resdict["tvec"] = shifts[best] - tosa_offset / 2.0
+        shifts -= tosa_offset / 2.0
+
+        import ipdb
+        ipdb.set_trace()
+
+        cluster, amax = utils.get_best_cluster(shifts, succs, 3)
+        shift, angle, scale, score = utils.get_values(
+            cluster, shifts, succs, angles, scales)
+
+        resdict = resdicts[amax]
+
+        resdict["scale"] = scale
+        resdict["angle"] = angle
+        resdict["tvec"] = shift
         resdict["ty"], resdict["tx"] = resdict["tvec"]
+
         # In non-tile cases, tosa is transformed in process_images
         if tosa is not None:
             tosa = ird.transform_img_dict(tosa, resdict)
