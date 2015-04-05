@@ -1,6 +1,8 @@
 User-centric changelog
 ======================
 
+**1.0.5 --- TBA**
+
 **1.0.4 --- 2015-03-03**
 
  * Increased robustness of the tiling algorithm (i.e. when matching small subjects against large templates).

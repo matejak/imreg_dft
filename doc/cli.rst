@@ -46,8 +46,6 @@ For more exhaustive list of known limitation, see the section Caveats_.
 Quick reference
 ---------------
 
-.. _sample-intro:
-
 #. Quickly find out whether it works for you, having the results (optionally) shown in a pop-up window and printed out.
    We assume you stand in the root of ``imreg_dft`` cloned from the git repo (or :ref:`downloaded from the web <source-files>`).
 
@@ -72,6 +70,8 @@ Quick reference
 
 #. Let's try something more tricky!
    The first and third examples are rotated against each other and also have a different scale.
+
+   .. _sample-intro:
 
    .. literalinclude:: _static/examples/03-bad.txt
      :language: shell-session

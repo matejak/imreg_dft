@@ -24,6 +24,9 @@ Basically, if you want to align two images that have different scale and are rot
  
 Requirements
 ------------
+
+``imreg_dft`` is `free software <http://en.wikipedia.org/wiki/Free_software>`_, i.e. both free of charge (so it is free as free beer) and you as a user are granted `four basic freedoms <https://www.gnu.org/philosophy/free-sw.html>`_ (so it is also free as free speech).
+
 Generally, you will need ``numpy`` and ``scipy`` for the algorithm functionality and ``matplotlib`` for plotting.
 For the command-line tool, reading images is useful, so make sure you have ``pillow`` (or ``PIL``, which is deprecated).
 

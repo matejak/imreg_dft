@@ -1,2 +1,1 @@
-Sphinx
-sphinxcontrib-napoleon>=0.2
+Sphinx>=1.3
