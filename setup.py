@@ -4,12 +4,19 @@ import os
 import sys
 import setuptools as st
 
-sys.path.append(os.path.join('src'))
+# Fix so that the setup.py usage is CWD-independent
+SETUPDIR = os.path.abspath(os.path.dirname(__file__))
+SETUPDIR = os.path.dirname(__file__)
+PKGDIR = os.path.join(SETUPDIR, 'src')
+
+sys.path.append(PKGDIR)
 import imreg_dft
 
-reqs = open('requirements.txt', 'r').read().strip().splitlines()
+reqsfname = os.path.join(SETUPDIR, 'requirements.txt')
+reqs = open(reqsfname, 'r').read().strip().splitlines()
 
-longdesc = open(os.path.join('doc', 'description.rst'), 'r').read()
+descfname = os.path.join(SETUPDIR, 'doc', 'description.rst')
+longdesc = open(descfname, 'r').read()
 
 st.setup(
     name="imreg_dft",
@@ -20,8 +27,8 @@ st.setup(
                  "discrete Fourier transform (DFT, FFT)"),
     license="BSD",
     url="https://github.com/matejak/imreg_dft",
-    package_dir = {'': 'src'},
-    packages = st.find_packages('src'),
+    package_dir = {'': PKGDIR},
+    packages = st.find_packages(PKGDIR),
     entry_points = {
         'console_scripts': [
            'ird = imreg_dft.cli:main',

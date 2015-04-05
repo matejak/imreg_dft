@@ -287,22 +287,24 @@ def _get_resdict(imgs, opts, tosa=None):
     if tiledim is not None:
         tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
         resdicts = []
-        shifts = np.empty((len(tiles), 2), float)
-        succs = np.empty(len(tiles), float)
-        angles = np.empty(len(tiles), float)
-        scales = np.empty(len(tiles), float)
+        shifts = np.zeros((len(tiles), 2), float)
+        succs = np.zeros(len(tiles), float)
+        angles = np.zeros(len(tiles), float)
+        scales = np.zeros(len(tiles), float)
         for ii, (tile, pos) in enumerate(tiles):
             try:
+                # TODO: Add unittests that zero success result
+                #   doesn't influence anything
                 resdict = process_images((tile, imgs[1]), opts, None)
+                angles[ii] = resdict["angle"]
+                scales[ii] = resdict["scale"]
+                shifts[ii] = np.array((resdict["ty"], resdict["tx"])) + pos
             except ValueError:
                 # probably incompatible images due to high scale change, so we
                 # just add some harmless stuff here and proceed.
-                resdict = dict(tx=0, ty=0, success=0)
+                resdict = dict(success=0)
             resdicts.append(resdict)
-            shifts[ii] = np.array((resdict["ty"], resdict["tx"])) + pos
             succs[ii] = resdict["success"]
-            angles[ii] = resdict["angle"]
-            scales[ii] = resdict["scale"]
             if 0:
                 print(ii, succs[ii])
                 import pylab as pyl
