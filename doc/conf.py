@@ -60,6 +60,9 @@ extensions = [
     'sphinx.ext.napoleon',
 ]
 
+# Use this one if you have Sphinx pre-1.3
+#    'sphinxcontrib.napoleon',
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -67,7 +70,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 # The encoding of source files.
-#source_encoding = 'utf-8-sig'
+# source_encoding = 'utf-8-sig'
 
 # The master toctree document.
 master_doc = 'index'
@@ -128,7 +131,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'classic'
+html_theme = 'default'
 
 html_theme_options = {'stickysidebar': 'true'}
 

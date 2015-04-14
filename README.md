@@ -11,7 +11,7 @@ Image registration using discrete Fourier transform.
 
 Given two images, `imreg_dft` can calculate difference between scale, rotation and position of imaged features.
 Given you have the requirements, you can start aligning images in about five minutes!
-Check the documentation on [readthedocs.ort](http://imreg-dft.readthedocs.org/en/latest/quickstart.html) (bleeding-edge) or [pythonhosted.org](http://pythonhosted.org//imreg_dft/) (with images).
+Check the documentation on [readthedocs.org](http://imreg-dft.readthedocs.org/en/latest/quickstart.html) (bleeding-edge) or [pythonhosted.org](http://pythonhosted.org//imreg_dft/) (with images).
 
 Features
 --------
