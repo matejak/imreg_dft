@@ -3,6 +3,7 @@
 import os
 import sys
 import setuptools as st
+from io import open
 
 # Fix so that the setup.py usage is CWD-independent
 SETUPDIR = os.path.abspath(os.path.dirname(__file__))
@@ -13,10 +14,10 @@ sys.path.append(PKGDIR)
 import imreg_dft
 
 reqsfname = os.path.join(SETUPDIR, 'requirements.txt')
-reqs = open(reqsfname, 'r').read().strip().splitlines()
+reqs = open(reqsfname, 'r', encoding='utf-8').read().strip().splitlines()
 
 descfname = os.path.join(SETUPDIR, 'doc', 'description.rst')
-longdesc = open(descfname, 'r').read()
+longdesc = open(descfname, 'r', encoding='utf-8').read()
 
 st.setup(
     name="imreg_dft",
