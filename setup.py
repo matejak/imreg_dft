@@ -17,7 +17,7 @@ reqs = open(reqsfname, 'r').read().strip().splitlines()
 # get version from __init__.py without importing
 versfname = os.path.join(PKGDIR, 'imreg_dft', '__init__.py')
 init_lines = open(versfname).readlines()
-version_line = next(filter(lambda x: '__version__' in x, init_lines))
+version_line = list(filter(lambda x: '__version__' in x, init_lines))[0]
 version = version_line.split('"')[1]
 
 descfname = os.path.join(SETUPDIR, 'doc', 'description.rst')
