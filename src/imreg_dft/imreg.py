@@ -40,7 +40,10 @@ from __future__ import division, print_function
 import math
 
 import numpy as np
-import numpy.fft as fft
+try:
+    import pyfftw.interfaces.numpy_fft as fft
+except ImportError:
+    import numpy.fft as fft
 import scipy.ndimage.interpolation as ndii
 
 import imreg_dft.utils as utils
