@@ -1,0 +1,8 @@
+Contributors
+============
+
+Below are all contributors listed in order in which they have appeared.
+
+* Christoph Gohlke: Initial implementation (available as of 05/2015 on http://www.lfd.uci.edu/~gohlke/code/imreg.py.html).
+* Matěj Týč: Extension of the initial implementation, creation of the project, maintainence.
+* Arve Seljebu: File input fixes, pyfftw integration.
