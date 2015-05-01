@@ -43,5 +43,4 @@ include doc/description.rst
 include doc/devel.rst
 include doc/index.rst
 include doc/make.bat
-include doc/overview.rst
 include doc/quickstart.rst

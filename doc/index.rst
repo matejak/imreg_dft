@@ -42,7 +42,13 @@ Requirements
 ++++++++++++
 
 See the ``requirements.txt`` file in the project's root for the exact specification.
-Generally, you will need ``numpy`` and ``scipy`` for the algorithm functionality and ``matplotlib`` for plotting.
+Generally, you will need ``numpy`` and ``scipy`` for the core algorithm functionality.
+
+Optionally, you may need:
+
+ - ``pillow`` for loading data from image files,
+ - ``matplotlib`` for displaying image output,
+ - ``pyfftw`` for better performance.
 
 Quickstart
 ++++++++++
