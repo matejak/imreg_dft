@@ -105,6 +105,8 @@ So, a warning for those who skip the ordinary text:
     However, when using it, be sure to start off with (let's say) ``--extend 10`` and ``--lowpass 0.9,1.1`` to exploit it.
     Then, experiment with the settings until the results look best.
     
+.. _constraints:
+
 Using constraints
 -----------------
 

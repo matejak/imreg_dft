@@ -3,7 +3,11 @@ User-centric changelog
 
 **1.0.5 --- TBA**
 
- * Fixed project documentation typos.
+ * Fixed project documentation typos, added the ``AUTHORS`` file.
+ * Added support for ``pyfftw`` for increased performance.
+ * Improved integration with MS Windows.
+ * Fixed an install bug #18 that occured when dependencies were not met at install-time.
+ * Added documentation for Python constraint interface #15
 
 **1.0.4 --- 2015-03-03**
 

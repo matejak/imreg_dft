@@ -176,6 +176,20 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
             Refer to the docs for a thorough explanation. Generally, pass "inf"
             when feeling conservative. Otherwise, experiment, values below 5
             are not even supposed to work.
+        constraints (dict or None): Specify preference of seeked values.
+            Pass None (default) for no constraints, otherwise pass a dict with
+            keys ``angle``, ``scale``, ``tx`` and/or ``ty`` (i.e. you can pass
+            all, some of them or none of them, all is fine). The value of a key
+            is supposed to be a mutable 2-tuple (e.g. a list), where the first
+            value is related to the constraint center and the second one to
+            softness of the constraint (the higher is the number,
+            the more soft a constraint is).
+
+            More specifically, constraints may be regarded as weights
+            in form of a shifted Gaussian curve.
+            However, for precise meaning of keys and values,
+            see the documentation section :ref:`constraints`.
+            Names of dictionary keys map to names of command-line arguments.
 
     Returns:
         dict: Contains following keys: ``scale``, ``angle``, ``tvec`` (Y, X),
@@ -198,8 +212,14 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
     angle = 0.0
     im2 = im1
 
+    constraints_default = dict(angle=[0, None], scale=[1, None])
     if constraints is None:
-        constraints = dict(angle=[0, None], scale=[1, None])
+        constraints = constraints_default
+
+    # We guard against case when caller passes only one constraint key.
+    # Now, the provided ones just replace defaults.
+    constraints_default.update(constraints)
+    constraints = constraints_default
 
     # During iterations, we have to work with constraints too.
     # So we make the copy in order to leave the original intact
@@ -297,6 +317,10 @@ def translation(im0, im1, filter_pcorr=0, constraints=None):
         im1 (2D numpy array): The second (subject) image
         filter_pcorr (int): Radius of a spectrum filter for translation
             detection
+        constraints (dict or None): Specify preference of seeked values.
+            For more detailed documentation, refer to :func:`similarity`.
+            The only difference is that here, only keys ``tx`` and/or ``ty``
+            (i.e. both or any of them or none of them) are used.
 
     Returns:
         tuple: The translation vector and success number: ((Y, X), success)

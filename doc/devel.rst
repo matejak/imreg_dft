@@ -22,6 +22,30 @@ They are used mainly by the ``ird`` tool.
    :members:
    :undoc-members:
 
+How to release
+--------------
+
+The build process in Python is not straightforward (as of 2014).
+Generally, you want this to be taken care of:
+
+- The version mentioned in ``src/imreg_dft/__init__.py`` is the right one.
+- Documentation can be generated (after make clean) and tests run OK too.
+- The source tree is tagged (this is obviously the last step).
+
+For this, there is a ``bash`` script ``tests/release.sh``.
+It accepts one argument --- the version string.
+It runs everything and although it doesn't do anything, it helps you to keep track of what is OK and what still needs to be worked on.
+
+You can execute it from anywhere, for example from the project root:
+
+.. code-block:: shell-session
+
+   [user@linuxbox imreg_dft]$ bash tests/release.sh 1.0.5
+
+The output should be self-explanatory.
+The script is not supposed to rewrite anything important; however, it may run the documentation generation and tests.
+Those, however, can.
+
 Become part of it!
 ------------------
 
@@ -78,3 +102,10 @@ most likely
          0002-BF-added-fix-for-Funny-bug.patch
 
       Send these files to the current project maintainer.
+
+  .. note::
+
+     If you hack the code, remember these things:
+
+      * Add yourself into the ``AUTHORS`` file and briefly describe your contribution.
+      * If your contribution affects how ``imreg_dft`` works (this is *very* likely), mention this in the documentation.

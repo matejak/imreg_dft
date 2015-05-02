@@ -16,10 +16,13 @@ TAGNAME="v$VER"
 git tag | grep "^$TAGNAME$" > /dev/null || failure "The version is not tagged (tag '$TAGNAME' missing)"
 
 # Check that Python has the same version string
-PYTHONPATH="../src" $PYTHON -c "import sys; from imreg_dft import __version__ as ver; sys.exit(0) if ver == '$VER' else sys.exit(1)" || failure "The version of package doesn't match"
+PYTHONPATH="$PROOT/src" $PYTHON -c "import sys; from imreg_dft import __version__ as ver; sys.exit(0) if ver == '$VER' else sys.exit(1)" || failure "The version of package doesn't match"
 
+echo "Trying to generate documentation"
 (cd "$PROOT/doc" && make clean > /dev/null && make html > /dev/null) || failure "Error(s) (re)generating HTML documentation, check that out"
 
+echo "Trying to run tests"
+(cd "$PROOT/tests" && make check > /dev/null) || failure "Error(s) running tests, check that out"
 
 test $SUCCESS == "yes" && { echo "All is OK for version '$VER'"; exit 0; }
 
