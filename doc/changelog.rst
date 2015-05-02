@@ -1,7 +1,9 @@
 User-centric changelog
 ======================
 
-**1.0.5 --- TBA**
+**1.1.0 --- TBA**
+
+**1.0.5 --- 2015-05-02**
 
  * Fixed project documentation typos, added the ``AUTHORS`` file.
  * Added support for ``pyfftw`` for increased performance.
