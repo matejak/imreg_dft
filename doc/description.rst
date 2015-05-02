@@ -9,7 +9,7 @@ Basically, if you want to align two images that have different scale and are rot
 `Get started <http://pythonhosted.org/imreg_dft/quickstart.html#quickstart>`_ in five minutes and see how it works for you!
 
 :Authors:
-  - `Matěj Týč <https://github.com/matejak>`_
+  - `Matěj Týč <https://github.com/matejak>`_ `PGP public key <https://keyserver.mattrude.com/pks/lookup?op=get&search=0x607524F854FD905F>`_
   - `Christoph Gohlke <http://www.lfd.uci.edu/~gohlke/>`_
 
 :Organization:

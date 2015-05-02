@@ -39,6 +39,7 @@ st.setup(
     extras_require={
         'plotting':  ["matplotlib>=1.2"],
         'loading images': ["pillow>=2.2"],
+        'better performance': ["pyfftw>=0.9"],
     },
     classifiers=[
         "Development Status :: 4 - Beta",

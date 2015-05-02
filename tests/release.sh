@@ -28,3 +28,10 @@ test $SUCCESS == "yes" && { echo "All is OK for version '$VER'"; exit 0; }
 
 echo "There were issues"
 exit 1
+
+# Create an annotated tag
+git tag -a $TAGNAME -m "Tagged version $VER"
+# Set the right date
+sed -i "s/TBA/$(date +%Y-%m-%d)/" $PROOD/doc/changelog.rst
+# Upload sdist (sign) and upload documentation
+(cd $PROOT; $PYTHON setup.py sdist upload -s; $PYTHON setup.py upload_docs)
