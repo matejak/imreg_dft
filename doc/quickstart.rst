@@ -127,7 +127,7 @@ Documentation
 
 Although you can read the documentation on `readthedocs.org <http://imreg-dft.readthedocs.org/en/latest/index.html>`_ (bleeding-edge) and `pythonhosted.org <http://pythonhosted.org//imreg_dft/>`_ (with images), you can generate your own easily.
 You just have to check out the ``requirements_docs.txt`` file at the root of the project and make sure you have all modules that are mentioned there.
-You also need to have ``imreg_dft`` installed prior documentation generation.
+You also need to have ``imreg_dft`` installed prior to documentation generation.
 
-So, be sure to have :ref:`the source files <source-files>`.
+Also be sure to have :ref:`the source files <source-files>`.
 In the source tree, go to the ``doc`` directory there and run ``make html`` or ``make latexpdf`` there.

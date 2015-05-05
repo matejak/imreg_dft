@@ -31,6 +31,7 @@ exit 1
 
 # Create an annotated tag
 git tag -a $TAGNAME -m "Tagged version $VER"
+git push origin $TAGNAME
 # Set the right date
 sed -i "s/TBA/$(date +%Y-%m-%d)/" $PROOD/doc/changelog.rst
 # Upload sdist (sign) and upload documentation

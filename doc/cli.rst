@@ -101,7 +101,7 @@ Quick reference
 
 #. Buy what do we actually get on output?
    You may wonder what those numbers mean.
-   *The output tells you what has to be done with the ``image`` so it looks like the ``template``.*
+   The output tells you *what has to be done* with the ``image`` *so it looks like* the ``template``.
    The scale and angle information is quite clear, but the translation depends on the center of scaling and the center of rotation...
 
    So the idea is as follows --- let's assume you have an image, an ``imreg_dft`` print output and all you want is to perform the image transformation yourself.

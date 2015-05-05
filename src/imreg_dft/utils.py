@@ -386,7 +386,7 @@ def imfilter(img, low=None, high=None):
         high (tuple): The high-pass filter parameters
 
     Returns
-        ndarray: The real component of the image after filtering
+        np.ndarray: The real component of the image after filtering
     """
     dft = fft.fft2(img)
 
@@ -587,7 +587,7 @@ def decompose(what, outshp, coef):
         outshp (tuple-like): The shape of decompositions
 
     Returns:
-        list - Decompositioni --- a list of tuples (subarray (np.ndarray),
+        list: Decomposition --- a list of tuples (subarray (np.ndarray),
         coordinate (np.ndarray))
     """
     outshp = np.array(outshp)
@@ -610,7 +610,7 @@ def getCuts(shp0, shp1, coef=0.5):
             1.0 means no overlap, 0.5 50% overlap, 0.1 90% overlap etc.
 
     Returns:
-        list - List of tuples (y, x) coordinates of possible tile corners.
+        list: List of tuples (y, x) coordinates of possible tile corners.
     """
     # * coef = possible increase of density
     # / 2.0 = default density is ~ 2x of density of disjoint tiles

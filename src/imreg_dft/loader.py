@@ -32,16 +32,16 @@
 The module contains a layer of functionality that allows
 abstract saving and loading of files.
 
-The concept is that there is one loader instance per file loaded.
-When we want to save a file, we use a loading loader to provide data to
-save and then we instantiate a saving loader (if needed) and save the data.
-
 A loader class inherits from :class:`Loader`.
 A singleton class :class:`LoaderSet` is the main public interface
 of this module. available as a global variable ``LOADERS``.
 It keeps track of all registered loaders and takes care
 after them (presents them with options, requests etc.)
 Loaders are registered as classes using the decorator :func:`loader`.
+
+The concept is that there is one loader instance per file loaded.
+When we want to save a file, we use a loading loader to provide data to
+save and then we instantiate a saving loader (if needed) and save the data.
 
 Individual loaders absolutely have to implement methods :meth:`Loader._save`
 and :meth:`Loader._load2reg`.
