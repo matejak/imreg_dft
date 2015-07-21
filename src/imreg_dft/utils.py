@@ -102,6 +102,7 @@ def argmax_angscale(array, log_base, exponent, constraints=None):
 
     array *= mask
     ret = argmax_ext(array, exponent)
+    ret = _interpolate(array, ret)
     success = _get_success(array, tuple(ret), 0)
     return ret, success
 
@@ -147,6 +148,7 @@ def argmax_translation(array, filter_pcorr, constraints=None):
     array *= mask2
     # Find what we look for
     tvec = argmax_ext(array, 'inf')
+    tvec = _interpolate(array, tvec)
     if 0:
         import pylab as pyl
         pyl.figure(); pyl.imshow(array, cmap=pyl.cm.gray)
@@ -190,19 +192,10 @@ def _get_success(array, coord, radius=2):
     """
     coord = np.round(coord).astype(int)
     coord = tuple(coord)
-    slices = []
-    for dim in range(2):
-        assert radius <= coord[dim] < array.shape[dim] - radius, \
-            "The result %s is too close to array boundaries" % (coord,)
-        slices.append(slice(coord[dim] - radius, coord[dim] + radius + 1))
-    slices = tuple(slices)
 
-    if 0:
-        import pylab as pyl
-        pyl.figure(); pyl.imshow(array[slices], cmap=pyl.cm.gray, interpolation="none"); pyl.colorbar()
-        pyl.show()
+    subarr = _get_subarr(array, coord, 2)
 
-    theval = array[slices].sum()
+    theval = subarr.sum()
     theval2 = array[coord]
     # bigval = np.percentile(array, 97)
     # success = theval / bigval
@@ -219,6 +212,39 @@ def _argmax2D(array):
     ret = list(np.unravel_index(amax, array.shape))
 
     return np.array(ret)
+
+
+def _get_subarr(array, center, rad):
+    dim = 1 + 2 * rad
+    subarr = np.zeros((dim,) * 2)
+    corner = np.array(center) - rad
+    for ii in range(dim):
+        yidx = corner[0] + ii
+        yidx %= array.shape[0]
+        for jj in range(dim):
+            xidx = corner[1] + jj
+            xidx %= array.shape[1]
+            subarr[ii, jj] = array[yidx, xidx]
+    return subarr
+
+
+def _interpolate(array, rough, rad=2):
+    """
+    Returns index that is in the array after being rounded.
+    """
+    rough = np.round(rough).astype(int)
+    surroundings = _get_subarr(array, rough, rad)
+    com = argmax_ext(surroundings, 1)
+    offset = com - rad
+    ret = rough + offset
+    # similar to win.wrap, so
+    # -0.2 becomes 0.3 and then again -0.2, which is rounded to 0
+    # -0.8 becomes - 0.3 -> len() - 0.3 and then len() - 0.8,
+    # which is rounded to len() - 1. Yeah!
+    ret += 0.5
+    ret %= np.array(array.shape).astype(int)
+    ret -= 0.5
+    return ret
 
 
 def argmax_ext(array, exponent):

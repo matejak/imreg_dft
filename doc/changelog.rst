@@ -3,6 +3,8 @@ User-centric changelog
 
 **1.1.0 --- TBA**
 
+ * Support for sub-pixel transformation detection.
+
 **1.0.5 --- 2015-05-02**
 
  * Fixed project documentation typos, added the ``AUTHORS`` file.

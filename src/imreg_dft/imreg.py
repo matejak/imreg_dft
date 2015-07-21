@@ -146,10 +146,11 @@ def _get_precision(shape, scale=1):
     pcorr_shape = _get_pcorr_shape(shape)
     log_base = _get_log_base(shape, pcorr_shape[1])
     # * 0.5 <= max deviation is half of the step
+    # * 0.25 <= we got subpixel precision now and 0.5 / 2 == 0.25
     # sccale: Scale deviation depends on the scale value
-    Dscale = scale * (log_base - 1) * 0.5
+    Dscale = scale * (log_base - 1) * 0.25
     # angle: Angle deviation is constant
-    Dangle = 180.0 / pcorr_shape[0] * 0.5
+    Dangle = 180.0 / pcorr_shape[0] * 0.25
     return Dangle, Dscale
 
 
@@ -262,7 +263,8 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
         tvec=tvec,
         Dscale=Dscale,
         Dangle=Dangle,
-        Dt=0.5,
+        # 0.25 because we go subpixel now
+        Dt=0.25,
         success=succ
     )
 
@@ -388,7 +390,7 @@ def transform_img_dict(img, tdict, bgval=None, order=1, invert=False):
             work very well with the translation.
 
     Returns:
-        :The same as :func:`transform_img`
+        np.ndarray: .. seealso:: :func:`transform_img`
     """
     scale = tdict["scale"]
     angle = tdict["angle"]
@@ -420,8 +422,8 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
             linear, 3 = cubic etc. Linear works surprisingly well.
 
     Returns:
-        The transformed img, may have another i.e. (bigger) shape than
-            the source.
+        np.ndarray: The transformed img, may have another
+        i.e. (bigger) shape than the source.
     """
     if img.ndim == 3:
         # A bloody painful special case of RGB images

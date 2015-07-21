@@ -195,6 +195,33 @@ class TestUtils(ut.TestCase):
                 # The actual test
                 self.assertEqual(val, orig_arr[tuple(fixed_coord)])
 
+    def test_subpixel(self):
+        anarr = np.zeros((4, 5))
+        anarr[2, 3] = 1
+        # The correspondence principle should hold
+        first_guess = (2, 3)
+        second_guess = utils._interpolate(anarr, first_guess, rad=1)
+        np.testing.assert_equal(second_guess, (2, 3))
+
+        # Now something more meaningful
+        anarr[2, 4] = 1
+        second_guess = utils._interpolate(anarr, first_guess, rad=1)
+        np.testing.assert_almost_equal(second_guess, (2, 3.5))
+
+    #@ut.skip("Corner case not implemented yet")
+    def test_subpixel_edge(self):
+        anarr = np.zeros((4, 5))
+        anarr[3, 0] = 1
+        anarr[3, 4] = 1
+        first_guess = (4, 0)
+        second_guess = utils._interpolate(anarr, first_guess, rad=2)
+        np.testing.assert_almost_equal(second_guess, (3, -0.5))
+
+        anarr[3, 0] += 1
+        anarr[0, 4] = 1
+        second_guess = utils._interpolate(anarr, first_guess, rad=2)
+        np.testing.assert_almost_equal(second_guess, (3.25, -0.5))
+
 
 class TestTiles(ut.TestCase):
     def testClusters(self):

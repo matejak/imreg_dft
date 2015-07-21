@@ -163,8 +163,9 @@ Extending images.
 
 Sub-pixel resolution.
     This is a tricky matter.
-    Since the frequency spectrum is used, neither linear or cubic interpolation will produce the right result.
-    You can try resampling if you are after the sub-pixel precision, but beware --- you have to have correctly sampled (i.e. not `undersampled <http://en.wikipedia.org/wiki/Undersampling>`_) input for it to work.
+    Since the frequency spectrum is used, neither linear or cubic interpolation guarantee an improvement.
+    However, the log-polar transform is used with linear interpolation, since it has been observed that it has a positive impact on the result.
+    For a more correct approach, you can try the resampling feature, but beware --- you have to have correctly sampled (i.e. not `undersampled <http://en.wikipedia.org/wiki/Undersampling>`_) input for it to work.
 
 .. _weak-big:
 
