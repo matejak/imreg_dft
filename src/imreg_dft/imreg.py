@@ -53,15 +53,13 @@ __all__ = ['translation', 'similarity', 'transform_img',
            'transform_img_dict', 'imshow']
 
 
-def _logpolar_filter(adft):
-    shape = adft.shape
+def _logpolar_filter(shape):
     yy = np.linspace(- np.pi / 2., np.pi / 2., shape[0])[:, np.newaxis]
     xx = np.linspace(- np.pi / 2., np.pi / 2., shape[1])[np.newaxis, :]
     # Supressing low spatial frequencies is a must when using log-polar
     # transform. The scale stuff is poorly reflected with low freqs.
-    filt = 1.0 - np.cos(np.sqrt(yy ** 2 + xx ** 2))**2
-    ret = adft * filt
-    return ret
+    filt = 1.0 - np.cos(np.sqrt(yy ** 2 + xx ** 2)) ** 2
+    return filt
 
 
 def _get_pcorr_shape(shape):
@@ -86,8 +84,10 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
         "Only two images are supported as input"
     shape = ims[0].shape
 
-    adfts = [fft.fftshift(abs(fft.fft2(im))) for im in ims]
-    adfts = [_logpolar_filter(adft) for adft in adfts]
+    ims_apod = [utils._apodize(im) for im in ims]
+    adfts = [fft.fftshift(abs(fft.fft2(im))) for im in ims_apod]
+    filt = _logpolar_filter(im.shape)
+    adfts = [adft * filt for adft in adfts]
 
     # High-pass filtering used to be here, but we have moved it to a higher
     # level interface
@@ -327,6 +327,8 @@ def translation(im0, im1, filter_pcorr=0, constraints=None):
     Returns:
         tuple: The translation vector and success number: ((Y, X), success)
     """
+    # Apodization and pcorr don't play along
+    # im0, im1 = [utils._apodize(im, ratio=1) for im in (im0, im1)]
     ret, succ = _phase_correlation(
         im0, im1,
         utils.argmax_translation, filter_pcorr, constraints)
@@ -349,6 +351,8 @@ def _phase_correlation(im0, im1, callback=None, * args):
     """
     if callback is None:
         callback = utils.argmax2D
+
+    # TODO: Implement some form of high-pass filtering of PHASE correlation
     f0, f1 = [fft.fft2(arr) for arr in (im0, im1)]
     # spectrum can be filtered, so we take precaution against dividing by 0
     eps = abs(f1).max() * 1e-15

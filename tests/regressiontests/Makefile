@@ -21,6 +21,7 @@ check: \
 	check-translation \
 	check-similarity \
 	check-similarity2 \
+	check-cells \
 	check-constraints1 \
 	check-constraints2 \
 	$(NUL)
@@ -61,7 +62,7 @@ check-constraints2: $(RSRCDIR)/constraints/three.png $(RSRCDIR)/constraints/two.
 	sh $(RTESTDIR)/check_similarity.sh $^ - - 90 1 --tx 200,100
 
 check-cells: $(RSRCDIR)/cells/big-fluo.jpg $(RSRCDIR)/cells/small-dhm.jpg
-	TOLER=4 sh $(RTESTDIR)/check_similarity.sh $^ - - 0.3 1 --tile --filter-pcorr 4 --lowpass 0.6,0.7 --angle 0,20 --scale 1,0.2
+	TOLER=8 sh $(RTESTDIR)/check_similarity.sh $^ 32 25 0.7 1 --tile --filter-pcorr 2 --lowpass 0.6,0.7 --angle 0,20 --scale 1,0.2
 
 .PHONY: \
 	check \

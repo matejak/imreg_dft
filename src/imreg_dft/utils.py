@@ -148,11 +148,14 @@ def argmax_translation(array, filter_pcorr, constraints=None):
     array *= mask2
     # Find what we look for
     tvec = argmax_ext(array, 'inf')
-    tvec = _interpolate(array, tvec)
+    tvec = _interpolate(array_orig, tvec)
     if 0:
+        print("tvec: %s" % tvec)
         import pylab as pyl
-        pyl.figure(); pyl.imshow(array, cmap=pyl.cm.gray)
-        pyl.show()
+        pyl.figure()
+        pyl.imshow(array, cmap=pyl.cm.gray, interpolation='nearest')
+        pyl.colorbar()
+        # pyl.show()
 
     # If we use constraints or min filter,
     # array_orig[tvec] may not be the maximum
@@ -352,17 +355,16 @@ def extend_to_3D(what, newdim_2D):
 
 
 def extend_to(what, newdim):
-    dst = (min(what.shape) * 0.1)
-    bgval = get_borderval(what, dst)
+    mindim = min(what.shape)
+    dst = int(mindim * 0.12)
+    bgval = get_borderval(what, dst // 2)
 
     dest = np.zeros(newdim, what.dtype)
     res = dest.copy() + bgval
     res = embed_to(res, what)
 
-    aporad = min(10, dst)
-    aporad = max(2, int(aporad))
-    apofield = get_apofield(what.shape, aporad)
-    apoemb = embed_to(dest.copy(), apofield)
+    apofield = get_apofield(what.shape, dst)
+    apoemb = embed_to(dest.copy().astype(float), apofield)
 
     res = apoemb * res + (1 - apoemb) * bgval
 
@@ -457,6 +459,39 @@ def _xpass(shape, lo, hi):
     mask = (dom > lo) * (dom < hi)
     res[mask] = 1 - (dom[mask] - lo) / (hi - lo)
 
+    return res
+
+
+def _apodize(what, aporad=None, ratio=None):
+    """
+    Given an image, it apodizes it (so it becomes quasi-seamless).
+    When :param:`ratio` is None, color near the edges will converge
+    to the same colour, whereas when ratio is a float number, a blurred
+    original image will serve as background.
+
+    Args:
+        what: The original image
+        aporad (int): Radius [px], width of the band near the edges
+            that will get modified
+        ratio (float or None): When None, the apodization background will
+            be a flat color.
+            When a float number, the background will be the image itself
+            convolved with Gaussian kernel of sigma (aporad / ratio).
+
+    Returns:
+        The apodized image
+    """
+    if aporad is None:
+        mindim = min(what.shape)
+        aporad = int(mindim * 0.12)
+    apofield = get_apofield(what.shape, aporad)
+    res = what * apofield
+    if ratio is not None:
+        ratio = float(ratio)
+        bg = ndi.gaussian_filter(what, aporad / ratio, mode='wrap')
+    else:
+        bg = get_borderval(what, aporad // 2)
+    res += bg * (1 - apofield)
     return res
 
 

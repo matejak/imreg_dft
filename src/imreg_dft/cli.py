@@ -244,33 +244,7 @@ def main():
 
 
 def filter_images(imgs, low, high):
-    # lazy import so no imports before run() is really called
-    from imreg_dft import utils
-
     ret = [utils.imfilter(img, low, high) for img in imgs]
-    return ret
-
-
-def apodize(imgs, radius_ratio):
-    # lazy import so no imports before run() is really called
-    import numpy as np
-    from imreg_dft import utils
-
-    ret = []
-    # They might have different shapes...
-    for img in imgs:
-        shape = img.shape
-
-        bgval = np.median(img)
-        bg = np.ones(shape) * bgval
-
-        radius = radius_ratio * min(shape)
-        apofield = utils.get_apofield(shape, radius)
-
-        bg *= (1 - apofield)
-        # not modifying inplace
-        toapp = bg + img * apofield
-        ret.append(toapp)
     return ret
 
 
@@ -304,6 +278,12 @@ def _get_resdict(imgs, opts, tosa=None):
                 # just add some harmless stuff here and proceed.
                 resdict = dict(success=0)
             resdicts.append(resdict)
+            if 0:
+                print("%d: succ: %g" % (ii, resdict["success"]))
+                import pylab as pyl
+                _, _, tosa = resdict["unextended"]
+                ird.imshow(tile, imgs[1], tosa, cmap=pyl.cm.gray)
+                pyl.show()
             succs[ii] = resdict["success"]
             if 0:
                 print(ii, succs[ii])
