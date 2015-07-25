@@ -86,7 +86,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
 
     ims_apod = [utils._apodize(im) for im in ims]
     adfts = [fft.fftshift(abs(fft.fft2(im))) for im in ims_apod]
-    filt = _logpolar_filter(im.shape)
+    filt = _logpolar_filter(shape)
     adfts = [adft * filt for adft in adfts]
 
     # High-pass filtering used to be here, but we have moved it to a higher
