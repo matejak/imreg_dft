@@ -154,6 +154,78 @@ def _get_precision(shape, scale=1):
     return Dangle, Dscale
 
 
+def _similarity(im0, im1, numiter=1, order=3, constraints=None,
+                filter_pcorr=0, exponent='inf', bgval=None):
+    if bgval is None:
+        bgval = utils.get_borderval(im1, 5)
+
+    shape = im0.shape
+    if shape != im1.shape:
+        raise ValueError("Images must have same shapes.")
+    elif im0.ndim != 2:
+        raise ValueError("Images must be 2-dimensional.")
+
+    # We are going to iterate and precise scale and angle estimates
+    scale = 1.0
+    angle = 0.0
+    im2 = im1
+
+    constraints_default = dict(angle=[0, None], scale=[1, None])
+    if constraints is None:
+        constraints = constraints_default
+
+    # We guard against case when caller passes only one constraint key.
+    # Now, the provided ones just replace defaults.
+    constraints_default.update(constraints)
+    constraints = constraints_default
+
+    # During iterations, we have to work with constraints too.
+    # So we make the copy in order to leave the original intact
+    constraints_dynamic = constraints.copy()
+    constraints_dynamic["scale"] = list(constraints["scale"])
+    constraints_dynamic["angle"] = list(constraints["angle"])
+
+    for ii in range(numiter):
+        newscale, newangle = _get_ang_scale([im0, im2], bgval, exponent,
+                                            constraints_dynamic)
+        scale *= newscale
+        angle += newangle
+
+        constraints_dynamic["scale"][0] /= newscale
+        constraints_dynamic["angle"][0] -= newangle
+
+        im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
+
+    # Here we look how is the turn-180
+    target, stdev = constraints.get("angle", (0, None))
+    odds = _get_odds(angle, target, stdev)
+
+    # now we can use pcorr to guess the translation
+    tvec, succ, angle2 = _translation(im0, im2, filter_pcorr, odds, constraints)
+
+    # The log-polar transform may have got the angle wrong by 180 degrees.
+    # The phase correlation can help us to correct that
+    angle += angle2
+    angle = utils.wrap_angle(angle, 360)
+
+    # don't know what it does, but it alters the scale a little bit
+    # scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
+
+    Dangle, Dscale = _get_precision(shape, scale)
+
+    res = dict(
+        scale=scale,
+        angle=angle,
+        tvec=tvec,
+        Dscale=Dscale,
+        Dangle=Dangle,
+        # 0.25 because we go subpixel now
+        Dt=0.25,
+        success=succ
+    )
+    return res
+
+
 def similarity(im0, im1, numiter=1, order=3, constraints=None,
                filter_pcorr=0, exponent='inf'):
     """
@@ -202,71 +274,10 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
         * No subpixel precision (but you can use *resampling* to get
           around this).
     """
-    shape = im0.shape
-    if shape != im1.shape:
-        raise ValueError("Images must have same shapes.")
-    elif im0.ndim != 2:
-        raise ValueError("Images must be 2-dimensional.")
-
-    # We are going to iterate and precise scale and angle estimates
-    scale = 1.0
-    angle = 0.0
-    im2 = im1
-
-    constraints_default = dict(angle=[0, None], scale=[1, None])
-    if constraints is None:
-        constraints = constraints_default
-
-    # We guard against case when caller passes only one constraint key.
-    # Now, the provided ones just replace defaults.
-    constraints_default.update(constraints)
-    constraints = constraints_default
-
-    # During iterations, we have to work with constraints too.
-    # So we make the copy in order to leave the original intact
-    constraints_dynamic = constraints.copy()
-    constraints_dynamic["scale"] = list(constraints["scale"])
-    constraints_dynamic["angle"] = list(constraints["angle"])
-
     bgval = utils.get_borderval(im1, 5)
-    for ii in range(numiter):
-        newscale, newangle = _get_ang_scale([im0, im2], bgval, exponent,
-                                            constraints_dynamic)
-        scale *= newscale
-        angle += newangle
 
-        constraints_dynamic["scale"][0] /= newscale
-        constraints_dynamic["angle"][0] -= newangle
-
-        im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
-
-    # Here we look how is the turn-180
-    target, stdev = constraints.get("angle", (0, None))
-    odds = _get_odds(angle, target, stdev)
-
-    # now we can use pcorr to guess the translation
-    tvec, succ, angle2 = _translation(im0, im2, filter_pcorr, odds, constraints)
-
-    # The log-polar transform may have got the angle wrong by 180 degrees.
-    # The phase correlation can help us to correct that
-    angle += angle2
-    angle = utils.wrap_angle(angle, 360)
-
-    # don't know what it does, but it alters the scale a little bit
-    # scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
-
-    Dangle, Dscale = _get_precision(shape, scale)
-
-    res = dict(
-        scale=scale,
-        angle=angle,
-        tvec=tvec,
-        Dscale=Dscale,
-        Dangle=Dangle,
-        # 0.25 because we go subpixel now
-        Dt=0.25,
-        success=succ
-    )
+    res = _similarity(im0, im1, numiter, order, constraints,
+                      filter_pcorr, exponent, bgval)
 
     im2 = transform_img_dict(im1, res, bgval, order)
     # Order of mask should be always 1 - higher values produce strange results.
@@ -443,7 +454,7 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
         return ret
 
     if bgval is None:
-        bgval = utils.get_borderval(img, 5)
+        bgval = utils.get_borderval(img)
 
     bigshape = np.array(img.shape) * 1.2
     bg = np.zeros(bigshape, img.dtype) + bgval
@@ -520,7 +531,7 @@ def _logpolar(image, shape, log_base, bgval=None):
         The transformed image
     """
     if bgval is None:
-        bgval = utils.get_borderval(image, 5)
+        bgval = utils.get_borderval(image)
     imshape = np.array(image.shape)
     center = imshape[0] / 2.0, imshape[1] / 2.0
     # 0 .. pi = only half of the spectrum is used

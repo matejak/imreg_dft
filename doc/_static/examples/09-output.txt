@@ -1,5 +1,5 @@
 [user@linuxbox examples]$ ird sample1.png sample3c.jpg --iter 3 --print-result --output color.jpg
-scale: 1.249088 +-0.00401166
-angle: -30.008935 +-0.1125
-shift: 34.9057, 72.773 +-0.25
-Success: 0.682
+scale: 1.249347 +-0.00401249
+angle: -30.023337 +-0.1125
+shift: 34.8964, 72.7884 +-0.25
+Success: 0.686

@@ -253,69 +253,13 @@ def _get_resdict(imgs, opts, tosa=None):
         if (shapes[0] / shapes[1]).max() > 1.7:
             tiledim = np.min(shapes, axis=0) * 1.1
             # TODO: Establish a translate region constraint of width tiledim * coef
-
-    if 0:
-        tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
-        resdicts = []
-        shifts = np.zeros((len(tiles), 2), float)
-        succs = np.zeros(len(tiles), float)
-        angles = np.zeros(len(tiles), float)
-        scales = np.zeros(len(tiles), float)
-        for ii, (tile, pos) in enumerate(tiles):
-            try:
-                # TODO: Add unittests that zero success result
-                #   doesn't influence anything
-                resdict = process_images((tile, imgs[1]), opts, None)
-                angles[ii] = resdict["angle"]
-                scales[ii] = resdict["scale"]
-                shifts[ii] = np.array((resdict["ty"], resdict["tx"])) + pos
-            except ValueError:
-                # probably incompatible images due to high scale change, so we
-                # just add some harmless stuff here and proceed.
-                resdict = dict(success=0)
-            resdicts.append(resdict)
-            if 0:
-                print("%d: succ: %g" % (ii, resdict["success"]))
-                import pylab as pyl
-                _, _, tosa = resdict["unextended"]
-                ird.imshow(tile, imgs[1], tosa, cmap=pyl.cm.gray)
-                pyl.show()
-            succs[ii] = resdict["success"]
-            if 0:
-                print(ii, succs[ii])
-                import pylab as pyl
-                pyl.figure(); pyl.imshow(tile)
-                pyl.show()
-        tosa_offset = np.array(imgs[0].shape)[:2] - np.array(tiledim)[:2] + 0.5
-        shifts -= tosa_offset / 2.0
-
-        # Get the cluster of the tiles that have similar results and that look
-        # most promising along with the index of the best tile
-        cluster, amax = utils.get_best_cluster(shifts, succs, 5)
-        # Make the quantities estimation even more precise by taking
-        # the average of all good tiles
-        shift, angle, scale, score = utils.get_values(
-            cluster, shifts, succs, angles, scales)
-
-        resdict = resdicts[amax]
-
-        resdict["scale"] = scale
-        resdict["angle"] = angle
-        resdict["tvec"] = shift
-        resdict["ty"], resdict["tx"] = resdict["tvec"]
-
-        # In non-tile cases, tosa is transformed in process_images
-        if tosa is not None:
-            tosa = ird.transform_img_dict(tosa, resdict)
-
     if tiledim is not None:
-        tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
-        resdict = ird.tiles.settle_tiles(tiles, imgs, tiledim, opts)
+        resdict = ird.tiles.settle_tiles(imgs, tiledim, opts)
 
         if tosa is not None:
-            tosa = ird.transform_img_dict(tosa, resdict)
+            tosa[:] = ird.transform_img_dict(tosa, resdict)
     else:
-        resdict = process_images(imgs, opts, tosa)
+        resdict = ird.tiles.process_images(imgs, opts, tosa, True)
 
     return resdict
 
@@ -329,6 +273,7 @@ def run(template, subject, opts):
     loader_img = loaders[1]
     imgs = [loa.load2reg(fname) for fname, loa in zip(fnames, loaders)]
 
+    # The array where the result should be placed
     tosa = None
     saver = None
     outname = opts["output"]
@@ -356,11 +301,6 @@ def run(template, subject, opts):
         imreg.imshow(im0, im1, im2, fig=fig)
         # imreg.imshow(imgs[0], imgs[1], im2, fig=fig)
         pyl.show()
-
-
-def process_images(ims, opts, tosa=None):
-    ret = tiles.process_images(ims, opts, tosa)
-    return ret
 
 
 if __name__ == "__main__":

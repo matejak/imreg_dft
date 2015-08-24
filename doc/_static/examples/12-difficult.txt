@@ -1,6 +1,6 @@
 [user@linuxbox examples]$ cd cells
 [user@linuxbox cells]$ ird big-fluo.jpg small-dhm.jpg --tile --filter-pcorr 4 --scale 1.0,0.1 --angle 0,20 --lowpass 0.7,0.8 --print-result
-scale: 1.008587 +-0.00233306
-angle: 0.028646 +-0.0708661
-shift: 209.337, -100.186 +-0.25
-Success: 0.0493
+scale: 0.999303 +-0.00236055
+angle: 0.240797 +-0.0708661
+shift: 32.3551, 25.9479 +-0.25
+Success: 0.0357

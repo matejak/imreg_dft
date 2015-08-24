@@ -639,11 +639,14 @@ def frame_img(img, mask, dst, apofield=None):
     return ret
 
 
-def get_borderval(img, radius):
+def get_borderval(img, radius=None):
     """
     Given an image and a radius, examine the average value of the image
     at most radius pixels from the edge
     """
+    if radius is None:
+        mindim = min(img.shape)
+        radius = max(1, mindim // 20)
     mask = np.zeros_like(img, dtype=np.bool)
     mask[:, :radius] = True
     mask[:, -radius:] = True

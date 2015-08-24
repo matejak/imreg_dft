@@ -39,6 +39,7 @@ _SUCCS = None
 _SHIFTS = None
 _ANGLES = None
 _SCALES = None
+_DIFFS = None
 
 
 def resample(img, coef):
@@ -61,10 +62,10 @@ def _distribute_resdict(resdict, ii):
     try:
         _ANGLES[ii] = resdict["angle"]
         _SCALES[ii] = resdict["scale"]
-        _SHIFTS[ii][0] = resdict["ty"]
-        _SHIFTS[ii][1] = resdict["tx"]
+        _SHIFTS[ii][0] = resdict["tvec"][0]
+        _SHIFTS[ii][1] = resdict["tvec"][1]
         _SUCCS[ii] = resdict["success"]
-    # Some tiles may have failed so much, that "angle" etc. are not even defined
+    # Some tiles may have failed so much, that "angle" etc. are not defined
     # So we just mark them as failiures and move on.
     except KeyError:
         _SUCCS[ii] = 0
@@ -74,44 +75,49 @@ def _assemble_resdict(ii):
     ret = dict(
         angle=_ANGLES[ii],
         scale=_SCALES[ii],
-        ty=_SHIFTS[ii][0],
-        tx=_SHIFTS[ii][1],
+        tvec=_SHIFTS[ii],
         success=_SUCCS[ii],
     )
     return ret
 
 
-def process_images2(ims, opts, tosa=None):
-    pass
-
-
-def process_images(ims, opts, tosa=None):
-    # lazy import so no imports before run() is really called
-    import numpy as np
-    from imreg_dft import utils
-    from imreg_dft import imreg
-
-    ims = [utils.extend_by(img, opts["extend"]) for img in ims]
+def _preprocess_extend(ims, extend, low, high, rcoef):
+    ims = [utils.extend_by(img, extend) for img in ims]
     bigshape = np.array([img.shape for img in ims]).max(0)
 
-    ims = filter_images(ims, opts["low"], opts["high"])
-    rcoef = opts["resample"]
+    ims = filter_images(ims, low, high)
     if rcoef != 1:
         ims = [resample(img, rcoef) for img in ims]
         bigshape *= rcoef
 
     # Make the shape of images the same
-    ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(img, 5), img)
+    bgcol = utils.get_borderval(img, 5)
+    ims = [utils.embed_to(np.zeros(bigshape) + bgcol, img)
            for img in ims]
+    return ims
 
-    resdict = imreg.similarity(
+
+def _postprocess_unextend(ims, im2, extend):
+    ret = [utils.unextend_by(img, extend)
+           for img in ims + [im2]]
+    return ret
+
+
+def process_images(ims, opts, tosa=None, get_unextended=False):
+    # lazy import so no imports before run() is really called
+    from imreg_dft import utils
+    from imreg_dft import imreg
+
+    rcoef = opts["resample"]
+    ims = _preprocess_extend(ims, opts["extend"],
+                             opts["low"], opts["high"], rcoef)
+
+    resdict = imreg._similarity(
         ims[0], ims[1], opts["iters"], opts["order"], opts["constraints"],
         opts["filter_pcorr"], opts["exponent"])
 
-    im2 = resdict.pop("timg")
-
     # Seems that the reampling simply scales the translation
-    resdict["tvec"] /= rcoef
+    resdict["Dt"] /= rcoef
     ty, tx = resdict["tvec"]
     resdict["tx"] = tx
     resdict["ty"] = ty
@@ -121,23 +127,32 @@ def process_images(ims, opts, tosa=None):
     if tosa is not None:
         tosa[:] = ird.transform_img_dict(tosa, tform)
 
-    if rcoef != 1:
-        ims = [resample(img, 1.0 / rcoef) for img in ims]
-        im2 = resample(im2, 1.0 / rcoef)
-        resdict["Dt"] /= rcoef
+    if get_unextended:
+        im2 = imreg.transform_img_dict(ims[1], resdict, order=opts["order"])
 
-    resdict["unextended"] = [utils.unextend_by(img, opts["extend"])
-                             for img in ims + [im2]]
+        if rcoef != 1:
+            ims = [resample(img, 1.0 / rcoef) for img in ims]
+            im2 = resample(im2, 1.0 / rcoef)
+
+        resdict["unextended"] = _postprocess_unextend(ims, im2, opts["extend"])
+
+    # We need this for the transform above
+    resdict["tvec"] /= rcoef
 
     return resdict
 
 
 def process_tile(tile, imgs, opts, ii, pos):
-    global _SUCCS, _SHIFTS, _ANGLES, _SCALES
+    global _SUCCS, _SHIFTS, _ANGLES, _SCALES, _DIFFS
     try:
         # TODO: Add unittests that zero success result
         #   doesn't influence anything
         resdict = process_images((tile, imgs[1]), opts, None)
+        resdict['tvec'] += pos
+        if np.isnan(_DIFFS[0]):
+            _DIFFS[0] = resdict["Dangle"]
+            _DIFFS[1] = resdict["Dscale"]
+            _DIFFS[2] = resdict["Dt"]
     except ValueError:
         # probably incompatible images due to high scale change, so we
         # just add some harmless stuff here and proceed.
@@ -157,14 +172,17 @@ def process_tile(tile, imgs, opts, ii, pos):
         pyl.show()
 
 
-def settle_tiles(tiles, imgs, tiledim, opts):
-    global _SUCCS, _SHIFTS, _ANGLES, _SCALES
+def settle_tiles(imgs, tiledim, opts):
+    tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
+
+    global _SUCCS, _SHIFTS, _ANGLES, _SCALES, _DIFFS
     _SUCCS = np.empty(len(tiles), float) + np.nan
     _SHIFTS = np.empty((len(tiles), 2), float) + np.nan
     _ANGLES = np.empty(len(tiles), float) + np.nan
     _SCALES = np.empty(len(tiles), float) + np.nan
+    # Dangle, Dscale, Dt
+    _DIFFS = np.empty(3, float) + np.nan
 
-    tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
     for ii, (tile, pos) in enumerate(tiles):
         process_tile(tile, imgs, opts, ii, pos)
 
@@ -185,15 +203,14 @@ def settle_tiles(tiles, imgs, tiledim, opts):
     resdict["tvec"] = shift
     resdict["ty"], resdict["tx"] = resdict["tvec"]
 
-    orig = tiles[amax][0]
-    bgval = utils.get_borderval(orig, 5)
-    im2 = ird.transform_img_dict(orig, resdict, bgval, opts["order"])
+    bgval = utils.get_borderval(imgs[1], 5)
+
+    ims = _preprocess_extend(imgs, opts["extend"],
+                             opts["low"], opts["high"], opts["resample"])
+    im2 = ird.transform_img_dict(ims[1], resdict, bgval, opts["order"])
 
     # TODO: This is kinda dirty
-    resdict["unextended"] = [utils.unextend_by(img, opts["extend"])
-                             for img in (imgs[1], orig, im2)]
-    resdict["Dangle"], resdict["Dscale"] = ird.imreg._get_precision(img.shape,
-                                                                    scale)
-    resdict["Dt"] = 0.25
+    resdict["unextended"] = _postprocess_unextend(ims, im2, opts["extend"])
+    resdict["Dangle"], resdict["Dscale"], resdict["Dt"] = _DIFFS
 
     return resdict
