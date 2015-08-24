@@ -755,6 +755,10 @@ def get_clusters(points, rad=0):
     :func:`_get_dst1`.
     (point = matrix row).
 
+    Args:
+        points (np.ndarray): Shifts.
+        rad (float): What is closer than ``rad`` is considered *close*.
+
     The result matrix has always True on diagonals.
     """
     num = len(points)
@@ -810,15 +814,20 @@ def get_values(cluster, shifts, scores, angles, scales):
     in the cluster.
     Treat the angular data carefully.
     """
-    weights = cluster * scores
-    weights /= sum(weights)
+    weights = scores[cluster]
+    s_weights = sum(weights)
+    if s_weights == 0:
+        # When scores are all zero, we just select the mean of proposed values
+        weights = np.ones_like(weights)
+    else:
+        weights /= s_weights
 
-    shift = sum(shifts * weights[:, np.newaxis])
-    scale = sum(scales * weights)
-    score = sum(scores * weights)
+    shift = np.sum(shifts[cluster] * weights[:, np.newaxis], axis=0)
+    scale = sum(scales[cluster] * weights)
+    score = sum(scores[cluster] * weights)
 
     angles = _ang2complex(angles)
-    angle = sum(angles * weights)
+    angle = sum(angles[cluster] * weights)
     angle = _complex2ang(angle)
 
     return shift, angle, scale, score

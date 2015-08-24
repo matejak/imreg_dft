@@ -81,6 +81,10 @@ def _assemble_resdict(ii):
     return ret
 
 
+def process_images2(ims, opts, tosa=None):
+    pass
+
+
 def process_images(ims, opts, tosa=None):
     # lazy import so no imports before run() is really called
     import numpy as np
@@ -163,3 +167,33 @@ def settle_tiles(tiles, imgs, tiledim, opts):
     tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
     for ii, (tile, pos) in enumerate(tiles):
         process_tile(tile, imgs, opts, ii, pos)
+
+    tosa_offset = np.array(imgs[0].shape)[:2] - np.array(tiledim)[:2] + 0.5
+    _SHIFTS -= tosa_offset / 2.0
+
+    # Get the cluster of the tiles that have similar results and that look
+    # most promising along with the index of the best tile
+    cluster, amax = utils.get_best_cluster(_SHIFTS, _SUCCS, 5)
+    # Make the quantities estimation even more precise by taking
+    # the average of all good tiles
+    shift, angle, scale, score = utils.get_values(
+        cluster, _SHIFTS, _SUCCS, _ANGLES, _SCALES)
+
+    resdict = _assemble_resdict(amax)
+    resdict["scale"] = scale
+    resdict["angle"] = angle
+    resdict["tvec"] = shift
+    resdict["ty"], resdict["tx"] = resdict["tvec"]
+
+    orig = tiles[amax][0]
+    bgval = utils.get_borderval(orig, 5)
+    im2 = ird.transform_img_dict(orig, resdict, bgval, opts["order"])
+
+    # TODO: This is kinda dirty
+    resdict["unextended"] = [utils.unextend_by(img, opts["extend"])
+                             for img in (imgs[1], orig, im2)]
+    resdict["Dangle"], resdict["Dscale"] = ird.imreg._get_precision(img.shape,
+                                                                    scale)
+    resdict["Dt"] = 0.25
+
+    return resdict

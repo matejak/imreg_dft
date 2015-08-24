@@ -38,6 +38,7 @@ import argparse as ap
 import imreg_dft as ird
 import imreg_dft.utils as utils
 import imreg_dft.loader as loader
+import imreg_dft.tiles
 
 
 def assure_constraint(possible_constraints):
@@ -243,11 +244,6 @@ def main():
     run(args.template, args.subject, opts)
 
 
-def filter_images(imgs, low, high):
-    ret = [utils.imfilter(img, low, high) for img in imgs]
-    return ret
-
-
 def _get_resdict(imgs, opts, tosa=None):
     import numpy as np
 
@@ -258,7 +254,7 @@ def _get_resdict(imgs, opts, tosa=None):
             tiledim = np.min(shapes, axis=0) * 1.1
             # TODO: Establish a translate region constraint of width tiledim * coef
 
-    if tiledim is not None:
+    if 0:
         tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
         resdicts = []
         shifts = np.zeros((len(tiles), 2), float)
@@ -311,6 +307,13 @@ def _get_resdict(imgs, opts, tosa=None):
         # In non-tile cases, tosa is transformed in process_images
         if tosa is not None:
             tosa = ird.transform_img_dict(tosa, resdict)
+
+    if tiledim is not None:
+        tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
+        resdict = ird.tiles.settle_tiles(tiles, imgs, tiledim, opts)
+
+        if tosa is not None:
+            tosa = ird.transform_img_dict(tosa, resdict)
     else:
         resdict = process_images(imgs, opts, tosa)
 
@@ -355,60 +358,9 @@ def run(template, subject, opts):
         pyl.show()
 
 
-def resample(img, coef):
-    from scipy import signal
-    ret = img
-    for axis in range(2):
-        newdim = ret.shape[axis] * coef
-        ret = signal.resample(ret, newdim, axis=axis)
-    return ret
-
-
 def process_images(ims, opts, tosa=None):
-    # lazy import so no imports before run() is really called
-    import numpy as np
-    from imreg_dft import utils
-    from imreg_dft import imreg
-
-    ims = [utils.extend_by(img, opts["extend"]) for img in ims]
-    bigshape = np.array([img.shape for img in ims]).max(0)
-
-    ims = filter_images(ims, opts["low"], opts["high"])
-    rcoef = opts["resample"]
-    if rcoef != 1:
-        ims = [resample(img, rcoef) for img in ims]
-        bigshape *= rcoef
-
-    # Make the shape of images the same
-    ims = [utils.embed_to(np.zeros(bigshape) + utils.get_borderval(img, 5), img)
-           for img in ims]
-
-    resdict = imreg.similarity(
-        ims[0], ims[1], opts["iters"], opts["order"], opts["constraints"],
-        opts["filter_pcorr"], opts["exponent"])
-
-    im2 = resdict.pop("timg")
-
-    # Seems that the reampling simply scales the translation
-    resdict["tvec"] /= rcoef
-    ty, tx = resdict["tvec"]
-    resdict["tx"] = tx
-    resdict["ty"] = ty
-    resdict["imgs"] = ims
-    tform = resdict
-
-    if tosa is not None:
-        tosa[:] = ird.transform_img_dict(tosa, tform)
-
-    if rcoef != 1:
-        ims = [resample(img, 1.0 / rcoef) for img in ims]
-        im2 = resample(im2, 1.0 / rcoef)
-        resdict["Dt"] /= rcoef
-
-    resdict["unextended"] = [utils.unextend_by(img, opts["extend"])
-                             for img in ims + [im2]]
-
-    return resdict
+    ret = tiles.process_images(ims, opts, tosa)
+    return ret
 
 
 if __name__ == "__main__":

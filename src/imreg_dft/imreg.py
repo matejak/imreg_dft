@@ -275,9 +275,13 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
     imask[imask > 0.8] = 1.0
 
     # Framing here = just blending the im2 with its BG according to the mask
-    im2 = utils.frame_img(im2, imask, 10)
+    im3 = utils.frame_img(im2, imask, 10)
 
-    res["timg"] = im2
+    res["timg"] = im3
+    if 0:
+        import pylab as pyl
+        pyl.figure(); pyl.imshow(im2); pyl.show()
+        pyl.figure(); pyl.imshow(im3); pyl.show()
     return res
 
 

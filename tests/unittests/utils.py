@@ -228,12 +228,29 @@ class TestUtils(ut.TestCase):
         second_guess = utils._interpolate(anarr, first_guess, rad=2)
         np.testing.assert_array_less(second_guess, anarr.shape)
 
+
 class TestTiles(ut.TestCase):
     def testClusters(self):
         shifts = [(0, 1), (0, 1.1), (0.2, 1), (-0.1, 0.9), (-0.1, 0.8)]
         shifts = np.array(shifts)
         clusters = utils.get_clusters(shifts, 0.11)
-        np.testing.assert_array_equal(clusters[0], (1, 1, 0, 1, 0))
+        cluster = clusters[0]
+        np.testing.assert_array_equal(cluster, (1, 1, 0, 1, 0))
+
+        nshifts = len(shifts)
+        scores = np.zeros(nshifts)
+        scores[0] = 1
+        angles = np.arange(nshifts)
+        scales = np.ones(nshifts)
+        scales[2] = np.nan
+
+        shift, angle, scale, score = utils.get_values(
+            cluster, shifts, scores, angles, scales)
+
+        np.testing.assert_array_equal(shift, shifts[0])
+        self.assertEqual(angle, angles[0])
+        self.assertEqual(scale, scales[0])
+        self.assertEqual(score, scores[0])
 
 
 if __name__ == '__main__':
