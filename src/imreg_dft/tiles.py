@@ -91,9 +91,10 @@ def _preprocess_extend(ims, extend, low, high, rcoef):
         bigshape *= rcoef
 
     # Make the shape of images the same
-    bgcol = utils.get_borderval(img, 5)
-    ims = [utils.embed_to(np.zeros(bigshape) + bgcol, img)
+    bgs = [np.zeros(bigshape) + utils.get_borderval(img, 5)
            for img in ims]
+    ims = [utils.embed_to(bg, img)
+           for bg, img in zip(bgs, ims)]
     return ims
 
 
@@ -105,7 +106,6 @@ def _postprocess_unextend(ims, im2, extend):
 
 def process_images(ims, opts, tosa=None, get_unextended=False):
     # lazy import so no imports before run() is really called
-    from imreg_dft import utils
     from imreg_dft import imreg
 
     rcoef = opts["resample"]
