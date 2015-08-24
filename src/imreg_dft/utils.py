@@ -102,9 +102,9 @@ def argmax_angscale(array, log_base, exponent, constraints=None):
 
     array *= mask
     ret = argmax_ext(array, exponent)
-    ret = _interpolate(array, ret)
-    success = _get_success(array, tuple(ret), 0)
-    return ret, success
+    ret2 = _interpolate(array, ret)
+    success = _get_success(array, tuple(ret2), 0)
+    return ret2, success
 
 
 def argmax_translation(array, filter_pcorr, constraints=None):
@@ -275,6 +275,9 @@ def argmax_ext(array, exponent):
 
         arr2 = array ** exponent
         arrsum = arr2.sum()
+        if arrsum == 0:
+            # We have to return SOMETHING, so let's go for (0, 0)
+            return np.zeros(2)
         arrprody = np.sum(arr2 * col) / arrsum
         arrprodx = np.sum(arr2 * row) / arrsum
         ret = [arrprody, arrprodx]

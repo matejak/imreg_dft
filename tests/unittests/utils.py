@@ -222,6 +222,11 @@ class TestUtils(ut.TestCase):
         second_guess = utils._interpolate(anarr, first_guess, rad=2)
         np.testing.assert_almost_equal(second_guess, (3.25, -0.5))
 
+    def test_subpixel_crazy(self):
+        anarr = np.zeros((4, 5))
+        first_guess = (0, 0)
+        second_guess = utils._interpolate(anarr, first_guess, rad=2)
+        np.testing.assert_array_less(second_guess, anarr.shape)
 
 class TestTiles(ut.TestCase):
     def testClusters(self):
