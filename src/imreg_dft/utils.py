@@ -44,6 +44,29 @@ def wrap_angle(angles, ceil=2 * np.pi):
     return angles
 
 
+def _calc_tform(shape, orig, scale, angle, tvec, newshape=None):
+    offset = np.array(shape) // 2
+    carth = orig - offset
+    polar = np.array((np.sqrt((carth ** 2).sum()),
+                      np.arctan2(carth[0], carth[1])))
+    polar[0] *= scale
+    polar[1] -= np.deg2rad(angle)
+    carth = np.array((polar[0] * np.sin(polar[1]),
+                      polar[0] * np.cos(polar[1])))
+    carth += tvec
+    if newshape is not None:
+        offset = np.array(newshape) // 2
+    ret = carth + offset
+    return ret
+
+
+def _calc_tform_complete(shape, scale, angle, tvec, newshape=None):
+    origs = [(0, 0), (shape[0], 0), shape, (0, shape[1])]
+    ress = [_calc_tform(shape, orig, scale, angle, tvec, newshape)
+            for orig in origs]
+    return ress
+
+
 def rot180(arr):
     ret = np.rot90(arr, 2)
     return ret
