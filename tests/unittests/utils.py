@@ -170,13 +170,16 @@ class TestUtils(ut.TestCase):
         smallshp = (30, 50)
         inarr = np.random.random(smallshp)
         recon = np.zeros_like(inarr)
-        tileshp = (7, 6)
+        # Float tile dimensions are possible, but they may cause problems.
+        # Our code should handle them well.
+        tileshp = (7.4, 6.3)
+        tileshp_round = tuple(np.round(tileshp))
         decomps = utils.decompose(inarr, tileshp, 0.8)
         for decarr, start in decomps:
             sshp = decarr.shape
+            self.assertEqual(tileshp_round, sshp)
             recon[start[0]:start[0] + sshp[0],
                   start[1]:start[1] + sshp[1]] = decarr
-        self.assertEqual(tileshp, decarr.shape)
         np.testing.assert_array_equal(inarr, recon)
 
     def test_fftshift(self):

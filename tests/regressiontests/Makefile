@@ -17,14 +17,17 @@ endif
 # Temporarily broken
 #	check-cells
 
-check: \
+CHECKS = \
 	check-translation \
 	check-similarity \
 	check-similarity2 \
 	check-cells \
+	check-tiles \
 	check-constraints1 \
 	check-constraints2 \
 	$(NUL)
+
+check: $(CHECKS)
 
 clean:
 	$(RM) .coverage
@@ -67,10 +70,4 @@ check-cells: $(RSRCDIR)/cells/big-fluo.jpg $(RSRCDIR)/cells/small-dhm.jpg
 check-tiles: $(RSRCDIR)/tiling/big.png $(RSRCDIR)/tiling/small.png
 	TOLER=8 sh $(RTESTDIR)/check_similarity.sh $^ 156 137 40.5 0.51 --tile
 
-.PHONY: \
-	check \
-	clean \
-	check-translation \
-	check-similarity \
-	check-cells \
-	$(NUL)
+.PHONY: $(CHECKS)

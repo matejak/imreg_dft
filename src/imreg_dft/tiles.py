@@ -35,11 +35,15 @@ import imreg_dft as ird
 import imreg_dft.utils as utils
 
 
+_TILES = None
 _SUCCS = None
 _SHIFTS = None
 _ANGLES = None
 _SCALES = None
 _DIFFS = None
+_IMAGE = None
+_OPTS = None
+_POSS = None
 
 
 def resample(img, coef):
@@ -142,12 +146,16 @@ def process_images(ims, opts, tosa=None, get_unextended=False):
     return resdict
 
 
-def process_tile(tile, imgs, opts, ii, pos):
+def process_tile(ii):
     global _SUCCS, _SHIFTS, _ANGLES, _SCALES, _DIFFS
+    tile = _TILES[ii]
+    image = _IMAGE
+    opts = _OPTS
+    pos = _POSS[ii]
     try:
         # TODO: Add unittests that zero success result
         #   doesn't influence anything
-        resdict = process_images((tile, imgs[1]), opts, None)
+        resdict = process_images((tile, image), opts, None)
         resdict['tvec'] += pos
         if np.isnan(_DIFFS[0]):
             _DIFFS[0] = resdict["Dangle"]
@@ -162,7 +170,7 @@ def process_tile(tile, imgs, opts, ii, pos):
         print("%d: succ: %g" % (ii, resdict["success"]))
         import pylab as pyl
         _, _, tosa = resdict["unextended"]
-        ird.imshow(tile, imgs[1], tosa, cmap=pyl.cm.gray)
+        ird.imshow(tile, image, tosa, cmap=pyl.cm.gray)
         pyl.show()
     _SUCCS[ii] = resdict["success"]
     if 0:
@@ -172,19 +180,57 @@ def process_tile(tile, imgs, opts, ii, pos):
         pyl.show()
 
 
-def settle_tiles(imgs, tiledim, opts):
-    tiles = ird.utils.decompose(imgs[0], tiledim, 0.35)
-
+def _fill_globals(tiles, poss, image, opts):
+    ntiles = len(tiles)
     global _SUCCS, _SHIFTS, _ANGLES, _SCALES, _DIFFS
-    _SUCCS = np.empty(len(tiles), float) + np.nan
-    _SHIFTS = np.empty((len(tiles), 2), float) + np.nan
-    _ANGLES = np.empty(len(tiles), float) + np.nan
-    _SCALES = np.empty(len(tiles), float) + np.nan
+    global _TILES, _IMAGE, _OPTS, _POSS
+    _SUCCS = np.empty(ntiles, float) + np.nan
+    _SHIFTS = np.empty((ntiles, 2), float) + np.nan
+    _ANGLES = np.empty(ntiles, float) + np.nan
+    _SCALES = np.empty(ntiles, float) + np.nan
     # Dangle, Dscale, Dt
     _DIFFS = np.empty(3, float) + np.nan
 
-    for ii, (tile, pos) in enumerate(tiles):
-        process_tile(tile, imgs, opts, ii, pos)
+    _TILES = np.empty((ntiles,) + tiles[0].shape)
+    for ii, tile in enumerate(tiles):
+        _TILES[ii, :] = tile
+
+    _IMAGE = np.zeros_like(image) + image
+    _OPTS = opts
+    _POSS = tuple((tuple(pos) for pos in poss))
+
+
+def settle_tiles(imgs, tiledim, opts):
+    global _SHIFTS
+
+    tiles, poss = zip(* ird.utils.decompose(imgs[0], tiledim, 0.35))
+
+    _fill_globals(tiles, poss, imgs[1], opts)
+
+    for ii, pos in enumerate(poss):
+        process_tile(ii)
+
+    """
+    if ncores == 0:  # no multiprocessing (to see errors)
+        _seg_init(mesh, dims, counter)
+        data = map(_get_prep, allranges)
+    else:
+        pool = mp.Pool(
+            processes=ncores,
+            initializer=_seg_init,
+            initargs=(mesh, dims, counter),
+        )
+        res = pool.map_async(_get_prep, allranges)
+        pool.close()
+
+        while not res.ready():
+            reporter.update(counter.value)
+            time.sleep(sleeptime)
+        assert res.successful(), \
+            "Some exceptions have likely occured"
+
+        data = res.get()
+    """
 
     tosa_offset = np.array(imgs[0].shape)[:2] - np.array(tiledim)[:2] + 0.5
     _SHIFTS -= tosa_offset / 2.0

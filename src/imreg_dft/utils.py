@@ -748,13 +748,20 @@ def mkCut(shp0, dims, start):
     """
     assert np.all(shp0 > dims), \
         "The array is too small - shape %s vs shape %s of cuts " % (shp0, dims)
+    # If dims (or even start )are float, the resulting shape may be different
+    # due to the rounding stuff.
+    start = np.round(start)
+    dims = np.round(dims)
     end = start + dims
+    # The difference between end of the cut and the original shape.
+    # If it is >= 0, then everything is OK.
     diff = shp0 - end
     for ii, num in enumerate(diff):
         # no-op, the end fits into our shape
         if num > 0:
             diff[ii] = 0
 
+    # If the end would be outside, we shift both the start AND the end.
     rstart = start + diff
     rend = end + diff
     res = []
