@@ -84,11 +84,12 @@ def _get_scales(shape, log_base):
     return ret
 
 
-def argmax_angscale(array, log_base, exponent, constraints=None):
+def argmax_angscale(array, log_base, exponent, constraints=None, reports=None):
     if constraints is None:
         constraints = {}
 
     mask = np.ones(array.shape, float)
+    array_orig = array.copy()
 
     if "scale" in constraints:
         scale, sigma = constraints["scale"]
@@ -124,13 +125,18 @@ def argmax_angscale(array, log_base, exponent, constraints=None):
     mask = fft.fftshift(mask)
 
     array *= mask
-    ret = argmax_ext(array, exponent)
+    ret = _argmax_ext(array, exponent)
     ret2 = _interpolate(array, ret)
-    success = _get_success(array, tuple(ret2), 0)
+
+    if reports is not None:
+        reports["orig"] = array_orig
+        reports["postproc"] = array
+
+    success = _get_success(array_orig, tuple(ret2), 0)
     return ret2, success
 
 
-def argmax_translation(array, filter_pcorr, constraints=None):
+def argmax_translation(array, filter_pcorr, constraints=None, reports=None):
     if constraints is None:
         constraints = dict(tx=(0, None), ty=(0, None))
 
@@ -170,7 +176,7 @@ def argmax_translation(array, filter_pcorr, constraints=None):
     mask2[thresh[0]:-thresh[0], thresh[1]:-thresh[1]] = 1
     array *= mask2
     # Find what we look for
-    tvec = argmax_ext(array, 'inf')
+    tvec = _argmax_ext(array, 'inf')
     tvec = _interpolate(array_orig, tvec)
     if 0:
         print("tvec: %s" % tvec)
@@ -183,6 +189,10 @@ def argmax_translation(array, filter_pcorr, constraints=None):
     # If we use constraints or min filter,
     # array_orig[tvec] may not be the maximum
     success = _get_success(array_orig, tuple(tvec), 2)
+
+    if reports is not None:
+        reports["orig"] = array_orig.copy()
+        reports["postproc"] = array.copy()
 
     return tvec, success
 
@@ -230,7 +240,7 @@ def _get_success(array, coord, radius=2):
     return success
 
 
-def _argmax2D(array):
+def _argmax2D(array, reports=None):
     """
     Simple 2D argmax function with simple sharpness indication
     """
@@ -260,7 +270,7 @@ def _interpolate(array, rough, rad=2):
     """
     rough = np.round(rough).astype(int)
     surroundings = _get_subarr(array, rough, rad)
-    com = argmax_ext(surroundings, 1)
+    com = _argmax_ext(surroundings, 1)
     offset = com - rad
     ret = rough + offset
     # similar to win.wrap, so
@@ -273,7 +283,7 @@ def _interpolate(array, rough, rad=2):
     return ret
 
 
-def argmax_ext(array, exponent):
+def _argmax_ext(array, exponent):
     """
     Calculate coordinates of the COM (center of mass) of the provided array.
 
@@ -286,7 +296,7 @@ def argmax_ext(array, exponent):
         np.ndarray: The COM coordinate tuple, float values are allowed!
     """
 
-    # When using an integer exponent for argmax_ext, it is good to have the
+    # When using an integer exponent for _argmax_ext, it is good to have the
     # neutral rotation/scale in the center rather near the edges
 
     ret = None

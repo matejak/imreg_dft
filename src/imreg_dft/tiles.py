@@ -108,17 +108,32 @@ def _postprocess_unextend(ims, im2, extend):
     return ret
 
 
-def process_images(ims, opts, tosa=None, get_unextended=False):
+def process_images(ims, opts, tosa=None, get_unextended=False,
+                   reports=None):
     # lazy import so no imports before run() is really called
     from imreg_dft import imreg
 
     rcoef = opts["resample"]
     ims = _preprocess_extend(ims, opts["extend"],
                              opts["low"], opts["high"], rcoef)
+    if reports is not None:
+        reports["processed-0"] = ims
 
     resdict = imreg._similarity(
         ims[0], ims[1], opts["iters"], opts["order"], opts["constraints"],
-        opts["filter_pcorr"], opts["exponent"])
+        opts["filter_pcorr"], opts["exponent"], reports=reports)
+
+    if reports is not None:
+        import pylab as pyl
+        for ii, im in enumerate(reports["ims-filt"]):
+            pyl.figure(); pyl.title("filtered"); pyl.imshow(im.real); pyl.colorbar()
+            pyl.savefig("filt-%d.png" % ii)
+        for ii, im in enumerate(reports["dfts-filt"]):
+            pyl.figure(); pyl.title("log abs dfts"); pyl.imshow(np.log(np.abs(im))); pyl.colorbar()
+            pyl.savefig("logabs-%d.png" % ii)
+        for ii, im in enumerate(reports["logpolars"]):
+            pyl.figure(); pyl.title("log abs log-ploar"); pyl.imshow(np.log(np.abs(im))); pyl.colorbar()
+            pyl.savefig("logpolar-%d.png" % ii)
 
     # Seems that the reampling simply scales the translation
     resdict["Dt"] /= rcoef
@@ -166,13 +181,15 @@ def process_tile(ii):
         # just add some harmless stuff here and proceed.
         resdict = dict(success=0)
     _distribute_resdict(resdict, ii)
-    if 0:
+    _SUCCS[ii] = resdict["success"]
+    if 1:
         print("%d: succ: %g" % (ii, resdict["success"]))
         import pylab as pyl
-        _, _, tosa = resdict["unextended"]
-        ird.imshow(tile, image, tosa, cmap=pyl.cm.gray)
+        resdict["tvec"] -= pos
+        tosa = ird.transform_img_dict(image, resdict, 0, opts["order"])
+        tosa = utils.unextend_by(tosa, opts["extend"])
+        # ird.imshow(tile, image, tosa, cmap=pyl.cm.gray)
         pyl.show()
-    _SUCCS[ii] = resdict["success"]
     if 0:
         print(ii, _SUCCS[ii])
         import pylab as pyl

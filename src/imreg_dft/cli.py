@@ -247,6 +247,8 @@ def main():
 def _get_resdict(imgs, opts, tosa=None):
     import numpy as np
 
+    reports = None
+
     tiledim = None
     if opts["tile"]:
         shapes = np.array([np.array(img.shape) for img in imgs])
@@ -259,7 +261,8 @@ def _get_resdict(imgs, opts, tosa=None):
         if tosa is not None:
             tosa[:] = ird.transform_img_dict(tosa, resdict)
     else:
-        resdict = ird.tiles.process_images(imgs, opts, tosa, True)
+        resdict = ird.tiles.process_images(imgs, opts, tosa, True,
+                                           reports=reports)
 
     return resdict
 

@@ -109,9 +109,9 @@ class TestUtils(ut.TestCase):
         src = np.array([[1, 3, 1],
                         [0, 0, 0],
                         [1, 3.01, 0]])
-        infres = utils.argmax_ext(src, 'inf')  # element 3.01
+        infres = utils._argmax_ext(src, 'inf')  # element 3.01
         self.assertEqual(tuple(infres), (2.0, 1.0))
-        n10res = utils.argmax_ext(src, 10)  # element 1 in the rows with 3s
+        n10res = utils._argmax_ext(src, 10)  # element 1 in the rows with 3s
         n10res = np.round(n10res)
         self.assertEqual(tuple(n10res), (1, 1))
 

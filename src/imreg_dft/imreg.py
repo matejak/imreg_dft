@@ -67,7 +67,7 @@ def _get_pcorr_shape(shape):
     return ret
 
 
-def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
+def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     """
     Given two images, return their scale and angle difference.
 
@@ -85,16 +85,23 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
     shape = ims[0].shape
 
     ims_apod = [utils._apodize(im) for im in ims]
-    adfts = [fft.fftshift(abs(fft.fft2(im))) for im in ims_apod]
+    dfts = [fft.fftshift(fft.fft2(im)) for im in ims_apod]
     filt = _logpolar_filter(shape)
-    adfts = [adft * filt for adft in adfts]
+    dfts = [dft * filt for dft in dfts]
 
     # High-pass filtering used to be here, but we have moved it to a higher
     # level interface
 
     pcorr_shape = _get_pcorr_shape(shape)
     log_base = _get_log_base(shape, pcorr_shape[1])
-    stuffs = [_logpolar(adft, pcorr_shape, log_base, 0.0) for adft in adfts]
+    stuffs = [_logpolar(np.abs(dft), pcorr_shape, log_base, 0.0)
+              for dft in dfts]
+
+    if reports is not None:
+        reports["dfts-filt"] = dfts
+        reports["ims-filt"] = [fft.ifft2(np.fft.ifftshift(dft))
+                               for dft in dfts]
+        reports["logpolars"] = stuffs
 
     if 0:
         import pylab as pyl
@@ -119,17 +126,49 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None):
     return 1.0 / scale, - angle
 
 
-def _translation(im0, im2, filter_pcorr, odds=1, constraints=None):
+def translation(im0, im2, filter_pcorr, odds=1, constraints=None,
+                reports=None):
     """
+    Return translation vector to register images.
+    It tells how to translate the im1 to get im0.
+
     Args:
+        im0 (2D numpy array): The first (template) image
+        im1 (2D numpy array): The second (subject) image
+        filter_pcorr (int): Radius of a spectrum filter for translation
+            detection
+        constraints (dict or None): Specify preference of seeked values.
+            For more detailed documentation, refer to :func:`similarity`.
+            The only difference is that here, only keys ``tx`` and/or ``ty``
+            (i.e. both or any of them or none of them) are used.
         odds (float): The greater the odds are, the higher is the preferrence
             of the angle + 180 over the original angle. Odds of -1 are the same
             as inifinity.
+            The value 1 is neutral, the converse of 2 is 1 / 2 etc.
+
+    Returns:
+        tuple: The translation vector and success number: ((Y, X), success)
     """
     angle = 0
-    tvec, succ = translation(im0, im2, filter_pcorr, constraints)
-    tvec2, succ2 = translation(im0, utils.rot180(im2),
-                               filter_pcorr, constraints)
+    report_one = report_two = None
+    if reports is not None:
+        report_one = dict()
+        report_two = dict()
+
+    tvec, succ = _translation(im0, im2, filter_pcorr, constraints, report_one)
+    tvec2, succ2 = _translation(im0, utils.rot180(im2), filter_pcorr,
+                                constraints, report_two)
+
+    if reports is not None:
+        reports["t0-orig"] = report_one["orig"]
+        reports["t0-postproc"] = report_one["postproc"]
+        reports["t0-succ"] = succ
+        reports["t0-tvec"] = tuple(tvec)
+        reports["t1-orig"] = report_one["orig"]
+        reports["t1-postproc"] = report_one["postproc"]
+        reports["t1-succ"] = succ2
+        reports["t1-tvec"] = tuple(tvec2)
+
     if succ2 * odds > succ or odds == -1:
         tvec = tvec2
         succ = succ2
@@ -155,7 +194,7 @@ def _get_precision(shape, scale=1):
 
 
 def _similarity(im0, im1, numiter=1, order=3, constraints=None,
-                filter_pcorr=0, exponent='inf', bgval=None):
+                filter_pcorr=0, exponent='inf', bgval=None, reports=None):
     if bgval is None:
         bgval = utils.get_borderval(im1, 5)
 
@@ -187,7 +226,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
 
     for ii in range(numiter):
         newscale, newangle = _get_ang_scale([im0, im2], bgval, exponent,
-                                            constraints_dynamic)
+                                            constraints_dynamic, reports)
         scale *= newscale
         angle += newangle
 
@@ -200,8 +239,12 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
     target, stdev = constraints.get("angle", (0, None))
     odds = _get_odds(angle, target, stdev)
 
+    if reports is not None:
+        reports["im2-irots"] = im2
+
     # now we can use pcorr to guess the translation
-    tvec, succ, angle2 = _translation(im0, im2, filter_pcorr, odds, constraints)
+    tvec, succ, angle2 = translation(im0, im2, filter_pcorr, odds,
+                                      constraints, reports)
 
     # The log-polar transform may have got the angle wrong by 180 degrees.
     # The phase correlation can help us to correct that
@@ -227,7 +270,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
 
 
 def similarity(im0, im1, numiter=1, order=3, constraints=None,
-               filter_pcorr=0, exponent='inf'):
+               filter_pcorr=0, exponent='inf', reports=None):
     """
     Return similarity transformed image im1 and transformation parameters.
     Transformation parameters are: isotropic scale factor, rotation angle (in
@@ -277,7 +320,7 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
     bgval = utils.get_borderval(im1, 5)
 
     res = _similarity(im0, im1, numiter, order, constraints,
-                      filter_pcorr, exponent, bgval)
+                      filter_pcorr, exponent, bgval, reports)
 
     im2 = transform_img_dict(im1, res, bgval, order)
     # Order of mask should be always 1 - higher values produce strange results.
@@ -324,29 +367,14 @@ def _get_odds(angle, target, stdev):
     return ret
 
 
-def translation(im0, im1, filter_pcorr=0, constraints=None):
+def _translation(im0, im1, filter_pcorr=0, constraints=None, reports=None):
     """
-    Return translation vector to register images.
-    It tells how to translate the im1 to get im0.
-
-    Args:
-        im0 (2D numpy array): The first (template) image
-        im1 (2D numpy array): The second (subject) image
-        filter_pcorr (int): Radius of a spectrum filter for translation
-            detection
-        constraints (dict or None): Specify preference of seeked values.
-            For more detailed documentation, refer to :func:`similarity`.
-            The only difference is that here, only keys ``tx`` and/or ``ty``
-            (i.e. both or any of them or none of them) are used.
-
-    Returns:
-        tuple: The translation vector and success number: ((Y, X), success)
     """
     # Apodization and pcorr don't play along
     # im0, im1 = [utils._apodize(im, ratio=1) for im in (im0, im1)]
     ret, succ = _phase_correlation(
         im0, im1,
-        utils.argmax_translation, filter_pcorr, constraints)
+        utils.argmax_translation, filter_pcorr, constraints, reports)
     return ret, succ
 
 
