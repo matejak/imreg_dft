@@ -248,6 +248,7 @@ def _get_resdict(imgs, opts, tosa=None):
     import numpy as np
 
     reports = None
+    # reports = dict()
 
     tiledim = None
     if opts["tile"]:
@@ -256,7 +257,7 @@ def _get_resdict(imgs, opts, tosa=None):
             tiledim = np.min(shapes, axis=0) * 1.1
             # TODO: Establish a translate region constraint of width tiledim * coef
     if tiledim is not None:
-        resdict = ird.tiles.settle_tiles(imgs, tiledim, opts)
+        resdict = ird.tiles.settle_tiles(imgs, tiledim, opts, reports)
 
         if tosa is not None:
             tosa[:] = ird.transform_img_dict(tosa, resdict)

@@ -97,12 +97,6 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     stuffs = [_logpolar(np.abs(dft), pcorr_shape, log_base, 0.0)
               for dft in dfts]
 
-    if reports is not None:
-        reports["dfts-filt"] = dfts
-        reports["ims-filt"] = [fft.ifft2(np.fft.ifftshift(dft))
-                               for dft in dfts]
-        reports["logpolars"] = stuffs
-
     if 0:
         import pylab as pyl
         pyl.figure(); pyl.imshow(ims[0]);
@@ -117,6 +111,14 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     angle = np.rad2deg(angle)
     angle = utils.wrap_angle(angle, 360)
     scale = log_base ** arg_rad
+
+    if reports is not None:
+        reports["dfts-filt"] = dfts
+        reports["ims-filt"] = [fft.ifft2(np.fft.ifftshift(dft))
+                               for dft in dfts]
+        reports["logpolars"] = stuffs
+
+        reports["result_raw"] = (arg_ang, arg_rad)
 
     if not 0.5 < scale < 2:
         raise ValueError(
@@ -244,7 +246,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
 
     # now we can use pcorr to guess the translation
     tvec, succ, angle2 = translation(im0, im2, filter_pcorr, odds,
-                                      constraints, reports)
+                                     constraints, reports)
 
     # The log-polar transform may have got the angle wrong by 180 degrees.
     # The phase correlation can help us to correct that

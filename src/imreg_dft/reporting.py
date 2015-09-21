@@ -30,6 +30,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Rect_callback(object):
@@ -44,13 +45,18 @@ class Rect_mpl(Rect_callback):
     def __init__(self, subplot):
         self.subplot = subplot
 
-    def _call(self, idx, LLC, dims):
+    def _call(self, idx, LLC, dims, special=False):
         # Get from the numpy -> MPL coord system
         LLC = LLC[::-1]
-        URC = np.array((dims[1], dims[0]))
-        self.subplot.Rectangle(LLC, dims[1], dims[0],
-                               fc='none')
-        self.subplot.text((URC - LLC) / 2.0, "(%02d)" % idx)
+        URC = LLC + np.array((dims[1], dims[0]))
+        kwargs = dict(fc='none')
+        if special:
+            kwargs["fc"] = 'w'
+            kwargs["alpha"] = 0.5
+        rect = plt.Rectangle(LLC, dims[1], dims[0], ** kwargs)
+        self.subplot.add_artist(rect)
+        center = (URC + LLC) / 2.0
+        self.subplot.text(center[0], center[1], "(%02d)" % idx)
 
 
 def slices2rects(slices, rect_cb):
@@ -59,8 +65,8 @@ def slices2rects(slices, rect_cb):
         slices: List of slice objects
         rect_cb (callable): Check :class:`Rect_callback`.
     """
-    for sly, slx in slices:
+    for ii, (sly, slx) in enumerate(slices):
         LLC = np.array((sly.start, slx.start))
         URC = np.array((sly.stop,  slx.stop))
         dims = URC - LLC
-        rect_cb(LLC, dims)
+        rect_cb(ii, LLC, dims)

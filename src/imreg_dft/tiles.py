@@ -33,6 +33,7 @@ import numpy as np
 
 import imreg_dft as ird
 import imreg_dft.utils as utils
+import imreg_dft.reporting as reporting
 
 
 _TILES = None
@@ -182,7 +183,7 @@ def process_tile(ii):
         resdict = dict(success=0)
     _distribute_resdict(resdict, ii)
     _SUCCS[ii] = resdict["success"]
-    if 1:
+    if _SUCCS[ii] > 0:
         print("%d: succ: %g" % (ii, resdict["success"]))
         import pylab as pyl
         resdict["tvec"] -= pos
@@ -217,10 +218,21 @@ def _fill_globals(tiles, poss, image, opts):
     _POSS = tuple((tuple(pos) for pos in poss))
 
 
-def settle_tiles(imgs, tiledim, opts):
+def settle_tiles(imgs, tiledim, opts, reports=None):
     global _SHIFTS
+    coef = 0.35
+    img0 = imgs[0]
 
-    tiles, poss = zip(* ird.utils.decompose(imgs[0], tiledim, 0.35))
+    if reports is not None:
+        slices = utils.getSlices(img0.shape, tiledim, coef)
+        import pylab as pyl
+        fix, axes = pyl.subplots()
+        axes.imshow(img0)
+        callback = reporting.Rect_mpl(axes)
+        reporting.slices2rects(slices, callback)
+        pyl.show()
+
+    tiles, poss = zip(* ird.utils.decompose(img0, tiledim, coef))
 
     _fill_globals(tiles, poss, imgs[1], opts)
 
@@ -249,7 +261,7 @@ def settle_tiles(imgs, tiledim, opts):
         data = res.get()
     """
 
-    tosa_offset = np.array(imgs[0].shape)[:2] - np.array(tiledim)[:2] + 0.5
+    tosa_offset = np.array(img0.shape)[:2] - np.array(tiledim)[:2] + 0.5
     _SHIFTS -= tosa_offset / 2.0
 
     # Get the cluster of the tiles that have similar results and that look
