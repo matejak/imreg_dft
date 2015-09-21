@@ -692,10 +692,16 @@ def decompose(what, outshp, coef):
     """
     outshp = np.array(outshp)
     shape = np.array(what.shape)
-    starts = getCuts(shape, outshp, coef)
-    slices = [mkCut(shape, outshp, start) for start in starts]
+    slices = getSlices(shape, outshp, coef)
     decomps = [(what[slic], slices2start(slic)) for slic in slices]
     return decomps
+
+
+def getSlices(inshp, outshp, coef):
+    shape = inshp
+    starts = getCuts(shape, outshp, coef)
+    slices = [mkCut(shape, outshp, start) for start in starts]
+    return slices
 
 
 def getCuts(shp0, shp1, coef=0.5):
@@ -713,12 +719,9 @@ def getCuts(shp0, shp1, coef=0.5):
         list: List of tuples (y, x) coordinates of possible tile corners.
     """
     # * coef = possible increase of density
-    # / 2.0 = default density is ~ 2x of density of disjoint tiles
-    offset = (shp1 * coef).astype(int)
-    shp0_eff = [shp0[dim] - shp1[dim] for dim in range(2)]
-    # Because we pretend that the tile dim is half of the real one, we skip
-    # the last tile - we are too fat.  vvvvv
-    starts = [_getCut(shp, offset[dim]) for dim, shp in enumerate(shp0_eff)]
+    offsets = (shp1 * coef).astype(int)
+    starts = [_getCut(shap0, shap1, offset)
+              for shap0, shap1, offset in zip(shp0, shp1, offsets)]
     assert len(starts) == 2
     res = []
     for start0 in starts[0]:
@@ -728,7 +731,35 @@ def getCuts(shp0, shp1, coef=0.5):
     return res
 
 
-def _getCut(big, small):
+def _getCut(big, small, offset):
+    """
+    Given a big array length and small array length and an offset,
+    output a list of starts of small arrays, so that they cover the
+    big one and their offset is <= the required offset.
+
+    Args:
+        big (int): The source length array
+        small (float): The small length
+
+    Returns:
+        list - list of possible start locations
+    """
+    # big "reduced"
+    big_r = big - small
+    count = int(big_r / offset)
+    if count * offset != big_r:
+        count += 1
+    true_offset = big_r / float(count)
+    assert offset >= true_offset
+    begins = [int(true_offset * ii) for ii in range(count)]
+    # big:   ----------------| - hidden small -
+    # small: +---
+    # begins:*...*...*...*..*
+    begins.append(big_r)
+    return begins
+
+
+def _getCut2(big, small):
     """
 
     Args:
@@ -806,6 +837,7 @@ def get_clusters(points, rad=0):
     """
     num = len(points)
     clusters = np.zeros((num, num), bool)
+    # some distances may be NaNs
     for ii, shift in enumerate(points):
         clusters[ii] = _get_dst1(shift, points) <= rad
     return clusters

@@ -151,20 +151,20 @@ class TestUtils(ut.TestCase):
 
         small = np.array((10, 20))
         res = utils.getCuts(big, small, 1.0)
-        self.assertEquals(res[1], (0, 20))
+        self.assertEquals(res[1], (0, 15))
         self.assertEquals(res[2], (0, 30))
         self.assertEquals(res[3], (10, 0))
-        self.assertEquals(res[4], (10, 20))
+        self.assertEquals(res[4], (10, 15))
         self.assertEquals(res[5], (10, 30))
         self.assertEquals(res[6], (20, 0))
 
     def test_cut(self):
         # Tests of those private functions are ugly
-        res = utils._getCut(9, 3)
+        res = utils._getCut(14, 5, 3)
         np.testing.assert_array_equal(res, (0, 3, 6, 9))
 
-        res = utils._getCut(80, 50)
-        np.testing.assert_array_equal(res, (0, 50, 80))
+        res = utils._getCut(130, 50, 50)
+        np.testing.assert_array_equal(res, (0, 40, 80))
 
     def test_decomps(self):
         smallshp = (30, 50)
