@@ -28,7 +28,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-
 import numpy as np
 
 import imreg_dft as ird
@@ -56,8 +55,8 @@ def resample(img, coef):
     return ret
 
 
-def filter_images(imgs, low, high):
-    ret = [utils.imfilter(img, low, high) for img in imgs]
+def filter_images(imgs, low, high, cut):
+    ret = [utils.imfilter(img, low, high, cut) for img in imgs]
     return ret
 
 
@@ -86,11 +85,11 @@ def _assemble_resdict(ii):
     return ret
 
 
-def _preprocess_extend(ims, extend, low, high, rcoef):
+def _preprocess_extend(ims, extend, low, high, cut, rcoef):
     ims = [utils.extend_by(img, extend) for img in ims]
     bigshape = np.array([img.shape for img in ims]).max(0)
 
-    ims = filter_images(ims, low, high)
+    ims = filter_images(ims, low, high, cut)
     if rcoef != 1:
         ims = [resample(img, rcoef) for img in ims]
         bigshape *= rcoef
@@ -116,7 +115,7 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
 
     rcoef = opts["resample"]
     ims = _preprocess_extend(ims, opts["extend"],
-                             opts["low"], opts["high"], rcoef)
+                             opts["low"], opts["high"], opts["cut"], rcoef)
     if reports is not None:
         reports["processed-0"] = ims
 
@@ -126,15 +125,37 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
 
     if reports is not None:
         import pylab as pyl
-        for ii, im in enumerate(reports["ims-filt"]):
-            pyl.figure(); pyl.title("filtered"); pyl.imshow(im.real); pyl.colorbar()
-            pyl.savefig("filt-%d.png" % ii)
-        for ii, im in enumerate(reports["dfts-filt"]):
-            pyl.figure(); pyl.title("log abs dfts"); pyl.imshow(np.log(np.abs(im))); pyl.colorbar()
-            pyl.savefig("logabs-%d.png" % ii)
-        for ii, im in enumerate(reports["logpolars"]):
-            pyl.figure(); pyl.title("log abs log-ploar"); pyl.imshow(np.log(np.abs(im))); pyl.colorbar()
-            pyl.savefig("logpolar-%d.png" % ii)
+        fig = pyl.figure()
+        for key, value in reports.items():
+            if "ims-filt" in key:
+                for ii, im in enumerate(value):
+                    pyl.clf()
+                    pyl.title("filtered")
+                    pyl.imshow(im.real, cmap=pyl.cm.hot)
+                    pyl.colorbar()
+                    pyl.savefig("%s-%d.png" % (key, ii))
+            if "dfts-filt" in key:
+                for ii, im in enumerate(value):
+                    pyl.clf()
+                    pyl.title("log abs dfts")
+                    pyl.imshow(np.log(np.abs(im)), cmap=pyl.cm.hot)
+                    pyl.colorbar()
+                    pyl.savefig("%s-%d.png" % (key, ii))
+            if "logpolars" in key:
+                for ii, im in enumerate(value):
+                    pyl.clf()
+                    pyl.title("log abs log-ploar")
+                    pyl.imshow(np.log(np.abs(im)), cmap=pyl.cm.hot)
+                    pyl.colorbar()
+                    pyl.savefig("%s-%d.png" % (key, ii))
+            if "amt-orig" in key:
+                pyl.clf()
+                pyl.title("log abs pcorr")
+                pyl.imshow(np.log(np.abs(value)), cmap=pyl.cm.hot)
+                pyl.colorbar()
+                pyl.savefig("%s-%d.png" % (key, ii))
+            reports.pop(key)
+        del fig
 
     # Seems that the reampling simply scales the translation
     resdict["Dt"] /= rcoef
@@ -162,7 +183,7 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
     return resdict
 
 
-def process_tile(ii):
+def process_tile(ii, reports=None):
     global _SUCCS, _SHIFTS, _ANGLES, _SCALES, _DIFFS
     tile = _TILES[ii]
     image = _IMAGE
@@ -171,7 +192,9 @@ def process_tile(ii):
     try:
         # TODO: Add unittests that zero success result
         #   doesn't influence anything
-        resdict = process_images((tile, image), opts, None)
+        with reporting.report_wrapper(reports, ii) as wrapped:
+            resdict = process_images((tile, image), opts,
+                                     reports=wrapped)
         resdict['tvec'] += pos
         if np.isnan(_DIFFS[0]):
             _DIFFS[0] = resdict["Dangle"]
@@ -184,13 +207,13 @@ def process_tile(ii):
     _distribute_resdict(resdict, ii)
     _SUCCS[ii] = resdict["success"]
     if _SUCCS[ii] > 0:
-        print("%d: succ: %g" % (ii, resdict["success"]))
-        import pylab as pyl
+        # print("%d: succ: %g" % (ii, resdict["success"]))
+        # import pylab as pyl
         resdict["tvec"] -= pos
         tosa = ird.transform_img_dict(image, resdict, 0, opts["order"])
         tosa = utils.unextend_by(tosa, opts["extend"])
         # ird.imshow(tile, image, tosa, cmap=pyl.cm.gray)
-        pyl.show()
+        # pyl.show()
     if 0:
         print(ii, _SUCCS[ii])
         import pylab as pyl
@@ -226,18 +249,18 @@ def settle_tiles(imgs, tiledim, opts, reports=None):
     if reports is not None:
         slices = utils.getSlices(img0.shape, tiledim, coef)
         import pylab as pyl
-        fix, axes = pyl.subplots()
+        fig, axes = pyl.subplots()
         axes.imshow(img0)
         callback = reporting.Rect_mpl(axes)
         reporting.slices2rects(slices, callback)
-        pyl.show()
+        fig.savefig("tiling.png")
 
     tiles, poss = zip(* ird.utils.decompose(img0, tiledim, coef))
 
     _fill_globals(tiles, poss, imgs[1], opts)
 
     for ii, pos in enumerate(poss):
-        process_tile(ii)
+        process_tile(ii, reports)
 
     """
     if ncores == 0:  # no multiprocessing (to see errors)
@@ -281,7 +304,8 @@ def settle_tiles(imgs, tiledim, opts, reports=None):
     bgval = utils.get_borderval(imgs[1], 5)
 
     ims = _preprocess_extend(imgs, opts["extend"],
-                             opts["low"], opts["high"], opts["resample"])
+                             opts["low"], opts["high"], opts["cut"],
+                             opts["resample"])
     im2 = ird.transform_img_dict(ims[1], resdict, bgval, opts["order"])
 
     # TODO: This is kinda dirty

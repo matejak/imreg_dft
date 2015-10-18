@@ -94,10 +94,10 @@ $(word 11,$(TARGETS)): $(EXAMPLEDEPS)
 $(CONS_PNG_OK):
 	ird $(CONSDIR)/tricky.png $(CONSDIR)/tricky.png --angle 170,10 -o $(CONS_PNG_OK)
 
-CELLDIR = $(RSRCDIR)/cells
+TILEDIR = $(RSRCDIR)/tiling
 $(word 12,$(TARGETS)): $(EXAMPLEDEPS)
-	$(REPEATER) cd cells > $@
-	DIR=$(CELLDIR) PRIV="-o $(PWD)/$(DIFFICULT_PNG)" $(REPEATER) ird big-fluo.jpg small-dhm.jpg --tile --filter-pcorr 4 --scale 1.0,0.1 --angle 0,20 --lowpass 0.7,0.8 --print-result >> $@
+	$(REPEATER) cd tiling > $@
+	DIR=$(TILEDIR) PRIV="-o $(PWD)/$(DIFFICULT_PNG)" $(REPEATER) ird big.png small.png --tile --print-result >> $@
 
 $(word 13,$(TARGETS)): $(EXAMPLEDEPS)
 	$(REPEATER) ird -h  > $@
@@ -108,7 +108,7 @@ $(IMGDIR)/big.png $(IMGDIR)/big.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3.p
 $(IMGDIR)/constraints.png $(IMGDIR)/constraints.pdf: $(CONSDIR)/tricky.png $(CONS_PNG_OK) $(CONS_PNG_BAD)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2
 
-$(IMGDIR)/difficult.png $(IMGDIR)/difficult.pdf: $(CELLDIR)/big-fluo.jpg $(CELLDIR)/small-dhm.jpg $(DIFFICULT_PNG)
+$(IMGDIR)/difficult.png $(IMGDIR)/difficult.pdf: $(TILEDIR)/big.png $(TILEDIR)/small.png $(DIFFICULT_PNG)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2 --colormap gray_r
 
 define already-have-it

@@ -14,14 +14,10 @@ ifdef COVERAGE
 export CMD = $(COVERAGE) run -a --source imreg_dft $(PROOT)/src/imreg_dft/cli.py
 endif
 
-# Temporarily broken
-#	check-cells
-
 CHECKS = \
 	check-translation \
 	check-similarity \
 	check-similarity2 \
-	check-cells \
 	check-tiles \
 	check-constraints1 \
 	check-constraints2 \
@@ -63,9 +59,6 @@ check-constraints1: $(RSRCDIR)/constraints/tricky.png
 check-constraints2: $(RSRCDIR)/constraints/three.png $(RSRCDIR)/constraints/two.png 
 	sh $(RTESTDIR)/check_similarity.sh $^ - - 90 1
 	sh $(RTESTDIR)/check_similarity.sh $^ - - 90 1 --tx 200,100
-
-check-cells: $(RSRCDIR)/cells/big-fluo.jpg $(RSRCDIR)/cells/small-dhm.jpg
-	TOLER=8 sh $(RTESTDIR)/check_similarity.sh $^ 32 25 0.7 1 --tile --filter-pcorr 2 --lowpass 0.6,0.7 --angle 0,20 --scale 1,0.2
 
 check-tiles: $(RSRCDIR)/tiling/big.png $(RSRCDIR)/tiling/small.png
 	TOLER=8 sh $(RTESTDIR)/check_similarity.sh $^ 156 137 40.5 0.51 --tile

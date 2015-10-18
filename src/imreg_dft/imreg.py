@@ -105,7 +105,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
 
     (arg_ang, arg_rad), success = _phase_correlation(
         stuffs[0], stuffs[1],
-        utils.argmax_angscale, log_base, exponent, constraints)
+        utils.argmax_angscale, log_base, exponent, constraints, reports)
 
     angle = -np.pi * arg_ang / float(pcorr_shape[0])
     angle = np.rad2deg(angle)
@@ -162,12 +162,12 @@ def translation(im0, im2, filter_pcorr, odds=1, constraints=None,
                                 constraints, report_two)
 
     if reports is not None:
-        reports["t0-orig"] = report_one["orig"]
-        reports["t0-postproc"] = report_one["postproc"]
+        reports["t0-orig"] = report_one["amt-orig"]
+        reports["t0-postproc"] = report_one["amt-postproc"]
         reports["t0-succ"] = succ
         reports["t0-tvec"] = tuple(tvec)
-        reports["t1-orig"] = report_one["orig"]
-        reports["t1-postproc"] = report_one["postproc"]
+        reports["t1-orig"] = report_two["amt-orig"]
+        reports["t1-postproc"] = report_two["amt-postproc"]
         reports["t1-succ"] = succ2
         reports["t1-tvec"] = tuple(tvec2)
 

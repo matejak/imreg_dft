@@ -166,7 +166,7 @@ Result
 ------
 
 The following result demonstrates usage of ``ird`` under hard conditions.
-There are two images, the template is taken from confocal microscope (a), the subject is a phase acquired using a digital holographic microscope [4]_.
+.. There are two images, the template is taken from confocal microscope (a), the subject is a phase acquired using a digital holographic microscope [4]_.
 
 Pretty much everything that could go wrong indeed went:
 

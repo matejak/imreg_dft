@@ -29,8 +29,73 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import contextlib
+
 import numpy as np
 import matplotlib.pyplot as plt
+
+
+@contextlib.contextmanager
+def report_wrapper(orig, index):
+    ret = ReportsWrapper(orig)
+    ret.push_index(index)
+    yield ret
+    ret.pop_index(index)
+
+
+class ReportsWrapper(object):
+    """
+    A wrapped dictionary.
+    It allows a parent function to put it in a mode, in which it will
+    prefix keys of items set.
+    """
+    def __init__(self, reports):
+        self.reports = reports
+        self.prefixes = []
+        self.idx = ""
+
+    def pop(self, what):
+        return self.reports.pop(what)
+
+    def items(self):
+        if self.reports is None:
+            return []
+        else:
+            return self.reports.items()
+
+    def __setitem__(self, key, value):
+        if self.reports is None:
+            return
+        key = self.idx + key
+        self.reports[key] = value
+
+    def __getitem__(self, key):
+        assert self.reports is not None
+        return self.reports[key]
+
+    def _idx2prefix(self, idx):
+        ret = "%03d-" % idx
+        return ret
+
+    def push_index(self, idx):
+        prefix = self._idx2prefix(idx)
+        self.push_prefix(prefix)
+
+    def pop_index(self, idx):
+        prefix = self._idx2prefix(idx)
+        self.pop_prefix(prefix)
+
+    def push_prefix(self, idx):
+        self.prefixes.append(idx)
+        self.idx = "%s" % idx
+
+    def pop_prefix(self, idx):
+        assert self.prefixes[-1] == idx
+        self.prefixes.pop()
+        if len(self.prefixes) > 0:
+            self.idx = self.prefixes[-1]
+        else:
+            self.idx = ""
 
 
 class Rect_callback(object):

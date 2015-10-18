@@ -143,11 +143,16 @@ def create_parser():
     parser.add_argument('--show', action="store_true", default=False,
                         help="Whether to show registration result")
     parser.add_argument('--lowpass', type=_float_tuple,
-                        default=None, metavar="HI_THRESH,LOW_THRESH",
+                        default=None, metavar="LOW_THRESH,HIGH_THRESH",
                         help="1,1 means no-op, 0.8,0.9 is a mild filter")
     parser.add_argument('--highpass', type=_float_tuple,
-                        default=None, metavar="HI_THRESH,LOW_THRESH",
+                        default=None, metavar="LOW_THRESH,HIGH_THRESH",
                         help="0,0 means no-op, 0.1,0.2 is a mild filter")
+    parser.add_argument('--cut', type=_float_tuple,
+                        default=None, metavar="LOW_THRESH,HIGH_THRESH",
+                        help="Cap values of the image according to "
+                        "quantile values. "
+                        "0,1 means no-op, 0.01,0.99 is a mild filter")
     parser.add_argument('--resample', type=float, default=1,
                         help="Work with resampled images.")
     # parser.add_argument('--exponent', type=_exponent, default="inf",
@@ -231,6 +236,7 @@ def main():
         extend=args.extend,
         low=args.lowpass,
         high=args.highpass,
+        cut=args.cut,
         show=args.show,
         print_format=print_format,
         iters=args.iters,

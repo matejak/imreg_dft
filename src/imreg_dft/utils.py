@@ -129,8 +129,8 @@ def argmax_angscale(array, log_base, exponent, constraints=None, reports=None):
     ret2 = _interpolate(array, ret)
 
     if reports is not None:
-        reports["orig"] = array_orig
-        reports["postproc"] = array
+        reports["amas-orig"] = array_orig
+        reports["amas-postproc"] = array
 
     success = _get_success(array_orig, tuple(ret2), 0)
     return ret2, success
@@ -191,8 +191,8 @@ def argmax_translation(array, filter_pcorr, constraints=None, reports=None):
     success = _get_success(array_orig, tuple(tvec), 2)
 
     if reports is not None:
-        reports["orig"] = array_orig.copy()
-        reports["postproc"] = array.copy()
+        reports["amt-orig"] = array_orig.copy()
+        reports["amt-postproc"] = array.copy()
 
     return tvec, success
 
@@ -439,15 +439,18 @@ def unextend_by(what, dst):
     return res
 
 
-def imfilter(img, low=None, high=None):
+def imfilter(img, low=None, high=None, cap=None):
     """
     Given an image, it a high-pass and/or low-pass filters on its
     Fourier spectrum.
 
     Args
         img (ndarray): The image to be filtered
-        low (tuple): The low-pass filter parameters
-        high (tuple): The high-pass filter parameters
+        low (tuple): The low-pass filter parameters, 0..1
+        high (tuple): The high-pass filter parameters, 0..1
+        cap (tuple): The quantile cap parameters, 0..1.
+            A filtered image will have extremes below the lower quantile and
+            above the upper one cut.
 
     Returns
         np.ndarray: The real component of the image after filtering
@@ -460,6 +463,18 @@ def imfilter(img, low=None, high=None):
         _highpass(dft, high[0], high[1])
 
     ret = np.real(fft.ifft2(dft))
+
+    if cap is None:
+        cap = (0, 1)
+
+    low, high = cap
+    if low > 0.0:
+        low_val = np.percentile(ret, low * 100.0)
+        ret[ret < low_val] = low_val
+    if high < 1.0:
+        high_val = np.percentile(ret, high * 100.0)
+        ret[ret > high_val] = high_val
+
     return ret
 
 
