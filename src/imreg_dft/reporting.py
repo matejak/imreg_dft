@@ -32,7 +32,6 @@
 import contextlib
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 @contextlib.contextmanager
@@ -111,6 +110,8 @@ class Rect_mpl(Rect_callback):
         self.subplot = subplot
 
     def _call(self, idx, LLC, dims, special=False):
+        # We don't want to import this on the top-level due to test stuff
+        import matplotlib.pyplot as plt
         # Get from the numpy -> MPL coord system
         LLC = LLC[::-1]
         URC = LLC + np.array((dims[1], dims[0]))
