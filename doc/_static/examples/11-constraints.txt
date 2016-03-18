@@ -1,6 +1,6 @@
 [user@linuxbox examples]$ cd constraints
 [user@linuxbox constraints]$ ird tricky.png tricky.png --angle 170,1 --scale 1,0.05 --print-result
-scale: 1.005890 +-0.00182589
-angle: 170.072252 +-0.0576184
-shift: -11.3876, -39.106 +-0.25
-Success: 0.257
+scale: 0.986651 +-0.00179097
+angle: 170.056593 +-0.0576184
+shift: -7.60926, -37.7109 +-0.25
+Success: 0.176

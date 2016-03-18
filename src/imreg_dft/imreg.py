@@ -128,7 +128,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     return 1.0 / scale, - angle
 
 
-def translation(im0, im2, filter_pcorr, odds=1, constraints=None,
+def translation(im0, im2, filter_pcorr=0, odds=1, constraints=None,
                 reports=None):
     """
     Return translation vector to register images.
@@ -137,8 +137,9 @@ def translation(im0, im2, filter_pcorr, odds=1, constraints=None,
     Args:
         im0 (2D numpy array): The first (template) image
         im1 (2D numpy array): The second (subject) image
-        filter_pcorr (int): Radius of a spectrum filter for translation
-            detection
+        filter_pcorr (int): Radius of the minimum spectrum filter
+            for translation detection, use the filter when detection fails.
+            Values > 3 are likely not useful.
         constraints (dict or None): Specify preference of seeked values.
             For more detailed documentation, refer to :func:`similarity`.
             The only difference is that here, only keys ``tx`` and/or ``ty``
@@ -157,7 +158,10 @@ def translation(im0, im2, filter_pcorr, odds=1, constraints=None,
         report_one = dict()
         report_two = dict()
 
+    # We estimate translation for the original image...
     tvec, succ = _translation(im0, im2, filter_pcorr, constraints, report_one)
+    # ... and for the 180-degrees rotated image (the rotation estimation doesn't
+    # distinguish rotation of x vs x + 180deg).
     tvec2, succ2 = _translation(im0, utils.rot180(im2), filter_pcorr,
                                 constraints, report_two)
 

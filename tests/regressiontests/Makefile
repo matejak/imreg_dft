@@ -1,7 +1,8 @@
 # directory of regression tests(ie where this makefile is based in)
 RTESTDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 PROOT = $(RTESTDIR)/../..
-RSRCDIR = $(PROOT)/resources/examples
+RSRCDIR = $(PROOT)/resources
+EXAMPLESDIR = $(RSRCDIR)/examples
 
 PYTHON ?= python
 COVERAGE ?=
@@ -21,6 +22,7 @@ CHECKS = \
 	check-tiles \
 	check-constraints1 \
 	check-constraints2 \
+	check-examples \
 	$(NUL)
 
 check: $(CHECKS)
@@ -30,37 +32,41 @@ clean:
 	$(RM) sample1.mat sample3c.mat
 
 # Check that we can compute the translation and it is antisymetric
-check-translation: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample2.png
+check-translation: $(EXAMPLESDIR)/sample1.png $(EXAMPLESDIR)/sample2.png
 	sh $(RTESTDIR)/check_similarity.sh $(word 1,$^) $(word 2,$^) -19 79 0 1
 	sh $(RTESTDIR)/check_similarity.sh $(word 2,$^) $(word 1,$^) 19 -79 0 1
 
 # Check that we can compute also other things than translation
 # and that it is also sortof antisymetric
-check-similarity: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3.png
+check-similarity: $(EXAMPLESDIR)/sample1.png $(EXAMPLESDIR)/sample3.png
 	sh $(RTESTDIR)/check_similarity.sh $(word 1,$^) $(word 2,$^) - - -30 1.25 --iter 2
 	sh $(RTESTDIR)/check_similarity.sh $(word 2,$^) $(word 1,$^) - - 30 0.8 --iter 2
 
-sample1.mat: $(RSRCDIR)/sample1.png
+sample1.mat: $(EXAMPLESDIR)/sample1.png
 	$(PYTHON) $(RTESTDIR)/img2mat.py $< $@ --var img --dummy-vars one,two
 
-sample3c.mat: $(RSRCDIR)/sample3c.jpg
+sample3c.mat: $(EXAMPLESDIR)/sample3c.jpg
 	$(PYTHON) $(RTESTDIR)/img2mat.py $< $@ --var img
 
 # Check that we can compute also other things than translation
 # and on .mat files AND image files
-check-similarity2: sample1.mat $(RSRCDIR)/sample3.png $(RSRCDIR)/sample1.png sample3c.mat
+check-similarity2: sample1.mat $(EXAMPLESDIR)/sample3.png $(EXAMPLESDIR)/sample1.png sample3c.mat
 	sh $(RTESTDIR)/check_similarity.sh $(word 1,$^) $(word 2,$^) - - -30 1.25 --iter 2 --loader-opts in=img
 	sh $(RTESTDIR)/check_similarity.sh $(word 4,$^) $(word 3,$^) - - 30 0.8 --iter 2
 
-check-constraints1: $(RSRCDIR)/constraints/tricky.png
+check-constraints1: $(EXAMPLESDIR)/constraints/tricky.png
 	sh $(RTESTDIR)/check_similarity.sh $< $< - - 0 1
 	sh $(RTESTDIR)/check_similarity.sh $< $< - - 180 1 --angle 140,20
 
-check-constraints2: $(RSRCDIR)/constraints/three.png $(RSRCDIR)/constraints/two.png 
+check-constraints2: $(EXAMPLESDIR)/constraints/three.png $(EXAMPLESDIR)/constraints/two.png 
 	sh $(RTESTDIR)/check_similarity.sh $^ - - 90 1
 	sh $(RTESTDIR)/check_similarity.sh $^ - - 90 1 --tx 200,100
 
-check-tiles: $(RSRCDIR)/tiling/big.png $(RSRCDIR)/tiling/small.png
+check-tiles: $(EXAMPLESDIR)/tiling/big.png $(EXAMPLESDIR)/tiling/small.png
 	TOLER=8 sh $(RTESTDIR)/check_similarity.sh $^ 156 137 40.5 0.51 --tile
+
+check-examples: $(RSRCDIR)/code/translation.py $(RSRCDIR)/code/similarity.py
+	cd $(RSRCDIR)/code && IMSHOW=no $(PYTHON) $(word 1,$^) > /dev/null
+	cd $(RSRCDIR)/code && IMSHOW=no $(PYTHON) $(word 2,$^) > /dev/null
 
 .PHONY: $(CHECKS)

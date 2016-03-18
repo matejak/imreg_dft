@@ -12,9 +12,14 @@ basedir = os.path.join('..', 'examples')
 im0 = sp.misc.imread(os.path.join(basedir, "sample1.png"), True)
 # the image to be transformed
 im1 = sp.misc.imread(os.path.join(basedir, "sample2.png"), True)
-t0, t1 = ird.translation(im0, im1)
+tvec, succ, _ = ird.translation(im0, im1)
+tvec = tvec.round(4)
 # the Transformed IMaGe.
-timg = ird.transform_img(im1, tvec=(t0, t1))
-ird.imshow(im0, im1, timg)
-plt.show()
-print(t0, t1)
+timg = ird.transform_img(im1, tvec=tvec)
+
+# Maybe we don't want to show plots all the time
+if not os.environ.get("IMSHOW", "yes") == "no":
+    ird.imshow(im0, im1, timg)
+    plt.show()
+
+print("Translation is {}, success rate {:.4g}".format(tuple(tvec), succ))
