@@ -92,7 +92,7 @@ def _preprocess_extend(ims, extend, low, high, cut, rcoef):
     ims = filter_images(ims, low, high, cut)
     if rcoef != 1:
         ims = [resample(img, rcoef) for img in ims]
-        bigshape *= rcoef
+        bigshape = np.round(bigshape * rcoef)
 
     # Make the shape of images the same
     bgs = [np.zeros(bigshape) + utils.get_borderval(img, 5)

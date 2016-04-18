@@ -69,6 +69,7 @@ def _constraints(what):
                 raise ap.ArgumentTypeError(
                     "The %s value must be a number between %g and %g, got %g."
                     % (lo, hi, mean))
+        std = 0
         if len(components) == 2:
             std = components[1]
             if len(std) == 0:

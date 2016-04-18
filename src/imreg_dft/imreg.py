@@ -490,7 +490,7 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
     if bgval is None:
         bgval = utils.get_borderval(img)
 
-    bigshape = np.array(img.shape) * 1.2
+    bigshape = np.round(np.array(img.shape) * 1.2).astype(int)
     bg = np.zeros(bigshape, img.dtype) + bgval
 
     dest0 = utils.embed_to(bg, img.copy())

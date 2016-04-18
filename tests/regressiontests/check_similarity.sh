@@ -60,10 +60,10 @@ test "x$TY" != 'x-' && \
 
 test -n "$ANGLE" -a "x$ANGLE" != 'x-' && \
 	{ almost_equal_angle "$GOTAng" "$ANGLE" "$DANGLE" \
-		|| die "Angle didn't work out, expected $ANGLE got $GOTAng"; }
+		|| die "Angle didn't work out, expected $ANGLE got $GOTAng (precision: $DANGLE)"; }
 
 test -n "$SCALE" -a "x$SCALE" != 'x-' && \
 	{ almost_equal "$GOTScale" "$SCALE" "$DSCALE" \
-		|| die "Scale didn't work out, expected $SCALE got $GOTScale"; }
+		|| die "Scale didn't work out, expected $SCALE got $GOTScale (precision: $DSCALE)"; }
 
 exit 0
