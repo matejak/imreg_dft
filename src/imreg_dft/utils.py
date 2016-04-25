@@ -825,8 +825,8 @@ def mkCut(shp0, dims, start):
         "The array is too small - shape %s vs shape %s of cuts " % (shp0, dims)
     # If dims (or even start )are float, the resulting shape may be different
     # due to the rounding stuff.
-    start = np.round(start)
-    dims = np.round(dims)
+    start = np.round(start).astype(int)
+    dims = np.round(dims).astype(int)
     end = start + dims
     # The difference between end of the cut and the original shape.
     # If it is >= 0, then everything is OK.
