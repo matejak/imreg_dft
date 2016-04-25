@@ -91,6 +91,7 @@ Contents
    cli.rst
    cli-advanced.rst
    api.rst
+   howitsdone.rst
    devel.rst
    changelog.rst
 

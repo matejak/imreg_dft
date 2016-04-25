@@ -110,6 +110,12 @@ def _postprocess_unextend(ims, im2, extend):
 
 def process_images(ims, opts, tosa=None, get_unextended=False,
                    reports=None):
+    """
+    Args:
+        tosa (np.ndarray): An array where to save the transformed subject.
+        get_unextended (bool): Whether to get the transformed subject
+            in the same shape and coord origin as the template.
+    """
     # lazy import so no imports before run() is really called
     from imreg_dft import imreg
 
@@ -177,7 +183,7 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
 
         resdict["unextended"] = _postprocess_unextend(ims, im2, opts["extend"])
 
-    # We need this for the transform above
+    # We need this intact until now (for the transform above)
     resdict["tvec"] /= rcoef
 
     return resdict

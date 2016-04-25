@@ -405,7 +405,7 @@ def _phase_correlation(im0, im1, callback=None, * args):
     f0, f1 = [fft.fft2(arr) for arr in (im0, im1)]
     # spectrum can be filtered, so we take precaution against dividing by 0
     eps = abs(f1).max() * 1e-15
-    # cps == cross-power spectrum of im0 and im2
+    # cps == cross-power spectrum of im0 and im1
     cps = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1) + eps)))
     # scps = shifted cps
     scps = fft.fftshift(cps)

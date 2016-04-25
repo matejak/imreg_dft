@@ -349,10 +349,12 @@ def undo_embed(what, orig_shape):
     """
     Undo an embed operation
 
-    :param what: What has once be the destination array
-    :param what: The shape of the once original array
+    Args:
+        what: What has once be the destination array
+        orig_shape: The shape of the once original array
 
-    :returns: The closest we got to the undo
+    Returns:
+        The closest we got to the undo
     """
     _, slices_to = _get_emslices(what.shape, orig_shape)
 
@@ -366,10 +368,12 @@ def embed_to(where, what):
     the destination so it is centered and perform all necessary operations
     (cropping or aligning)
 
-    :param where: The destination array (also modified inplace)
-    :param what: The source array
+    Args:
+        where: The destination array (also modified inplace)
+        what: The source array
 
-    :returns: The destination array
+    Returns:
+        The destination array
     """
     slices_from, slices_to = _get_emslices(where.shape, what.shape)
 
@@ -378,6 +382,9 @@ def embed_to(where, what):
 
 
 def extend_to_3D(what, newdim_2D):
+    """
+    Extend 2D and 3D arrays (when being supplied with their x--y shape).
+    """
     if what.ndim == 3:
         height = what.shape[2]
         res = np.empty(newdim_2D + (height,), what.dtype)
@@ -391,6 +398,16 @@ def extend_to_3D(what, newdim_2D):
 
 
 def extend_to(what, newdim):
+    """
+    Given an image, it puts it in a (typically larger) array.
+    To prevent rough edges from appearing, the containing array has a color
+    that is close to the image's border color, and image edges
+    smoothly blend into the background.
+
+    Args:
+        what (ndarray): What to extend
+        newdim (tuple): The resulting dimension
+    """
     mindim = min(what.shape)
     dst = int(mindim * 0.12)
     bgval = get_borderval(what, dst // 2)
@@ -402,9 +419,11 @@ def extend_to(what, newdim):
     apofield = get_apofield(what.shape, dst)
     apoemb = embed_to(dest.copy().astype(float), apofield)
 
+    # res is a convex combination of its previous self and the bg value
     res = apoemb * res + (1 - apoemb) * bgval
 
     return res
+    # vvv This doesn't work well vvv
 
     mask = dest
     mask = embed_to(mask, np.ones_like(what))
@@ -444,7 +463,7 @@ def imfilter(img, low=None, high=None, cap=None):
     Given an image, it a high-pass and/or low-pass filters on its
     Fourier spectrum.
 
-    Args
+    Args:
         img (ndarray): The image to be filtered
         low (tuple): The low-pass filter parameters, 0..1
         high (tuple): The high-pass filter parameters, 0..1
@@ -452,7 +471,7 @@ def imfilter(img, low=None, high=None, cap=None):
             A filtered image will have extremes below the lower quantile and
             above the upper one cut.
 
-    Returns
+    Returns:
         np.ndarray: The real component of the image after filtering
     """
     dft = fft.fft2(img)

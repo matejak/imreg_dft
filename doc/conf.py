@@ -60,9 +60,6 @@ extensions = [
     'sphinx.ext.napoleon',
 ]
 
-# Use this one if you have Sphinx pre-1.3
-#    'sphinxcontrib.napoleon',
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
