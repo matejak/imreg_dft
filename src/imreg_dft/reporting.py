@@ -36,10 +36,13 @@ import numpy as np
 
 @contextlib.contextmanager
 def report_wrapper(orig, index):
-    ret = ReportsWrapper(orig)
-    ret.push_index(index)
-    yield ret
-    ret.pop_index(index)
+    if orig is None:
+        yield None
+    else:
+        ret = ReportsWrapper(orig)
+        ret.push_index(index)
+        yield ret
+        ret.pop_index(index)
 
 
 class ReportsWrapper(object):
@@ -49,6 +52,9 @@ class ReportsWrapper(object):
     prefix keys of items set.
     """
     def __init__(self, reports):
+        assert reports is not None, \
+            ("Use the report_wrapper wrapper factory, don't "
+             "create wrappers from None")
         self.reports = reports
         self.prefixes = []
         self.idx = ""
@@ -57,14 +63,9 @@ class ReportsWrapper(object):
         return self.reports.pop(what)
 
     def items(self):
-        if self.reports is None:
-            return []
-        else:
-            return self.reports.items()
+        return self.reports.items()
 
     def __setitem__(self, key, value):
-        if self.reports is None:
-            return
         key = self.idx + key
         self.reports[key] = value
 

@@ -29,10 +29,9 @@ class TestReports(ut.TestCase):
         self.assertIn("1-four", wrapped)
         self.assertIn("five", wrapped)
 
-        wrapper_none = reporting.ReportsWrapper(None)
-        # shouldn't do anything
-        wrapper_none["foo"] = "bar"
-        self.assertEqual(len(wrapper_none.items()), 0)
+        with self.assertRaises(AssertionError):
+            wrapper_none = reporting.ReportsWrapper(None)
+
 
 if __name__ == '__main__':
     ut.main()
