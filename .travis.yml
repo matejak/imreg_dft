@@ -32,6 +32,6 @@ script:
   #- coverage run --source=imreg_dft ./tests/unittests/__init__.py
   - python ./tests/unittests/__init__.py
   # then append to it
-  - make -f ./tests/regressiontests/Makefile check
+  - IMSHOW=no make -f ./tests/regressiontests/Makefile check
 after_success:
   - coveralls

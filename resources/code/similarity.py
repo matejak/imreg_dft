@@ -2,7 +2,6 @@ import os
 
 import scipy as sp
 import scipy.misc
-import matplotlib.pyplot as plt
 
 import imreg_dft as ird
 
@@ -16,6 +15,7 @@ result = ird.similarity(im0, im1, numiter=3)
 
 assert "timg" in result
 # Maybe we don't want to show plots all the time
-if not os.environ.get("IMSHOW", "yes") == "no":
+if os.environ.get("IMSHOW", "yes") == "yes":
+    import matplotlib.pyplot as plt
     ird.imshow(im0, im1, result['timg'])
     plt.show()

@@ -2,7 +2,6 @@ import os
 
 import scipy as sp
 import scipy.misc
-import matplotlib.pyplot as plt
 
 import imreg_dft as ird
 
@@ -18,7 +17,8 @@ tvec = tvec.round(4)
 timg = ird.transform_img(im1, tvec=tvec)
 
 # Maybe we don't want to show plots all the time
-if not os.environ.get("IMSHOW", "yes") == "no":
+if os.environ.get("IMSHOW", "yes") == "yes":
+    import matplotlib.pyplot as plt
     ird.imshow(im0, im1, timg)
     plt.show()
 
