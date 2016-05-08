@@ -57,7 +57,7 @@ check-similarity2: sample1.mat $(EXAMPLESDIR)/sample3.png $(EXAMPLESDIR)/sample1
 check-constraints1: $(EXAMPLESDIR)/constraints/tricky.png
 	sh $(RTESTDIR)/check_similarity.sh $< $< - - 0 1
 	sh $(RTESTDIR)/check_similarity.sh $< $< - - 180 1 --angle 140,20
-	TOLER=2 sh $(RTESTDIR)/check_similarity.sh $< $< - - 175 1 --angle 175 --scale 1
+	TOLER=2 sh $(RTESTDIR)/check_similarity.sh $< $< - - 175 1.1 --angle 175 --scale 1.1
 
 check-constraints2: $(EXAMPLESDIR)/constraints/three.png $(EXAMPLESDIR)/constraints/two.png 
 	sh $(RTESTDIR)/check_similarity.sh $^ - - 90 1

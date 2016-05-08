@@ -38,6 +38,11 @@ import scipy.ndimage as ndi
 
 
 def wrap_angle(angles, ceil=2 * np.pi):
+    """
+    Args:
+        angles (float or ndarray, unit depends on kwarg :param:`ceil`)
+        ceil (float): Turnaround value
+    """
     angles += ceil / 2.0
     angles %= ceil
     angles -= ceil / 2.0
@@ -45,6 +50,10 @@ def wrap_angle(angles, ceil=2 * np.pi):
 
 
 def _calc_tform(shape, orig, scale, angle, tvec, newshape=None):
+    """
+    probably not used
+    """
+    assert 0, "We thought that this is not used"
     offset = np.array(shape) // 2
     carth = orig - offset
     polar = np.array((np.sqrt((carth ** 2).sum()),
@@ -61,6 +70,7 @@ def _calc_tform(shape, orig, scale, angle, tvec, newshape=None):
 
 
 def _calc_tform_complete(shape, scale, angle, tvec, newshape=None):
+    assert 0, "We thought that this is not used"
     origs = [(0, 0), (shape[0], 0), shape, (0, shape[1])]
     ress = [_calc_tform(shape, orig, scale, angle, tvec, newshape)
             for orig in origs]
@@ -68,35 +78,58 @@ def _calc_tform_complete(shape, scale, angle, tvec, newshape=None):
 
 
 def rot180(arr):
+    """
+    Rotate the input array over 180°
+    """
     ret = np.rot90(arr, 2)
     return ret
 
 
 def _get_angles(shape):
+    """
+    In the log-polar spectrum, the (first) coord corresponds to an angle.
+    This function returns a mapping of (the two) coordinates
+    to the respective angle.
+    """
     ret = np.zeros(shape, dtype=np.float64)
     ret -= np.linspace(0, np.pi, shape[0], endpoint=False)[:, np.newaxis]
     return ret
 
 
 def _get_scales(shape, log_base):
+    """
+    In the log-polar spectrum, the (second) coord corresponds to an angle.
+    This function returns a mapping of (the two) coordinates
+    to the respective scale.
+    """
     ret = np.zeros(shape, dtype=np.float64)
     ret += np.power(log_base, np.arange(shape[1], dtype=float))[np.newaxis, :]
     return ret
 
 
-def argmax_angscale(array, log_base, exponent, constraints=None, reports=None):
+def _get_constraint_mask(shape, log_base, constraints=None):
+    """
+    Prepare mask to apply to constraints to a cross-power spectrum.
+    """
     if constraints is None:
         constraints = {}
 
-    mask = np.ones(array.shape, float)
-    array_orig = array.copy()
+    mask = np.ones(shape, float)
 
+    # Here, we create masks that modulate picking the best correspondence.
+    # Generally, we look at the log-polar array and identify mapping of
+    # coordinates to values of quantities.
     if "scale" in constraints:
         scale, sigma = constraints["scale"]
-        scales = fft.ifftshift(_get_scales(array.shape, log_base))
-        scales *= log_base ** (- array.shape[1] / 2.0)
+        scales = fft.ifftshift(_get_scales(shape, log_base))
+        # vvv This issome kind of transformation of result of _get_scales
+        # vvv (apparently log scales) to linear ones.
+        scales *= log_base ** (- shape[1] / 2.0)
+        # This makes the scales array low near where scales is near 'scale'
         scales -= 1.0 / scale
         if sigma == 0:
+            # there isn't: ascales = np.abs(scales - scale)
+            # because scales are already low for values near 'scale'
             ascales = np.abs(scales)
             scale_min = ascales.min()
             mask[ascales > scale_min] = 0
@@ -107,8 +140,9 @@ def argmax_angscale(array, log_base, exponent, constraints=None, reports=None):
 
     if "angle" in constraints:
         angle, sigma = constraints["angle"]
-        angles = _get_angles(array.shape)
+        angles = _get_angles(shape)
         # We flip the sign on purpose
+        # TODO: ^^^ Why???
         angles += np.deg2rad(angle)
         # TODO: Check out the wrapping. It may be tricky since pi+1 != 1
         wrap_angle(angles, np.pi)
@@ -123,17 +157,29 @@ def argmax_angscale(array, log_base, exponent, constraints=None, reports=None):
             mask *= np.exp(-angles ** 2 / sigma ** 2)
 
     mask = fft.fftshift(mask)
+    return mask
+
+
+def argmax_angscale(array, log_base, exponent, constraints=None, reports=None):
+    """
+    Given a power spectrum, we choose the best fit.
+
+    The power spectrum is treated with constraint masks and then
+    passed to :func:`_argmax_ext`.
+    """
+    mask = _get_constraint_mask(array.shape, log_base, constraints)
+    array_orig = array.copy()
 
     array *= mask
     ret = _argmax_ext(array, exponent)
-    ret2 = _interpolate(array, ret)
+    ret_final = _interpolate(array, ret)
 
     if reports is not None:
         reports["amas-orig"] = array_orig
         reports["amas-postproc"] = array
 
-    success = _get_success(array_orig, tuple(ret2), 0)
-    return ret2, success
+    success = _get_success(array_orig, tuple(ret_final), 0)
+    return ret_final, success
 
 
 def argmax_translation(array, filter_pcorr, constraints=None, reports=None):
@@ -198,6 +244,7 @@ def argmax_translation(array, filter_pcorr, constraints=None, reports=None):
 
 
 def _extend_array(arr, point, radius):
+    assert 0, "We thought that this is not used"
     ret = arr
     if point[0] - radius < 0:
         diff = - (point[0] - radius)
@@ -210,6 +257,7 @@ def _extend_array(arr, point, radius):
 
 
 def _compensate_fftshift(vec, shape):
+    assert 0, "We thought that this is not used"
     vec -= shape // 2
     vec %= shape
     return vec
@@ -217,14 +265,17 @@ def _compensate_fftshift(vec, shape):
 
 def _get_success(array, coord, radius=2):
     """
+    Given a coord, examine the array around it and return a number signifying
+    how good is the "match".
+
     Args:
         radius: Get the success as a sum of neighbor of coord of this radius
         coord: Coordinates of the maximum. Float numbers are allowed
             (and converted to int inside)
 
     Returns:
-        Success as float between 0 and 1. The meaning of the number is loose,
-        but the higher the better.
+        Success as float between 0 and 1 (can get slightly higher than 1).
+        The meaning of the number is loose, but the higher the better.
     """
     coord = np.round(coord).astype(int)
     coord = tuple(coord)
@@ -251,6 +302,13 @@ def _argmax2D(array, reports=None):
 
 
 def _get_subarr(array, center, rad):
+    """
+    Args:
+        array (ndarray): The array to search
+        center (2-tuple): The point in the array to search around
+        rad (int): Search radius, no radius (i.e. get the single point)
+            implies rad == 0
+    """
     dim = 1 + 2 * rad
     subarr = np.zeros((dim,) * 2)
     corner = np.array(center) - rad
@@ -566,6 +624,9 @@ def _apodize(what, aporad=None, ratio=None):
 
 
 def get_apofield(shape, aporad):
+    """
+    Returns an array between 0 and 1 that goes to zero close to the edges.
+    """
     if aporad == 0:
         return np.ones(shape, dtype=float)
     apos = np.hanning(aporad * 2)
@@ -581,58 +642,7 @@ def get_apofield(shape, aporad):
     return apofield
 
 
-def frame_img2(img, mask, dst, apofield=None):
-    """
-    Given an array, a mask (floats between 0 and 1), and a distance,
-    alter the area where the mask is low (and roughly within dst from the edge)
-    so it blends well with the area where the mask is high.
-    The purpose of this is removal of spurious frequencies in the image's
-    Fourier spectrum.
-
-    Args:
-        img (np.array): What we want to alter
-        maski (np.array): The indicator what can be altered and what not
-        dst (int): Parameter controlling behavior near edges, value could be
-            probably deduced from the mask.
-    """
-    import scipy.ndimage as ndimg
-
-    radius = dst / 1.8
-
-    convmask0 = mask + 1e-10
-
-    krad_max = radius * 6
-    convimg = img
-    convmask = convmask0
-    convimg0 = img
-    krad0 = 0.8
-    krad = krad0
-
-    while krad < krad_max:
-        convimg = ndimg.gaussian_filter(convimg0 * convmask0,
-                                        krad, mode='wrap')
-        convmask = ndimg.gaussian_filter(convmask0, krad, mode='wrap')
-        convimg /= convmask
-
-        cmask_max = convmask[mask == 0].max()
-        convmask /= cmask_max
-
-        convimg = (convimg * (convmask - convmask0)
-                   + convimg0 * (1 - convmask + convmask0))
-        krad *= 1.8
-
-        convimg0 = convimg
-        convmask0 = convmask
-
-    if apofield is not None:
-        ret = convimg * (1 - apofield) + img * apofield
-    else:
-        ret = convimg
-        ret[mask >= 1] = img[mask >= 1]
-
-    return ret
-
-
+# TODO: Refactor this function, the current shape looks covoluted.
 def frame_img(img, mask, dst, apofield=None):
     """
     Given an array, a mask (floats between 0 and 1), and a distance,
@@ -790,26 +800,6 @@ def _getCut(big, small, offset):
     # small: +---
     # begins:*...*...*...*..*
     begins.append(big_r)
-    return begins
-
-
-def _getCut2(big, small):
-    """
-
-    Args:
-        big (int): The source length array
-        small (float): The small length
-
-    Returns:
-        list - list of possible start locations
-    """
-    count = int(big / small)
-    begins = [int(small * ii) for ii in range(count + 1)]
-    # big:   ----------------| - hidden small -
-    # small: +---
-    # begins:*...*...*...*..*
-    if not small * count == big:
-        begins.append(big)
     return begins
 
 

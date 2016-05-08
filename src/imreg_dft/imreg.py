@@ -54,11 +54,18 @@ __all__ = ['translation', 'similarity', 'transform_img',
 
 
 def _logpolar_filter(shape):
+    """
+    Make a radial cosine filter for the logpolar transform.
+    This filter suppresses low frequencies and completely removes the zero freq.
+    """
     yy = np.linspace(- np.pi / 2., np.pi / 2., shape[0])[:, np.newaxis]
     xx = np.linspace(- np.pi / 2., np.pi / 2., shape[1])[np.newaxis, :]
     # Supressing low spatial frequencies is a must when using log-polar
     # transform. The scale stuff is poorly reflected with low freqs.
-    filt = 1.0 - np.cos(np.sqrt(yy ** 2 + xx ** 2)) ** 2
+    rads = np.sqrt(yy ** 2 + xx ** 2)
+    filt = 1.0 - np.cos(rads) ** 2
+    # vvv This doesn't really matter, very high freqs are not too usable anyway
+    filt[np.abs(rads) > np.pi / 2] = 1
     return filt
 
 
@@ -75,6 +82,8 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
         ims (2-tuple-like of 2D ndarrays): The images
         bgval: We also pad here in the :func:`map_coordinates`
         exponent (float or 'inf'): The exponent stuff, see :func:`similarity`
+        constraints (dict, optional)
+        reports (optional)
 
     Returns:
         tuple: Scale, angle. Describes the relationship of the subject  image to
@@ -128,7 +137,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     return 1.0 / scale, - angle
 
 
-def translation(im0, im2, filter_pcorr=0, odds=1, constraints=None,
+def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
                 reports=None):
     """
     Return translation vector to register images.
@@ -159,10 +168,10 @@ def translation(im0, im2, filter_pcorr=0, odds=1, constraints=None,
         report_two = dict()
 
     # We estimate translation for the original image...
-    tvec, succ = _translation(im0, im2, filter_pcorr, constraints, report_one)
+    tvec, succ = _translation(im0, im1, filter_pcorr, constraints, report_one)
     # ... and for the 180-degrees rotated image (the rotation estimation doesn't
     # distinguish rotation of x vs x + 180deg).
-    tvec2, succ2 = _translation(im0, utils.rot180(im2), filter_pcorr,
+    tvec2, succ2 = _translation(im0, utils.rot180(im1), filter_pcorr,
                                 constraints, report_two)
 
     if reports is not None:
@@ -188,6 +197,14 @@ def translation(im0, im2, filter_pcorr=0, odds=1, constraints=None,
 
 
 def _get_precision(shape, scale=1):
+    """
+    Given the parameters of the log-polar transform, get width of the interval
+    where the correct values are.
+
+    Args:
+        shape (tuple): Shape of images
+        scale (float): The scale difference (precision varies)
+    """
     pcorr_shape = _get_pcorr_shape(shape)
     log_base = _get_log_base(shape, pcorr_shape[1])
     # * 0.5 <= max deviation is half of the step
@@ -201,6 +218,20 @@ def _get_precision(shape, scale=1):
 
 def _similarity(im0, im1, numiter=1, order=3, constraints=None,
                 filter_pcorr=0, exponent='inf', bgval=None, reports=None):
+    """
+    This function takes some input and returns mutual rotation, scale
+    and translation.
+    It does these things during the process:
+
+    * Handles correct constraints handling (defaults etc.).
+    * Performs angle-scale determination iteratively.
+      This involves keeping constraints in sync.
+    * Performs translation determination.
+    * Calculates precision.
+
+    Returns:
+        Dictionary with results.
+    """
     if bgval is None:
         bgval = utils.get_borderval(im1, 5)
 
@@ -263,11 +294,8 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
     Dangle, Dscale = _get_precision(shape, scale)
 
     res = dict(
-        scale=scale,
-        angle=angle,
-        tvec=tvec,
-        Dscale=Dscale,
-        Dangle=Dangle,
+        scale=scale, angle=angle, tvec=tvec,
+        Dscale=Dscale, Dangle=Dangle,
         # 0.25 because we go subpixel now
         Dt=0.25,
         success=succ
@@ -347,7 +375,14 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
 
 def _get_odds(angle, target, stdev):
     """
+    Determine whether we are more likely to choose the angle, or angle + 180°
+
     Args:
+        angle (float, degrees): The base angle.
+        target (float, degrees): The angle we think is the right one.
+            Typically, we take this from constraints.
+        stdev (float, degrees): The relevance of the target value.
+            Also typically taken from constraints.
 
     Return:
         float: The greater the odds are, the higher is the preferrence
@@ -375,6 +410,7 @@ def _get_odds(angle, target, stdev):
 
 def _translation(im0, im1, filter_pcorr=0, constraints=None, reports=None):
     """
+    The plain wrapper for translation phase correlation, no big deal.
     """
     # Apodization and pcorr don't play along
     # im0, im1 = [utils._apodize(im, ratio=1) for im in (im0, im1)]
@@ -537,6 +573,13 @@ def _get_log_base(shape, new_r):
 
     This value can be considered fixed, if you want to mess with the logpolar
     transform, mess with the shape.
+
+    Args:
+        shape (): Shape of the original image.
+        new_r (float): The r-size of the log-polar transform array dimension.
+
+    Returns:
+        float - Base of the log-polar transform.
     """
     # The highest radius we have to accomodate is 'old_r',
     # However, we cut some parts out as only a thin part of the spectra has

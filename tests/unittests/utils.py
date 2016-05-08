@@ -72,6 +72,31 @@ class TestUtils(ut.TestCase):
             # principally
             # np.testing.assert_equal(what, undone)
 
+    def test_subarray(self):
+        arr = np.arange(20)
+        arr = arr.reshape((4, 5))
+
+        # trivial subarray
+        suba = utils._get_subarr(arr, (1, 1), 1)
+        ret = arr[:3, :3]
+        np.testing.assert_equal(suba, ret)
+
+        # subarray with zero radius
+        suba = utils._get_subarr(arr, (1, 1), 0)
+        ret = arr[1, 1]
+        np.testing.assert_equal(suba, ret)
+
+        # subarray that wraps through two edges
+        suba = utils._get_subarr(arr, (0, 0), 1)
+        ret = np.zeros((3, 3), int)
+        ret[1:, 1:] = arr[:2, :2]
+        ret[0, 0] = arr[-1, -1]
+        ret[0, 1] = arr[-1, 0]
+        ret[0, 2] = arr[-1, 1]
+        ret[1, 0] = arr[0, -1]
+        ret[2, 0] = arr[1, -1]
+        np.testing.assert_equal(suba, ret)
+
     def _addFreq(self, src, vec):
         dom = np.zeros(src.shape)
         dom += np.arange(src.shape[0])[:, np.newaxis] * np.pi * vec[0]
@@ -182,6 +207,7 @@ class TestUtils(ut.TestCase):
                   start[1]:start[1] + sshp[1]] = decarr
         np.testing.assert_array_equal(inarr, recon)
 
+    @ut.skip("The tested function is deprecated")
     def test_fftshift(self):
         orig_arr = np.arange(12)
         shape = np.array((4, 3))
