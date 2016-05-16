@@ -137,6 +137,17 @@ def outmsg(msg):
     return msg
 
 
+def create_base_parser(parser):
+    parser.add_argument('--extend', type=int, metavar="PIXELS", default=0,
+                        help="Extend images by the specified amount of pixels "
+                        "before the processing (thus eliminating "
+                        "edge effects)")
+    parser.add_argument('--order', type=int, default=1,
+                        help="Interpolation order (1 = linear, 3 = cubic etc)")
+    parser.add_argument('--output', '-o',
+                        help="Where to save the transformed subject.")
+
+
 def create_parser():
     parser = ap.ArgumentParser()
     parser.add_argument('template')
@@ -161,14 +172,7 @@ def create_parser():
     parser.add_argument('--iters', type=int, default=1,
                         help="How many iterations to guess the right scale "
                         "and angle")
-    parser.add_argument('--extend', type=int, metavar="PIXELS", default=0,
-                        help="Extend images by the specified amount of pixels "
-                        "before the processing (thus eliminating "
-                        "edge effects)")
-    parser.add_argument('--order', type=int, default=1,
-                        help="Interpolation order (1 = linear, 3 = cubic etc)")
-    parser.add_argument('--output', '-o',
-                        help="Where to save the transformed subject.")
+    create_base_parser(parser)
     parser.add_argument(
         '--filter-pcorr', type=int, default=0,
         help="Whether to filter during translation detection. Normally not "
