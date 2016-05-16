@@ -11,8 +11,8 @@ basedir = os.path.join('..', 'examples')
 im0 = sp.misc.imread(os.path.join(basedir, "sample1.png"), True)
 # the image to be transformed
 im1 = sp.misc.imread(os.path.join(basedir, "sample2.png"), True)
-tvec, succ, _ = ird.translation(im0, im1)
-tvec = tvec.round(4)
+result = ird.translation(im0, im1)
+tvec = result["tvec"].round(4)
 # the Transformed IMaGe.
 timg = ird.transform_img(im1, tvec=tvec)
 
@@ -22,4 +22,5 @@ if os.environ.get("IMSHOW", "yes") == "yes":
     ird.imshow(im0, im1, timg)
     plt.show()
 
-print("Translation is {}, success rate {:.4g}".format(tuple(tvec), succ))
+print("Translation is {}, success rate {:.4g}"
+      .format(tuple(tvec), result["success"]))

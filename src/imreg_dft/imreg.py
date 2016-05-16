@@ -159,7 +159,7 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
             The value 1 is neutral, the converse of 2 is 1 / 2 etc.
 
     Returns:
-        tuple: The translation vector and success number: ((Y, X), success, angle)
+        dict: Contains following keys: ``angle``, ``tvec`` (Y, X), and ``success``.
     """
     angle = 0
     report_one = report_two = None
@@ -193,7 +193,9 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
         import pylab as pyl
         pyl.figure(); pyl.imshow(im0, cmap=pyl.cm.gray)
         pyl.show()
-    return tvec, succ, angle
+
+    ret = dict(tvec=tvec, success=succ, angle=angle)
+    return ret
 
 
 def _get_precision(shape, scale=1):
@@ -280,26 +282,25 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
         reports["im2-irots"] = im2
 
     # now we can use pcorr to guess the translation
-    tvec, succ, angle2 = translation(im0, im2, filter_pcorr, odds,
-                                     constraints, reports)
+    res = translation(im0, im2, filter_pcorr, odds,
+                      constraints, reports)
 
     # The log-polar transform may have got the angle wrong by 180 degrees.
     # The phase correlation can help us to correct that
-    angle += angle2
-    angle = utils.wrap_angle(angle, 360)
+    angle += res["angle"]
+    res["angle"] = utils.wrap_angle(angle, 360)
 
     # don't know what it does, but it alters the scale a little bit
     # scale = (im1.shape[1] - 1) / (int(im1.shape[1] / scale) - 1)
 
     Dangle, Dscale = _get_precision(shape, scale)
 
-    res = dict(
-        scale=scale, angle=angle, tvec=tvec,
-        Dscale=Dscale, Dangle=Dangle,
-        # 0.25 because we go subpixel now
-        Dt=0.25,
-        success=succ
-    )
+    res["scale"] = scale
+    res["Dscale"] = Dscale
+    res["Dangle"] = Dangle
+    # 0.25 because we go subpixel now
+    res["Dt"] = 0.25
+
     return res
 
 

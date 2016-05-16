@@ -1,9 +1,10 @@
 User-centric changelog
 ======================
 
-**1.1.0 --- TBA**
+**2.0.0 --- TBA**
 
  * Support for sub-pixel transformation detection.
+ * Changed interface for the ``imreg_dft.imreg.translation`` function (it returns a dict).
 
 **1.0.5 --- 2015-05-02**
 
