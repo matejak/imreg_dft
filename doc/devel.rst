@@ -20,6 +20,17 @@ They are used mainly by the ``ird`` tool.
 
 .. automodule:: imreg_dft.utils
    :members:
+   :private-members:
+   :undoc-members:
+
+tiles module
+------------
+
+This module contains generic functionality for phase correlation, so it can be reused easily. 
+
+.. automodule:: imreg_dft.tiles
+   :members:
+   :private-members:
    :undoc-members:
 
 How to release

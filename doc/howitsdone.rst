@@ -9,14 +9,19 @@ It estimates the scale, rotation and translation relationship between the images
 
 The image registration is carried out as follows:
 
-#. Images (template and subject) are loaded in a form of 2D or 3D numpy arrays ``(y, x [, channel])`` .
+#. Images (template and subject) are loaded in a form of 2D or 3D numpy arrays, where coordinates have this meaning: ``(y, x [, channel])`` .
 #. Both images are filtered.
    Typically, low spatial frequencies are stripped, because they are not useful for the phase correlation.
+   This is done in :func:`imreg_dft.utils.imfilter`
+
 #. If requested, both images are resampled (in other words, upscaled).
 #. If necessary, both images are extended so that their shapes match.
+   Implementation in :func:`imreg_dft.utils.embed_to`, gets called by :func:`imreg_dft.tiles._preprocess_extend`, 
+
 #. Phase correlation is performed to determine angle---scale change (:func:`imreg_dft.imreg.similarity`):
 
-   #. Images are apodized (so they are seamless with respect of their borders).
+   a. Images are apodized (so they are seamless with respect of their borders) in :func:`imreg_dft.imreg._get_ang_scale` 
+      by calling :func:`imreg_dft.utils._apodize`.
    #. Amplitude of the Fourier spectrum is calculated and the log-polar transformation is performed.
    #. Phase correlation is performed on that log-polar spectrum amplitude.
    #. Source image is transformed to match the template (according to the angle and scale change).
@@ -24,7 +29,7 @@ The image registration is carried out as follows:
 #. Second round of phase correlation is performed to determine translation (:func:`imreg_dft.imreg.translation`).
    Images are already apodized and compatible (this is ensured in the previous step).
 
-   #. Phase correlation on spectrums of the template and the transformed subject is performed. 
+   a. Phase correlation on spectrums of the template and the transformed subject is performed. 
    #. Phase correlation on spectrums of the template and the transformed subject rotated over 180° is performed.
    #. Results of both operations are compared and the one that is more successful serves as final determination of angle and true translation vector.
       This is due to the fact that the determination of angle is ambiguous.
