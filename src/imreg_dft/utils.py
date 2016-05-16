@@ -40,7 +40,7 @@ import scipy.ndimage as ndi
 def wrap_angle(angles, ceil=2 * np.pi):
     """
     Args:
-        angles (float or ndarray, unit depends on kwarg :param:`ceil`)
+        angles (float or ndarray, unit depends on kwarg ``ceil``)
         ceil (float): Turnaround value
     """
     angles += ceil / 2.0
@@ -593,7 +593,7 @@ def _xpass(shape, lo, hi):
 def _apodize(what, aporad=None, ratio=None):
     """
     Given an image, it apodizes it (so it becomes quasi-seamless).
-    When :param:`ratio` is None, color near the edges will converge
+    When ``ratio`` is None, color near the edges will converge
     to the same colour, whereas when ratio is a float number, a blurred
     original image will serve as background.
 

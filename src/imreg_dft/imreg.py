@@ -159,7 +159,7 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
             The value 1 is neutral, the converse of 2 is 1 / 2 etc.
 
     Returns:
-        tuple: The translation vector and success number: ((Y, X), success)
+        tuple: The translation vector and success number: ((Y, X), success, angle)
     """
     angle = 0
     report_one = report_two = None
@@ -429,7 +429,7 @@ def _phase_correlation(im0, im1, callback=None, * args):
         im1
         callback (function): Process the cross-power spectrum (i.e. choose
             coordinates of the best element, usually of the highest one).
-            Defaults to :func:`utils.argmax2D`
+            Defaults to :func:`imreg_dft.utils.argmax2D`
 
     Returns:
         tuple: The translation vector (Y, X)
@@ -601,7 +601,7 @@ def _logpolar(image, shape, log_base, bgval=None):
     Args:
         image: The image to be transformed
         shape: Shape of the transformed image
-        log_base: Parameter of the transformation, convoluted with
+        log_base: Parameter of the transformation, get it via
             :func:`_get_log_base`
 
     Returns:

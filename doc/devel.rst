@@ -1,19 +1,21 @@
 Developer reference
 ===================
 
+Modules
+-------
+
 The following is a functionality that may be useful, but it is not considered as public API and it may somehow evolve over time.
 
 .. _loaders_devel:
 
 loader module
--------------
++++++++++++++
 
 .. automodule:: imreg_dft.loader
    :members:
-   :undoc-members:
 
 utils module
-------------
+++++++++++++
 
 This module contains various support functions closely related to image registration.
 They are used mainly by the ``ird`` tool.
@@ -24,11 +26,21 @@ They are used mainly by the ``ird`` tool.
    :undoc-members:
 
 tiles module
-------------
+++++++++++++
 
 This module contains generic functionality for phase correlation, so it can be reused easily. 
 
 .. automodule:: imreg_dft.tiles
+   :members:
+   :private-members:
+   :undoc-members:
+
+imreg module
+++++++++++++
+
+This module contains mostly high-level functions.
+
+.. automodule:: imreg_dft.imreg
    :members:
    :private-members:
    :undoc-members:

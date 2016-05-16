@@ -12,30 +12,30 @@ The image registration is carried out as follows:
 #. Images (template and subject) are loaded in a form of 2D or 3D numpy arrays, where coordinates have this meaning: ``(y, x [, channel])`` .
 #. Both images are filtered.
    Typically, low spatial frequencies are stripped, because they are not useful for the phase correlation.
-   This is done in :func:`imreg_dft.utils.imfilter`
+   This is done in :func:`imreg_dft.utils.imfilter` and also later with the help of :func:`imreg_dft.imreg._logpolar_filter`.
 
-#. If requested, both images are resampled (in other words, upscaled).
+#. If requested, both images are resampled (in other words, upscaled, see :func:`imreg_dft.tiles.resample`).
 #. If necessary, both images are extended so that their shapes match.
    Implementation in :func:`imreg_dft.utils.embed_to`, gets called by :func:`imreg_dft.tiles._preprocess_extend`, 
 
-#. Phase correlation is performed to determine angle---scale change (:func:`imreg_dft.imreg.similarity`):
+#. Phase correlation is performed to determine angle---scale change (:func:`imreg_dft.imreg.similarity`, :func:`imreg_dft.imreg._get_ang_scale`):
 
    a. Images are apodized (so they are seamless with respect of their borders) in :func:`imreg_dft.imreg._get_ang_scale` 
       by calling :func:`imreg_dft.utils._apodize`.
-   #. Amplitude of the Fourier spectrum is calculated and the log-polar transformation is performed.
-   #. Phase correlation is performed on that log-polar spectrum amplitude.
-   #. Source image is transformed to match the template (according to the angle and scale change).
+   #. Amplitude of the Fourier spectrum is calculated and the log-polar transformation is performed (:func:`imreg_dft.imreg._logpolar`).
+   #. Phase correlation is performed on that log-polar spectrum amplitude (:func:`imreg_dft.imreg._phase_correlation`).
+   #. Source image is transformed to match the template (according to the angle and scale change --- :func:`imreg_dft.imreg.transform_img`).
 
 #. Second round of phase correlation is performed to determine translation (:func:`imreg_dft.imreg.translation`).
-   Images are already apodized and compatible (this is ensured in the previous step).
+   Images are already somewhat apodized and compatible (this is ensured in the previous step).
 
-   a. Phase correlation on spectrums of the template and the transformed subject is performed. 
-   #. Phase correlation on spectrums of the template and the transformed subject rotated over 180° is performed.
+   a. Phase correlation on spectra of the template and the transformed subject is performed. 
+   #. Phase correlation on spectra of the template and the transformed subject rotated over 180° is performed.`).
    #. Results of both operations are compared and the one that is more successful serves as final determination of angle and true translation vector.
       This is due to the fact that the determination of angle is ambiguous.
 
 #. The result (transformation parameters, transformed subject, ...) is saved to a dictionary.
-#. If a transformed subject is requested (e.g. if you want to compare it with the template pixel-by-pixel), it is made (by undoing extending and resampling operations).
+#. If a transformed subject is requested (e.g. if you want to compare it with the template pixel-by-pixel), it is made (by undoing extending and resampling operations --- :func:`imreg_dft.utils.unextend_by`, :func:`imreg_dft.tiles._postprocess_unextend`).
 
 Translation
 +++++++++++

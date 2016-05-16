@@ -10,6 +10,4 @@ imreg module
 
 .. automodule:: imreg_dft.imreg
    :members:
-   :undoc-members:
-
-
+   :noindex:
