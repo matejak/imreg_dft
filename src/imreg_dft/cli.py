@@ -184,7 +184,7 @@ def create_parser():
     parser.add_argument(
         '--print-format', default="scale: %(scale)f +-%(Dscale)g\n"
         "angle: %(angle)f +-%(Dangle)g\n"
-        "shift: %(tx)g, %(ty)g +-%(Dt)g\nSuccess: %(success).3g\n", type=outmsg,
+        "shift: %(tx)g, %(ty)g +-%(Dt)g\nsuccess: %(success).3g\n", type=outmsg,
         help="Print a string (to stdout) in a given format. A dictionary "
         "containing the 'scale', 'angle', 'tx', 'ty', 'Dscale', 'Dangle', "
         "'Dt' and 'success' keys will be passed for string interpolation")
@@ -220,7 +220,7 @@ def main():
 
     args = parser.parse_args()
 
-    loader_stuff = loader.settle_loaders(args, (args.template, args.subject))
+    loaders = loader.settle_loaders(args, (args.template, args.subject))
 
     # We need tuples in the parser and lists further in the code.
     # So we have to do it like this.
@@ -250,8 +250,8 @@ def main():
         tile=args.tile,
         constraints=constraints,
         output=args.output,
+        loaders=loaders,
     )
-    opts.update(loader_stuff)
     run(args.template, args.subject, opts)
 
 

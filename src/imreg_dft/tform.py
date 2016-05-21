@@ -31,8 +31,12 @@
 
 
 import argparse as ap
+import re
+
+import numpy as np
 
 import imreg_dft.cli as cli
+import imreg_dft.loader as loader
 
 
 def create_parser():
@@ -43,7 +47,8 @@ def create_parser():
     grp = parser.add_mutually_exclusive_group("Template shape")
     grp.add_argument("template", nargs="?")
     grp.add_argument("--template-shape")
-    parser.add_argument("transformation")
+    parser.add_argument("transformation", type=str2tform)
+    loader.update_parser(parser)
     return parser
 
 
@@ -51,4 +56,47 @@ def str2tform(tstr):
     """
     Parses a transformation-descripting string to a transformation dict.
     """
-    pass
+    rexp = (
+        "scale:\s*(?P<scale>\S*)\s*(+-\S*)?\s*"
+        "angle:\s*(?P<angle>\S*)\s*(+-\S*)?\s*"
+        "shift:\s*(?P<ty>[^,]*),\s*(?P<tx>[^,]*)\s*(+-\S*)?\s*"
+        "success:\s*(?P<success>\S*)\s*"
+    )
+    match = re.search(rexp, tstr, re.MULTILINE)
+    if match is None:
+        raise ap.ArgumentTypeError()
+    ret = dict()
+    parsed = match.groupdict()
+    for key, val in parsed.items():
+        ret[key] = float(val)
+    ret["tvec"] = np.array((ret["ty"], ret["tx"]))
+    return ret
+
+
+def args2dict(args):
+    """
+    Takes parsed command-line args and makes a dict that contains exact info
+    about what needs to be done.
+    """
+    ret = dict()
+    template_shape = None
+    _loader = loader.LOADERS.get_loader(args.subject)
+    ret["subject"] = _loader.load2reg(args.subject)
+    if args.template is not None:
+        img = _loader.load2reg(args.template)
+        template_shape = img.shape
+    elif args.template_shape is not None:
+        template_shape = [int(x) for x in args.template_shape.split(",")]
+    else:
+        template_shape = ret["subject"].shape
+    assert template_shape is not None, \
+        "Template shape should have been determined by now, wtf that it wasn't"
+    ret["shape"] = template_shape
+    ret["tform"] = str2tform(args.transformation)
+    return ret
+
+
+def main():
+    parser = create_parser()
+    args = parser.parse_args()
+    loader.settle_loaders(args)

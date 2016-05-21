@@ -69,7 +69,7 @@ def _str2nptype(stri):
     msg = ("The string '%s' is supposed to correspond to a "
            "numpy type" % stri)
     try:
-        typ = eval("np." + stri)
+        typ = eval("np." + stri, dict(np=np))
     except Exception as exc:
         msg += " but it is not the case at all - %s." % exc.message
         raise ValueError(msg)
@@ -214,7 +214,6 @@ def loader(lname, priority):
     return wrapped
 
 
-
 class Loader(object):
     """
 
@@ -338,7 +337,7 @@ class _MatLoader(Loader):
         else:
             key = self._opts["in"]
             keys = mat.keys()
-            if not key in keys:
+            if key not in keys:
                 raise LookupError(
                     "You requested load of '%s', but you can only choose from"
                     " %s" % (tuple(keys),))
@@ -471,18 +470,31 @@ def update_parser(parser):
 
 
 def settle_loaders(args, fnames=None):
+    """
+    The function to be called as soon as args are parsed.
+    It:
+
+    #. If requested by passed args, it prints loaders help
+        and then exits the app
+    #. If filenames are supplied, it returns list of respective loaders.
+
+    Args:
+        args (namespace): The output of :function:`argparse.parse_args`
+        fnames (list, optional): List of filenames to load
+
+    Returns:
+        list - list of loaders to load respective fnames.
+    """
     if args.help_loader:
         LOADERS.print_loader_help(args.loader)
         sys.exit(0)
     LOADERS.distribute_opts(args.loader_opts)
-    ret = {}
     loaders = []
     if fnames is not None:
         for fname in fnames:
             loader = LOADERS.get_loader(fname, args.loader)
             loaders.append(loader)
-    ret["loaders"] = loaders
-    return ret
+    return loaders
 
 
 LOADERS = LoaderSet()

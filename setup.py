@@ -33,6 +33,7 @@ st.setup(
     entry_points = {
         'console_scripts': [
            'ird = imreg_dft.cli:main',
+           'ird-tform = imreg_dft.tform:main',
         ],
     },
     install_requires=reqs,
