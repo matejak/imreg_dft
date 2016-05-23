@@ -18,7 +18,7 @@ The image registration is carried out as follows:
 #. If necessary, both images are extended so that their shapes match.
    Implementation in :func:`imreg_dft.utils.embed_to`, gets called by :func:`imreg_dft.tiles._preprocess_extend`, 
 
-#. Phase correlation is performed to determine angle---scale change (:func:`imreg_dft.imreg.similarity`, :func:`imreg_dft.imreg._get_ang_scale`):
+#. Phase correlation is performed to determine angle--scale change (:func:`imreg_dft.imreg.similarity`, :func:`imreg_dft.imreg._get_ang_scale`):
 
    a. Images are apodized (so they are seamless with respect of their borders) in :func:`imreg_dft.imreg._get_ang_scale` 
       by calling :func:`imreg_dft.utils._apodize`.
@@ -30,9 +30,9 @@ The image registration is carried out as follows:
    Images are already somewhat apodized and compatible (this is ensured in the previous step).
 
    a. Phase correlation on spectra of the template and the transformed subject is performed. 
-   #. Phase correlation on spectra of the template and the transformed subject rotated over 180° is performed.`).
+   #. Phase correlation on spectra of the template and the transformed subject rotated over 180° is performed.).
    #. Results of both operations are compared and the one that is more successful serves as final determination of angle and true translation vector.
-      This is due to the fact that the determination of angle is ambiguous.
+      This is due to the fact that the determination of angle using phase correlation is ambiguous --- an angle and the angle + 180° satisfy it in the same fashion.
 
 #. The result (transformation parameters, transformed subject, ...) is saved to a dictionary.
 #. If a transformed subject is requested (e.g. if you want to compare it with the template pixel-by-pixel), it is made (by undoing extending and resampling operations --- :func:`imreg_dft.utils.unextend_by`, :func:`imreg_dft.tiles._postprocess_unextend`).

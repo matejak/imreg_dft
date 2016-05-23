@@ -182,9 +182,10 @@ def create_parser():
         '--print-result', action="store_true", default=False,
         help="We don't print anything unless this option is specified")
     parser.add_argument(
-        '--print-format', default="scale: %(scale)f +-%(Dscale)g\n"
+        '--print-format', type=outmsg,
+        default="scale: %(scale)f +-%(Dscale)g\n"
         "angle: %(angle)f +-%(Dangle)g\n"
-        "shift: %(tx)g, %(ty)g +-%(Dt)g\nsuccess: %(success).3g\n", type=outmsg,
+        "shift (x, y): %(tx)g, %(ty)g +-%(Dt)g\nsuccess: %(success).3g\n",
         help="Print a string (to stdout) in a given format. A dictionary "
         "containing the 'scale', 'angle', 'tx', 'ty', 'Dscale', 'Dangle', "
         "'Dt' and 'success' keys will be passed for string interpolation")
@@ -270,6 +271,8 @@ def _get_resdict(imgs, opts, tosa=None):
     if tiledim is not None:
         resdict = ird.tiles.settle_tiles(imgs, tiledim, opts, reports)
 
+        # TODO: This "tosa" occurence is convoluted - it is not needed
+        #  in process_images
         if tosa is not None:
             tosa[:] = ird.transform_img_dict(tosa, resdict)
     else:

@@ -86,23 +86,34 @@ def _assemble_resdict(ii):
 
 
 def _preprocess_extend(ims, extend, low, high, cut, rcoef):
-    ims = [utils.extend_by(img, extend) for img in ims]
-    bigshape = np.array([img.shape for img in ims]).max(0)
+    bigshape = np.array([img.shape for img in ims]).max(0) + 2 * extend
+    bigshape *= rcoef
+    ims = [_preprocess_extend_single(im, extend, low, high, cut,
+                                     rcoef, bigshape)
+           for im in ims]
 
-    ims = filter_images(ims, low, high, cut)
-    if rcoef != 1:
-        ims = [resample(img, rcoef) for img in ims]
-        bigshape = np.round(bigshape * rcoef)
-
-    # Make the shape of images the same
-    bgs = [np.zeros(bigshape) + utils.get_borderval(img, 5)
-           for img in ims]
-    ims = [utils.embed_to(bg, img)
-           for bg, img in zip(bgs, ims)]
+    # Safeguard that the earlier determination of bigshape was correct.
+    assert np.all(bigshape == np.array([img.shape for img in ims]).max(0))
     return ims
 
 
-def _postprocess_unextend(ims, im2, extend):
+def _preprocess_extend_single(im, extend, low, high, cut, rcoef, bigshape):
+    im = utils.extend_by(im, extend)
+    im = utils.imfilter(im, low, high, cut)
+    if rcoef != 1:
+        im = resample(im, rcoef)
+
+    # Make the shape of images the same
+    bg = np.zeros(bigshape) + utils.get_borderval(im, 5)
+    im = utils.embed_to(bg, im)
+    return im
+
+
+def _postprocess_unextend(ims, im2, extend, rcoef=1):
+    if rcoef != 1:
+        ims = [resample(img, 1.0 / rcoef) for img in ims]
+        im2 = resample(im2, 1.0 / rcoef)
+
     ret = [utils.unextend_by(img, extend)
            for img in ims + [im2]]
     return ret
@@ -176,11 +187,6 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
 
     if get_unextended:
         im2 = imreg.transform_img_dict(ims[1], resdict, order=opts["order"])
-
-        if rcoef != 1:
-            ims = [resample(img, 1.0 / rcoef) for img in ims]
-            im2 = resample(im2, 1.0 / rcoef)
-
         resdict["unextended"] = _postprocess_unextend(ims, im2, opts["extend"])
 
     # We need this intact until now (for the transform above)

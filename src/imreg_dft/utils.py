@@ -443,6 +443,8 @@ def extend_to_3D(what, newdim_2D):
     """
     Extend 2D and 3D arrays (when being supplied with their x--y shape).
     """
+    assert len(newdim_2D) == 2, \
+        "You were supposed to provide 2D dimensions, got %s" % newdim_2D
     if what.ndim == 3:
         height = what.shape[2]
         res = np.empty(newdim_2D + (height,), what.dtype)

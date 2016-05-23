@@ -2,7 +2,6 @@
 # tform.py
 
 # Copyright (c) 2014-?, Matěj Týč
-# Produced at the Laboratory for Fluorescence Dynamics
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -32,44 +31,57 @@
 
 import argparse as ap
 import re
+import sys
 
 import numpy as np
 
 import imreg_dft.cli as cli
+import imreg_dft.imreg as imreg
 import imreg_dft.loader as loader
+import imreg_dft.utils as utils
 
 
 def create_parser():
     parser = ap.ArgumentParser()
     parser.add_argument("subject")
-    parser.add_argument("transformation", help="The transformation string.")
+    parser.add_argument("transformation", nargs="?", default="-",
+                        help="The transformation string.")
+    parser.add_argument("outname")
     cli.create_base_parser(parser)
-    grp = parser.add_mutually_exclusive_group("Template shape")
-    grp.add_argument("template", nargs="?")
+    grp = parser.add_mutually_exclusive_group()
+    grp.add_argument("--template")
     grp.add_argument("--template-shape")
-    parser.add_argument("transformation", type=str2tform)
     loader.update_parser(parser)
     return parser
 
 
-def str2tform(tstr):
+# TODO: Hanldle missing entries + default values
+def _str2tform(tstr):
     """
     Parses a transformation-descripting string to a transformation dict.
     """
     rexp = (
-        "scale:\s*(?P<scale>\S*)\s*(+-\S*)?\s*"
-        "angle:\s*(?P<angle>\S*)\s*(+-\S*)?\s*"
-        "shift:\s*(?P<ty>[^,]*),\s*(?P<tx>[^,]*)\s*(+-\S*)?\s*"
-        "success:\s*(?P<success>\S*)\s*"
+        r"scale:\s*(?P<scale>\S*)\s*(\+-\S*)?\s*"
+        r"angle:\s*(?P<angle>\S*)\s*(\+-\S*)?\s*"
+        r"shift (x, y):\s*(?P<tx>[^,]*),\s*(?P<ty>\S+)\s*(\+-\S*)?\s*"
+        r"success:\s*(?P<success>\S*)\s*"
     )
     match = re.search(rexp, tstr, re.MULTILINE)
-    if match is None:
-        raise ap.ArgumentTypeError()
+    assert match is not None, \
+        "No match"
     ret = dict()
     parsed = match.groupdict()
     for key, val in parsed.items():
         ret[key] = float(val)
     ret["tvec"] = np.array((ret["ty"], ret["tx"]))
+    return ret
+
+
+def str2tform(tstr):
+    try:
+        ret = _str2tform(tstr)
+    except Exception:
+        raise ap.ArgumentTypeError()
     return ret
 
 
@@ -81,18 +93,24 @@ def args2dict(args):
     ret = dict()
     template_shape = None
     _loader = loader.LOADERS.get_loader(args.subject)
-    ret["subject"] = _loader.load2reg(args.subject)
+    # loader needs to be loaded first
+    _loader.load2reg(args.subject)
+    ret["subject"] = _loader.get2save()
     if args.template is not None:
         img = _loader.load2reg(args.template)
         template_shape = img.shape
     elif args.template_shape is not None:
         template_shape = [int(x) for x in args.template_shape.split(",")]
     else:
-        template_shape = ret["subject"].shape
+        template_shape = ret["subject"].shape[:2]
     assert template_shape is not None, \
         "Template shape should have been determined by now, wtf that it wasn't"
+    ret["loader"] = _loader
     ret["shape"] = template_shape
-    ret["tform"] = str2tform(args.transformation)
+    tstring = args.transformation
+    if tstring == "-":
+        tstring = sys.stdin.read()
+    ret["tform"] = str2tform(tstring)
     return ret
 
 
@@ -100,3 +118,11 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
     loader.settle_loaders(args)
+    ins = args2dict(args)
+    subject = ins["subject"]
+
+    saver = loader.LOADERS.get_loader(args.outname)
+    subject = utils.extend_to_3D(subject, ins["shape"])
+
+    res = imreg.transform_img_dict(subject, ins["tform"])
+    saver.save(args.outname, res, ins["loader"])
