@@ -179,6 +179,7 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
         reports["t0-postproc"] = report_one["amt-postproc"]
         reports["t0-succ"] = succ
         reports["t0-tvec"] = tuple(tvec)
+
         reports["t1-orig"] = report_two["amt-orig"]
         reports["t1-postproc"] = report_two["amt-postproc"]
         reports["t1-succ"] = succ2
@@ -430,7 +431,8 @@ def _phase_correlation(im0, im1, callback=None, * args):
             Defaults to :func:`imreg_dft.utils.argmax2D`
 
     Returns:
-        tuple: The translation vector (Y, X)
+        tuple: The translation vector (Y, X). Translation vector of (0, 0)
+            means that the two images match.
     """
     if callback is None:
         callback = utils.argmax2D

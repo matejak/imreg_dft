@@ -175,8 +175,8 @@ def argmax_angscale(array, log_base, exponent, constraints=None, reports=None):
     ret_final = _interpolate(array, ret)
 
     if reports is not None:
-        reports["amas-orig"] = array_orig
-        reports["amas-postproc"] = array
+        reports["amas-orig"] = array_orig.copy()
+        reports["amas-postproc"] = array.copy()
 
     success = _get_success(array_orig, tuple(ret_final), 0)
     return ret_final, success
@@ -217,9 +217,8 @@ def argmax_translation(array, filter_pcorr, constraints=None, reports=None):
 
     # WE ARE FFTSHIFTED already.
     # ban translations that are too big
-    thresh = ashape // 6
-    mask2 = np.zeros(ashape, int)
-    mask2[thresh[0]:-thresh[0], thresh[1]:-thresh[1]] = 1
+    aporad = (ashape // 6).min()
+    mask2 = get_apofield(ashape, aporad)
     array *= mask2
     # Find what we look for
     tvec = _argmax_ext(array, 'inf')

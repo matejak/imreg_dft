@@ -121,6 +121,7 @@ def _postprocess_unextend(ims, im2, extend, rcoef=1):
 
 def _savefig(fig, fname):
     fig.savefig(fname, bbox_inches="tight")
+    fig.clear()
 
 
 def process_images(ims, opts, tosa=None, get_unextended=False,
@@ -146,79 +147,137 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
 
     if reports is not None:
         import pylab as pyl
+        import mpl_toolkits.axes_grid1 as axg
         fig = pyl.figure(figsize=(18, 6))
         prefix = "report"
         dfts_filt_extent = (-0.5, 0.5, -0.5, 0.5)
         logpolars_extent = (0, 0.5, 0, 360)
         for key, value in reports.items():
             if "ims-filt" in key:
+                grid = axg.ImageGrid(
+                    fig, 111,  # similar to subplot(111)
+                    nrows_ncols=(2, 2),
+                    add_all=True,
+                    axes_pad=0.4,
+                    cbar_pad=0.05,
+                    label_mode="L",
+                    cbar_mode="each",
+                    cbar_size="3.5%",
+                )
+                vmin = min([np.percentile(im, 2) for im in ims])
+                vmax = max([np.percentile(im, 98) for im in ims])
                 for ii, im in enumerate(value):
-                    pyl.clf()
-                    pyl.title("filtered")
-                    pyl.imshow(im.real, cmap=pyl.cm.hot)
-                    pyl.colorbar()
-                    fname = "%s-%s-%d.png" % (prefix, key, ii)
-                    _savefig(fig, fname)
+                    grid[ii].set_title("common cmap")
+                    im = grid[ii].imshow(im.real, cmap=pyl.cm.viridis,
+                                         vmin=vmin, vmax=vmax)
+                    grid.cbar_axes[ii].colorbar(im)
+
+                for ii, im in enumerate(value):
+                    grid[ii + 2].set_title("individual cmap")
+                    im = grid[ii + 2].imshow(im.real, cmap=pyl.cm.viridis)
+                    grid.cbar_axes[ii + 2].colorbar(im)
+
+                fname = "%s-%s.png" % (prefix, key)
+                _savefig(fig, fname)
             elif "dfts-filt" in key:
+                grid = axg.ImageGrid(
+                    fig, 111,  # similar to subplot(111)
+                    nrows_ncols=(1, 2),
+                    add_all=True,
+                    axes_pad=0.4,
+                    cbar_pad=0.05,
+                    label_mode="L",
+                    cbar_mode="each",
+                    cbar_size="3.5%",
+                )
+                what = ("template", "subject")
                 for ii, im in enumerate(value):
-                    pyl.clf()
-                    pyl.title("log abs dfts")
-                    pyl.imshow(np.log(np.abs(im)), cmap=pyl.cm.hot,
-                               extent=dfts_filt_extent, )
-                    pyl.colorbar()
-                    fname = "%s-%s-%d.png" % (prefix, key, ii)
-                    _savefig(fig, fname)
+                    grid[ii].set_title("log abs dfts - %s" % what[ii])
+                    im = grid[ii].imshow(np.log(np.abs(im)), cmap=pyl.cm.viridis,
+                                         extent=dfts_filt_extent, )
+                    grid.cbar_axes[ii].colorbar(im)
+                fname = "%s-%s.png" % (prefix, key)
+                _savefig(fig, fname)
             elif "logpolars" in key:
+                grid = axg.ImageGrid(
+                    fig, 111,  # similar to subplot(111)
+                    nrows_ncols=(2, 1),
+                    add_all=True,
+                    axes_pad=0.4,
+                    cbar_pad=0.05,
+                    label_mode="L",
+                    cbar_mode="each",
+                    cbar_size="3.5%",
+                )
                 ims = [np.log(np.abs(im)) for im in value]
                 vmin = min([np.percentile(im, 2) for im in ims])
                 vmax = max([np.percentile(im, 98) for im in ims])
                 for ii, im in enumerate(ims):
-                    pyl.clf()
-                    pyl.title("log abs log-ploar")
-                    pyl.imshow(im, cmap=pyl.cm.viridis, aspect="auto",
-                               vmin=vmin, vmax=vmax,
-                               extent=logpolars_extent)
-                    pyl.colorbar()
-                    fname = "%s-%s-%d.png" % (prefix, key, ii)
-                    _savefig(fig, fname)
+                    # The auto aspect stuff doesn't work here.
+                    grid[ii].set_aspect("auto", "box-forced")
+                    im = grid[ii].imshow(im, cmap=pyl.cm.viridis,
+                                         aspect= 1.0 / 360 * 0.5 / 3.0,
+                                         vmin=vmin, vmax=vmax,
+                                         extent=logpolars_extent)
+                    grid.cbar_axes[ii].colorbar(im)
+                fname = "%s-%s.png" % (prefix, key)
+                _savefig(fig, fname)
             # if "s-orig" in key:
             elif key == "amas-orig":
-                fig.clear()
-                p1 = fig.add_subplot(1, 2, 1)
-                p1.set_title("pcorr --- original")
-                showed = p1.imshow(value, cmap=pyl.cm.viridis, vmin=0)
-                p2 = fig.add_subplot(1, 2, 2, sharey=p1)
-                p2.set_title("constrained")
-                p2.set_yticklabels([""] * len(p2.get_yticklabels()))
-                showed = p2.imshow(reports["amas-postproc"],
-                                   cmap=pyl.cm.viridis, vmin=0)
-                fig.colorbar(showed)
+                grid = axg.ImageGrid(
+                    fig, 111,  # similar to subplot(111)
+                    nrows_ncols=(1, 2),
+                    add_all=True,
+                    axes_pad=0.4,
+                    cbar_pad=0.05,
+                    label_mode="L",
+                    cbar_mode="single",
+                    cbar_size="3.5%",
+                )
+                vmax = value.max()
+                grid[0].set_title("pcorr --- original")
+                grid[0].imshow(value, cmap=pyl.cm.viridis, vmin=0)
+                grid[1].set_title("constrained")
+                im = grid[1].imshow(reports["amas-postproc"],
+                                    cmap=pyl.cm.viridis, vmin=0, vmax=vmax)
+                grid.cbar_axes[0].colorbar(im)
                 fname = "%s-%s.png" % (prefix, key)
                 _savefig(fig, fname)
 
-        fig.clear()
-        p1 = fig.add_subplot(1, 2, 1)
-        p1.set_title("T pcorr 1 --- original")
-        showed = p1.imshow(reports["t0-orig"], cmap=pyl.cm.viridis, vmin=0)
-        p2 = fig.add_subplot(1, 2, 2, sharey=p1)
-        p2.set_title("constrained")
-        showed = p2.imshow(reports["t0-postproc"], cmap=pyl.cm.viridis,
-                           vmin=0)
-        fig.colorbar(showed)
-        fname = "%s-t0.png" % (prefix, )
+        grid = axg.ImageGrid(
+            fig, 111,  # similar to subplot(111)
+            nrows_ncols=(1, 3),
+            add_all=True,
+            axes_pad=0.4,
+            cbar_pad=0.05,
+            label_mode="L",
+        )
+        # Here goes a plot of template, rotated and scaled subject and
+        # upside-down on the top subject
+        fname = "{}-after-rot.png".format(prefix)
         _savefig(fig, fname)
-
-        fig.clear()
-        p1 = fig.add_subplot(1, 2, 1)
-        p1.set_title("T pcorr 2 --- original")
-        showed = p1.imshow(reports["t1-orig"], cmap=pyl.cm.viridis, vmin=0)
-        p2 = fig.add_subplot(1, 2, 2, sharey=p1)
-        p2.set_title("constrained")
-        showed = p2.imshow(reports["t1-postproc"],
-                           cmap=pyl.cm.viridis, vmin=0)
-        fig.colorbar(showed)
-        fname = "%s-t1.png" % (prefix, )
-        _savefig(fig, fname)
+        for idx in range(2):
+            grid = axg.ImageGrid(
+                fig, 111,  # similar to subplot(111)
+                nrows_ncols=(1, 2),
+                add_all=True,
+                axes_pad=0.4,
+                cbar_pad=0.05,
+                label_mode="L",
+                cbar_mode="single",
+                cbar_size="3.5%",
+            )
+            img = reports["t{}-orig".format(idx)]
+            vmax = img.max()
+            grid[0].set_title("T pcorr {} --- original".format(idx))
+            grid[0].imshow(img, cmap=pyl.cm.viridis, vmin=0, vmax=vmax)
+            grid[1].set_title("constrained")
+            img2 = reports["t{}-postproc".format(idx)]
+            im = grid[1].imshow(img2, cmap=pyl.cm.viridis,
+                                vmin=0, vmax=vmax)
+            grid.cbar_axes[0].colorbar(im)
+            fname = "{}-t{}.png".format(prefix, idx)
+            _savefig(fig, fname)
 
         del fig
 
