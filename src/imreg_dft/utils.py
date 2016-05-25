@@ -224,6 +224,7 @@ def argmax_translation(array, filter_pcorr, constraints=None, reports=None):
     # Find what we look for
     tvec = _argmax_ext(array, 'inf')
     tvec = _interpolate(array_orig, tvec)
+
     if 0:
         print("tvec: %s" % tvec)
         import pylab as pyl
@@ -325,6 +326,9 @@ def _get_subarr(array, center, rad):
 def _interpolate(array, rough, rad=2):
     """
     Returns index that is in the array after being rounded.
+
+    The result index tuple is in each of its components between zero and the
+    array's shape.
     """
     rough = np.round(rough).astype(int)
     surroundings = _get_subarr(array, rough, rad)

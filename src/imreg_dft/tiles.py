@@ -119,6 +119,10 @@ def _postprocess_unextend(ims, im2, extend, rcoef=1):
     return ret
 
 
+def _savefig(fig, fname):
+    fig.savefig(fname, bbox_inches="tight")
+
+
 def process_images(ims, opts, tosa=None, get_unextended=False,
                    reports=None):
     """
@@ -142,7 +146,10 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
 
     if reports is not None:
         import pylab as pyl
-        fig = pyl.figure()
+        fig = pyl.figure(figsize=(18, 6))
+        prefix = "report"
+        dfts_filt_extent = (-0.5, 0.5, -0.5, 0.5)
+        logpolars_extent = (0, 0.5, 0, 360)
         for key, value in reports.items():
             if "ims-filt" in key:
                 for ii, im in enumerate(value):
@@ -150,28 +157,69 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
                     pyl.title("filtered")
                     pyl.imshow(im.real, cmap=pyl.cm.hot)
                     pyl.colorbar()
-                    pyl.savefig("%s-%d.png" % (key, ii))
-            if "dfts-filt" in key:
+                    fname = "%s-%s-%d.png" % (prefix, key, ii)
+                    _savefig(fig, fname)
+            elif "dfts-filt" in key:
                 for ii, im in enumerate(value):
                     pyl.clf()
                     pyl.title("log abs dfts")
-                    pyl.imshow(np.log(np.abs(im)), cmap=pyl.cm.hot)
+                    pyl.imshow(np.log(np.abs(im)), cmap=pyl.cm.hot,
+                               extent=dfts_filt_extent, )
                     pyl.colorbar()
-                    pyl.savefig("%s-%d.png" % (key, ii))
-            if "logpolars" in key:
-                for ii, im in enumerate(value):
+                    fname = "%s-%s-%d.png" % (prefix, key, ii)
+                    _savefig(fig, fname)
+            elif "logpolars" in key:
+                ims = [np.log(np.abs(im)) for im in value]
+                vmin = min([np.percentile(im, 2) for im in ims])
+                vmax = max([np.percentile(im, 98) for im in ims])
+                for ii, im in enumerate(ims):
                     pyl.clf()
                     pyl.title("log abs log-ploar")
-                    pyl.imshow(np.log(np.abs(im)), cmap=pyl.cm.hot)
+                    pyl.imshow(im, cmap=pyl.cm.viridis, aspect="auto",
+                               vmin=vmin, vmax=vmax,
+                               extent=logpolars_extent)
                     pyl.colorbar()
-                    pyl.savefig("%s-%d.png" % (key, ii))
-            if "amt-orig" in key:
-                pyl.clf()
-                pyl.title("log abs pcorr")
-                pyl.imshow(np.log(np.abs(value)), cmap=pyl.cm.hot)
-                pyl.colorbar()
-                pyl.savefig("%s-%d.png" % (key, ii))
-            reports.pop(key)
+                    fname = "%s-%s-%d.png" % (prefix, key, ii)
+                    _savefig(fig, fname)
+            # if "s-orig" in key:
+            elif key == "amas-orig":
+                fig.clear()
+                p1 = fig.add_subplot(1, 2, 1)
+                p1.set_title("pcorr --- original")
+                showed = p1.imshow(value, cmap=pyl.cm.viridis, vmin=0)
+                p2 = fig.add_subplot(1, 2, 2, sharey=p1)
+                p2.set_title("constrained")
+                p2.set_yticklabels([""] * len(p2.get_yticklabels()))
+                showed = p2.imshow(reports["amas-postproc"],
+                                   cmap=pyl.cm.viridis, vmin=0)
+                fig.colorbar(showed)
+                fname = "%s-%s.png" % (prefix, key)
+                _savefig(fig, fname)
+
+        fig.clear()
+        p1 = fig.add_subplot(1, 2, 1)
+        p1.set_title("T pcorr 1 --- original")
+        showed = p1.imshow(reports["t0-orig"], cmap=pyl.cm.viridis, vmin=0)
+        p2 = fig.add_subplot(1, 2, 2, sharey=p1)
+        p2.set_title("constrained")
+        showed = p2.imshow(reports["t0-postproc"], cmap=pyl.cm.viridis,
+                           vmin=0)
+        fig.colorbar(showed)
+        fname = "%s-t0.png" % (prefix, )
+        _savefig(fig, fname)
+
+        fig.clear()
+        p1 = fig.add_subplot(1, 2, 1)
+        p1.set_title("T pcorr 2 --- original")
+        showed = p1.imshow(reports["t1-orig"], cmap=pyl.cm.viridis, vmin=0)
+        p2 = fig.add_subplot(1, 2, 2, sharey=p1)
+        p2.set_title("constrained")
+        showed = p2.imshow(reports["t1-postproc"],
+                           cmap=pyl.cm.viridis, vmin=0)
+        fig.colorbar(showed)
+        fname = "%s-t1.png" % (prefix, )
+        _savefig(fig, fname)
+
         del fig
 
     # Seems that the reampling simply scales the translation

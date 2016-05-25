@@ -278,9 +278,6 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
     target, stdev = constraints.get("angle", (0, None))
     odds = _get_odds(angle, target, stdev)
 
-    if reports is not None:
-        reports["im2-irots"] = im2
-
     # now we can use pcorr to guess the translation
     res = translation(im0, im2, filter_pcorr, odds,
                       constraints, reports)
@@ -440,7 +437,8 @@ def _phase_correlation(im0, im1, callback=None, * args):
 
     # TODO: Implement some form of high-pass filtering of PHASE correlation
     f0, f1 = [fft.fft2(arr) for arr in (im0, im1)]
-    # spectrum can be filtered, so we take precaution against dividing by 0
+    # spectrum can be filtered (already),
+    # so we have to take precaution against dividing by 0
     eps = abs(f1).max() * 1e-15
     # cps == cross-power spectrum of im0 and im1
     cps = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1) + eps)))

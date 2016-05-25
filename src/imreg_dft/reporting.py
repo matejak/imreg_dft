@@ -59,6 +59,9 @@ class ReportsWrapper(object):
         self.prefixes = []
         self.idx = ""
 
+    def keys(self):
+        return self.reports.keys()
+
     def pop(self, what):
         return self.reports.pop(what)
 
@@ -107,6 +110,9 @@ class Rect_callback(object):
 
 
 class Rect_mpl(Rect_callback):
+    """
+    A class that can draw image tiles nicely
+    """
     def __init__(self, subplot):
         self.subplot = subplot
 

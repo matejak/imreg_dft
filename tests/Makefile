@@ -1,7 +1,7 @@
 # directory of tests(ie where this makefile is based in)
 TESTDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 COVERAGE ?=
-PYTHON ?= python2
+PYTHON ?= python
 
 ifdef COVERAGE
 RUNUNIT = $(COVERAGE) run --source=imreg_dft

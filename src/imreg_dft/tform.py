@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # tform.py
 
-# Copyright (c) 2014-?, Matěj Týč
+# Copyright (c) 2016-?, Matěj Týč
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -63,7 +63,7 @@ def _str2tform(tstr):
     rexp = (
         r"scale:\s*(?P<scale>\S*)\s*(\+-\S*)?\s*"
         r"angle:\s*(?P<angle>\S*)\s*(\+-\S*)?\s*"
-        r"shift (x, y):\s*(?P<tx>[^,]*),\s*(?P<ty>\S+)\s*(\+-\S*)?\s*"
+        r"shift \(x, y\):\s*(?P<tx>[^,]*),\s*(?P<ty>\S+)\s*(\+-\S*)?\s*"
         r"success:\s*(?P<success>\S*)\s*"
     )
     match = re.search(rexp, tstr, re.MULTILINE)

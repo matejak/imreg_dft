@@ -34,6 +34,7 @@ st.setup(
         'console_scripts': [
            'ird = imreg_dft.cli:main',
            'ird-tform = imreg_dft.tform:main',
+           'ird-show = imreg_dft.show:main',
         ],
     },
     install_requires=reqs,
