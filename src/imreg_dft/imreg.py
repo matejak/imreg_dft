@@ -103,7 +103,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
 
     pcorr_shape = _get_pcorr_shape(shape)
     log_base = _get_log_base(shape, pcorr_shape[1])
-    stuffs = [_logpolar(np.abs(dft), pcorr_shape, log_base, 0.0)
+    stuffs = [_logpolar(np.abs(dft), pcorr_shape, log_base)
               for dft in dfts]
 
     if 0:
@@ -128,6 +128,11 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
         reports["logpolars"] = stuffs
 
         reports["result_raw"] = (arg_ang, arg_rad)
+        reports["amas-result"] = (angle, scale)
+        reports["amas-success"] = success
+        extent_el = pcorr_shape[1] / 2.0
+        reports["amas-extent"] = (log_base ** (-extent_el), log_base ** extent_el,
+                             -90, 90)
 
     if not 0.5 < scale < 2:
         raise ValueError(
@@ -264,6 +269,9 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
     constraints_dynamic["scale"] = list(constraints["scale"])
     constraints_dynamic["angle"] = list(constraints["angle"])
 
+    if reports is not None:
+        reports["asim"] = [im1.copy()]
+
     for ii in range(numiter):
         newscale, newangle = _get_ang_scale([im0, im2], bgval, exponent,
                                             constraints_dynamic, reports)
@@ -274,6 +282,9 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
         constraints_dynamic["angle"][0] -= newangle
 
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
+
+        if reports is not None:
+            reports["asim"].append(im1.copy())
 
     # Here we look how is the turn-180
     target, stdev = constraints.get("angle", (0, None))
@@ -596,7 +607,7 @@ def _get_log_base(shape, new_r):
 
 def _logpolar(image, shape, log_base, bgval=None):
     """
-    Return log-polar transformed image and log base.
+    Return log-polar transformed image
     Takes into account anisotropicity of the freq spectrum of rectangular images
 
     Args:
@@ -604,12 +615,13 @@ def _logpolar(image, shape, log_base, bgval=None):
         shape: Shape of the transformed image
         log_base: Parameter of the transformation, get it via
             :func:`_get_log_base`
+        bgval: The backround value. If None, use minimum of the image.
 
     Returns:
         The transformed image
     """
     if bgval is None:
-        bgval = utils.get_borderval(image)
+        bgval = np.percentile(image, 1)
     imshape = np.array(image.shape)
     center = imshape[0] / 2.0, imshape[1] / 2.0
     # 0 .. pi = only half of the spectrum is used
