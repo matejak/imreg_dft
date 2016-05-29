@@ -38,7 +38,7 @@ import argparse as ap
 import imreg_dft as ird
 import imreg_dft.utils as utils
 import imreg_dft.loader as loader
-import imreg_dft.tiles
+import imreg_dft.tiles as tiles
 
 
 def assure_constraint(possible_constraints):
@@ -269,15 +269,14 @@ def _get_resdict(imgs, opts, tosa=None):
             tiledim = np.min(shapes, axis=0) * 1.1
             # TODO: Establish a translate region constraint of width tiledim * coef
     if tiledim is not None:
-        resdict = ird.tiles.settle_tiles(imgs, tiledim, opts, reports)
+        resdict = tiles.settle_tiles(imgs, tiledim, opts, reports)
 
         # TODO: This "tosa" occurence is convoluted - it is not needed
         #  in process_images
         if tosa is not None:
             tosa[:] = ird.transform_img_dict(tosa, resdict)
     else:
-        resdict = ird.tiles.process_images(imgs, opts, tosa, True,
-                                           reports=reports)
+        resdict = tiles.process_images(imgs, opts, tosa, True, reports=reports)
 
     return resdict
 
@@ -298,7 +297,7 @@ def run(template, subject, opts):
     if outname is not None:
         tosa = loader_img.get2save()
         saver = loader.LOADERS.get_loader(outname)
-        tosa = ird.utils.extend_to_3D(tosa, imgs[0].shape[:3])
+        tosa = utils.extend_to_3D(tosa, imgs[0].shape[:3])
 
     resdict = _get_resdict(imgs, opts, tosa)
     im0, im1, im2 = resdict['unextended']
