@@ -121,14 +121,18 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     angle = utils.wrap_angle(angle, 360)
     scale = log_base ** arg_rad
 
+    angle = - angle
+    scale = 1.0 / scale
+
     if reports is not None:
         reports["dfts-filt"] = dfts
         reports["ims-filt"] = [fft.ifft2(np.fft.ifftshift(dft))
                                for dft in dfts]
         reports["logpolars"] = stuffs
+        reports["base"] = log_base
 
-        reports["result_raw"] = (arg_ang, arg_rad)
-        reports["amas-result"] = (angle, scale)
+        reports["amas-result-raw"] = (arg_ang, arg_rad)
+        reports["amas-result"] = (scale, angle)
         reports["amas-success"] = success
         extent_el = pcorr_shape[1] / 2.0
         reports["amas-extent"] = (log_base ** (-extent_el), log_base ** extent_el,
@@ -139,7 +143,7 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
             "Images are not compatible. Scale change %g too big to be true."
             % scale)
 
-    return 1.0 / scale, - angle
+    return scale, angle
 
 
 def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
@@ -182,12 +186,12 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
     if reports is not None:
         reports["t0-orig"] = report_one["amt-orig"]
         reports["t0-postproc"] = report_one["amt-postproc"]
-        reports["t0-succ"] = succ
+        reports["t0-success"] = succ
         reports["t0-tvec"] = tuple(tvec)
 
         reports["t1-orig"] = report_two["amt-orig"]
         reports["t1-postproc"] = report_two["amt-postproc"]
-        reports["t1-succ"] = succ2
+        reports["t1-success"] = succ2
         reports["t1-tvec"] = tuple(tvec2)
 
     if succ2 * odds > succ or odds == -1:
@@ -196,6 +200,7 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
         angle += 180
 
     if 0:
+        # show the filtered template
         import pylab as pyl
         pyl.figure(); pyl.imshow(im0, cmap=pyl.cm.gray)
         pyl.show()
@@ -270,7 +275,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
     constraints_dynamic["angle"] = list(constraints["angle"])
 
     if reports is not None:
-        reports["asim"] = [im1.copy()]
+        reports["asim"] = [im0.copy(), im2.copy()]
 
     for ii in range(numiter):
         newscale, newangle = _get_ang_scale([im0, im2], bgval, exponent,
@@ -284,7 +289,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
         if reports is not None:
-            reports["asim"].append(im1.copy())
+            reports["asim"].append(im2.copy())
 
     # Here we look how is the turn-180
     target, stdev = constraints.get("angle", (0, None))
@@ -377,6 +382,7 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
 
     res["timg"] = im3
     if 0:
+        # showing result before and after "framing"
         import pylab as pyl
         pyl.figure(); pyl.imshow(im2); pyl.show()
         pyl.figure(); pyl.imshow(im3); pyl.show()
@@ -459,6 +465,7 @@ def _phase_correlation(im0, im1, callback=None, * args):
     scps = fft.fftshift(cps)
 
     if 0:
+        # show operands and cross-power spectra
         import pylab as pyl
         pyl.figure(); pyl.imshow(im0);
         pyl.figure(); pyl.imshow(im1);

@@ -147,177 +147,58 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
 
     if reports is not None:
         import pylab as pyl
-        import mpl_toolkits.axes_grid1 as axg
-        from matplotlib import patches
         fig = pyl.figure(figsize=(18, 6))
         prefix = "report"
-        dfts_filt_extent = (-0.5, 0.5, -0.5, 0.5)
-        logpolars_extent = (0, 0.5, 0, 180)
         for key, value in reports.items():
             if "ims-filt" in key:
-                grid = axg.ImageGrid(
-                    fig, 111,  # similar to subplot(111)
-                    nrows_ncols=(2, 2),
-                    add_all=True,
-                    axes_pad=0.4,
-                    cbar_pad=0.05,
-                    label_mode="L",
-                    cbar_mode="each",
-                    cbar_size="3.5%",
-                )
-                vmin = min([np.percentile(im, 2) for im in ims])
-                vmax = max([np.percentile(im, 98) for im in ims])
-                for ii, im in enumerate(value):
-                    grid[ii].set_title("common cmap")
-                    im = grid[ii].imshow(im.real, cmap=pyl.cm.viridis,
-                                         vmin=vmin, vmax=vmax)
-                    grid.cbar_axes[ii].colorbar(im)
-
-                for ii, im in enumerate(value):
-                    grid[ii + 2].set_title("individual cmap")
-                    im = grid[ii + 2].imshow(im.real, cmap=pyl.cm.gray)
-                    grid.cbar_axes[ii + 2].colorbar(im)
+                reporting.imshow_plain(fig, value,
+                                       ("template", "sample"), True)
 
                 fname = "%s-%s.png" % (prefix, key)
                 _savefig(fig, fname)
             elif "dfts-filt" in key:
-                grid = axg.ImageGrid(
-                    fig, 111,  # similar to subplot(111)
-                    nrows_ncols=(1, 2),
-                    add_all=True,
-                    axes_pad=0.4,
-                    cbar_pad=0.05,
-                    label_mode="L",
-                    cbar_mode="each",
-                    cbar_size="3.5%",
-                )
-                what = ("template", "subject")
-                for ii, im in enumerate(value):
-                    grid[ii].set_title("log abs dfts - %s" % what[ii])
-                    im = grid[ii].imshow(np.log(np.abs(im)), cmap=pyl.cm.viridis,
-                                         extent=dfts_filt_extent, )
-                    grid.cbar_axes[ii].colorbar(im)
+                reporting.imshow_spectra(fig, value)
+
                 fname = "%s-%s.png" % (prefix, key)
                 _savefig(fig, fname)
             elif "logpolars" in key:
-                grid = axg.ImageGrid(
-                    fig, 111,  # similar to subplot(111)
-                    nrows_ncols=(2, 1),
-                    add_all=True,
-                    aspect=False,
-                    axes_pad=0.4,
-                    cbar_pad=0.05,
-                    label_mode="L",
-                    cbar_mode="each",
-                    cbar_size="3.5%",
-                )
-                ims = [np.log(np.abs(im)) for im in value]
-                vmin = min([np.percentile(im, 2) for im in ims])
-                vmax = max([np.percentile(im, 98) for im in ims])
-                for ii, im in enumerate(ims):
-                    # The auto aspect stuff doesn't work here.
-                    grid[ii].set_aspect("auto", "box-forced")
-                    im = grid[ii].imshow(im, cmap=pyl.cm.viridis,
-                                         vmin=vmin, vmax=vmax,
-                                         aspect="auto",
-                                         extent=logpolars_extent)
-                    grid.cbar_axes[ii].colorbar(im)
+                reporting.imshow_logpolars(fig, value)
+
                 fname = "%s-%s.png" % (prefix, key)
                 _savefig(fig, fname)
             # if "s-orig" in key:
             elif key == "amas-orig":
-                grid = axg.ImageGrid(
-                    fig, 111,  # similar to subplot(111)
-                    nrows_ncols=(1, 2),
-                    add_all=True,
-                    axes_pad=0.4,
-                    aspect=False,
-                    cbar_pad=0.05,
-                    label_mode="L",
-                    cbar_mode="single",
-                    cbar_size="3.5%",
+                center = np.array(reports["amas-result"], float)
+                center[0] = 1.0 / center[0]
+                reporting.imshow_pcorr(
+                    fig, value, reports["amas-postproc"],
+                    reports["amas-extent"], center,
+                    reports["amas-success"], log_base=reports["base"]
                 )
-                extent = reports["amas-extent"]
-                vmax = value.max()
-                grid[0].set_title("pcorr --- original")
-                grid[0].imshow(
-                    value, vmin=0, aspect="auto",
-                    origin="lower", extent=extent, cmap=pyl.cm.viridis,
-                )
-                center = np.array(reports["amas-result"])[::-1]
-                patch = patches.Circle(center, 7, ec="r", fc="none")
-                grid[0].plot(center[0], center[1], "ro")
-                grid[0].text(center[0], center[1],
-                             "succ: {:.3g}".format(reports["amas-success"]),
-                             c="red", va="top", ha="center")
-                # grid[0].add_artist(patch)
-                grid[0].grid(c="w")
-                grid[1].set_title("constrained")
-                im = grid[1].imshow(
-                    reports["amas-postproc"],
-                    vmin=0, vmax=vmax, aspect="auto",
-                    origin="lower", extent=extent, cmap=pyl.cm.viridis,
-                )
-                grid[1].grid(c="w")
-                grid.cbar_axes[0].colorbar(im)
                 fname = "%s-%s.png" % (prefix, key)
                 _savefig(fig, fname)
 
-        grid = axg.ImageGrid(
-            fig, 111,  # similar to subplot(111)
-            nrows_ncols=(1, len(reports["asim"])),
-            add_all=True,
-            axes_pad=0.4,
-            label_mode="L",
-        )
-        for ii, img in enumerate(reports["asim"]):
-            grid[ii].imshow(img, cmap=pyl.cm.gray)
+        reporting.imshow_plain(fig, reports["asim"],
+                               ("template", "sample", "tformed sample"))
+
         # Here goes a plot of template, rotated and scaled subject and
         fname = "{}-after-rot.png".format(prefix)
         _savefig(fig, fname)
 
-        radius = 10
         for idx in range(2):
-            grid = axg.ImageGrid(
-                fig, 111,  # similar to subplot(111)
-                nrows_ncols=(1, 2),
-                share_all=False,
-                axes_pad=0.4,
-                cbar_pad=0.05,
-                label_mode="L",
-                cbar_mode="single",
-                cbar_size="3.5%",
-            )
-            center = np.array(reports["t{}-tvec".format(idx)])[::-1]
-            img = reports["t{}-orig".format(idx)]
-            halves = np.array(img.shape) / 2.0
+            halves = np.array(ims[0].shape) / 2.0
             extent = np.array((- halves[1], halves[1], - halves[0], halves[0]))
-            vmax = img.max()
-            grid[0].set_title("T pcorr {} --- original".format(idx))
-            grid[0].imshow(img, cmap=pyl.cm.viridis, origin="lower",
-                           extent=extent, vmin=0, vmax=vmax)
-            patch = patches.Circle(center, 7, ec="r", fc="none")
-            grid[0].add_artist(patch)
-            grid[0].grid(c="w")
-            grid[1].set_title("constrained")
-            img2 = reports["t{}-postproc".format(idx)]
-            im = grid[1].imshow(img2, cmap=pyl.cm.viridis, origin="lower",
-                                extent=extent, vmin=0, vmax=vmax)
-            grid[1].grid(c="w")
-            grid.cbar_axes[0].colorbar(im)
-
-            extent2 = np.zeros(4, int)
-            extent2[np.array((0, 2))] = center - radius
-            extent2[np.array((1, 3))] = center + radius
-            closeup = utils._get_subarr(img, center[::-1], radius)
-            """
-            grid[2].imshow(closeup, cmap=pyl.cm.viridis, interpolation="nearest", origin="lower",
-                           extent=extent2, vmin=0, vmax=vmax)
-            """
+            center = reports["t{}-tvec".format(idx)][::-1]
+            img = reports["t{}-orig".format(idx)]
+            reporting.imshow_pcorr(
+                fig, img, reports["t{}-postproc".format(idx)],
+                extent, center, reports["t{}-success".format(idx)]
+            )
 
             fname = "{}-t{}.png".format(prefix, idx)
             _savefig(fig, fname)
 
+        fig.clear()
         del fig
 
     # Seems that the reampling simply scales the translation

@@ -32,6 +32,8 @@
 import contextlib
 
 import numpy as np
+import matplotlib.pyplot as plt
+import mpl_toolkits.axes_grid1 as axg
 
 
 @contextlib.contextmanager
@@ -143,3 +145,133 @@ def slices2rects(slices, rect_cb):
         URC = np.array((sly.stop,  slx.stop))
         dims = URC - LLC
         rect_cb(ii, LLC, dims)
+
+
+def imshow_spectra(fig, spectra):
+    dfts_filt_extent = (-0.5, 0.5, -0.5, 0.5)
+    grid = axg.ImageGrid(
+        fig, 111, nrows_ncols=(1, 2),
+        add_all=True,
+        axes_pad=0.4, label_mode="L",
+        cbar_pad=0.05, cbar_mode="each", cbar_size="3.5%",
+    )
+    what = ("template", "subject")
+    for ii, im in enumerate(spectra):
+        grid[ii].set_title("log abs dfts - %s" % what[ii])
+        im = grid[ii].imshow(np.log(np.abs(im)), cmap=plt.cm.viridis,
+                             extent=dfts_filt_extent, )
+        grid.cbar_axes[ii].colorbar(im)
+    return fig
+
+
+def imshow_logpolars(fig, spectra):
+    logpolars_extent = (0, 0.5, 0, 180)
+    grid = axg.ImageGrid(
+        fig, 111, nrows_ncols=(2, 1),
+        add_all=True,
+        aspect=False,
+        axes_pad=0.4, label_mode="L",
+        cbar_pad=0.05, cbar_mode="each", cbar_size="3.5%",
+    )
+    ims = [np.log(np.abs(im)) for im in spectra]
+    vmin = min([np.percentile(im, 2) for im in ims])
+    vmax = max([np.percentile(im, 98) for im in ims])
+    for ii, im in enumerate(ims):
+        im = grid[ii].imshow(im, cmap=plt.cm.viridis, vmin=vmin, vmax=vmax,
+                             aspect="auto", extent=logpolars_extent)
+        grid.cbar_axes[ii].colorbar(im)
+
+    return fig
+
+
+def imshow_plain(fig, images, what, also_common=False):
+    ncols = len(images)
+    nrows = 1
+    if also_common:
+        nrows = 2
+    grid = axg.ImageGrid(
+        fig, 111,  nrows_ncols=(nrows, ncols), add_all=True,
+        axes_pad=0.4, label_mode="L",
+        cbar_pad=0.05, cbar_mode="each", cbar_size="3.5%",
+    )
+    images = [im.real for im in images]
+
+    for ii, im in enumerate(images):
+        vmin = np.percentile(im, 2)
+        vmax = np.percentile(im, 98)
+        grid[ii].set_title("individual cmap --- {}".format(what[ii]))
+        img = grid[ii].imshow(im, cmap=plt.cm.gray, origin="lower",
+                              vmin=vmin, vmax=vmax)
+        grid.cbar_axes[ii].colorbar(img)
+
+    if also_common:
+        vmin = min([np.percentile(im, 2) for im in images])
+        vmax = max([np.percentile(im, 98) for im in images])
+        for ii, im in enumerate(images):
+            grid[ii + ncols].set_title("common cmap --- {}".format(what[ii]))
+            im = grid[ii + ncols].imshow(im, cmap=plt.cm.viridis,
+                                         origin="lower", vmin=vmin, vmax=vmax)
+            grid.cbar_axes[ii + ncols].colorbar(im)
+
+    return fig
+
+
+def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
+    grid = axg.ImageGrid(
+        fig, 111,  # similar to subplot(111)
+        nrows_ncols=(1, 2),
+        add_all=True,
+        axes_pad=0.4,
+        aspect=False,
+        cbar_pad=0.05,
+        label_mode="L",
+        cbar_mode="single",
+        cbar_size="3.5%",
+    )
+    vmax = raw.max()
+    imshow_kwargs = dict(
+        vmin=0, vmax=vmax,
+        aspect="auto",
+        origin="lower", extent=extent,
+        cmap=plt.cm.viridis,
+    )
+    grid[0].set_title("pcorr --- original")
+    labels = ("translation y", "translation x")
+    if log_base is not None:
+        for dim in range(2):
+            grid[dim].set_xscale("log", basex=log_base)
+            grid[dim].get_xaxis().set_major_formatter(plt.ScalarFormatter())
+        labels = ("rotation / degrees", "scale change")
+    grid[0].set_ylabel(labels[0])
+    grid[0].imshow(raw, ** imshow_kwargs)
+
+    center = np.array(result)
+    # Otherwise plot would change xlim
+    grid[0].autoscale(False)
+    grid[0].plot(center[0], center[1], "o",
+                 color="r", fillstyle="none", markersize=18, lw=8)
+    grid[0].annotate("succ: {:.3g}".format(success), xy=center,
+                     xytext=(0, 8), textcoords='offset points',
+                     color="red", va="bottom", ha="center")
+    grid[1].set_title("pcorr --- constrained and filtered")
+    im = grid[1].imshow(filtered, ** imshow_kwargs)
+    grid.cbar_axes[0].colorbar(im)
+
+    # The common stuff
+    for idx in range(2):
+        grid[idx].grid(c="w")
+        grid[idx].set_xlabel(labels[1])
+
+    """
+    pl = fig.add_subplot(122)
+    extent2 = np.zeros(4, int)
+    radius = 8
+    center = (np.array(reports["amas-result-raw"], int)
+                + np.array(raw.shape, int) // 2)
+    closeup = utils._get_subarr(raw, center, radius)
+
+    pl.imshow(closeup, interpolation="nearest", origin="lower",
+              cmap=plt.cm.viridis, vmin=0, vmax=vmax)
+    """
+
+    return fig
