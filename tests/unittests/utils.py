@@ -197,15 +197,23 @@ class TestUtils(ut.TestCase):
         recon = np.zeros_like(inarr)
         # Float tile dimensions are possible, but they may cause problems.
         # Our code should handle them well.
+        coef = 0.8
         tileshp = (7.4, 6.3)
         tileshp_round = tuple(np.round(tileshp))
-        decomps = utils.decompose(inarr, tileshp, 0.8)
+        decomps = utils.decompose(inarr, tileshp, coef)
         for decarr, start in decomps:
             sshp = decarr.shape
             self.assertEqual(tileshp_round, sshp)
             recon[start[0]:start[0] + sshp[0],
                   start[1]:start[1] + sshp[1]] = decarr
         np.testing.assert_array_equal(inarr, recon)
+
+        starts = zip(* decomps)[1]
+        dshape = np.array(utils.starts2dshape(starts), int)
+        # vvv generic conditions decomp shape has to satisfy vvv
+        # np.testing.assert((dshape - 1) * tileshp * coef < smallshp)
+        # np.testing.assert(dshape * tileshp * coef >= smallshp)
+        np.testing.assert_array_equal(dshape, (6, 10))
 
     @ut.skip("The tested function is deprecated")
     def test_fftshift(self):

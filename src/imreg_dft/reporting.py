@@ -32,8 +32,8 @@
 import contextlib
 
 import numpy as np
-import matplotlib.pyplot as plt
-import mpl_toolkits.axes_grid1 as axg
+# We intentionally don't import matplotlib on this level - we want this module
+# to be importable even if one doesn't have matplotlib
 
 
 @contextlib.contextmanager
@@ -47,7 +47,7 @@ def report_wrapper(orig, index):
         ret.pop_index(index)
 
 
-class ReportsWrapper(object):
+class ReportsWrapper(dict):
     """
     A wrapped dictionary.
     It allows a parent function to put it in a mode, in which it will
@@ -56,27 +56,19 @@ class ReportsWrapper(object):
     def __init__(self, reports):
         assert reports is not None, \
             ("Use the report_wrapper wrapper factory, don't "
-             "create wrappers from None")
-        self.reports = reports
+             "create wrappers from {}".format(reports))
+        super(dict, self).__init__(reports)
+        self.update(reports)
         self.prefixes = []
         self.idx = ""
 
-    def keys(self):
-        return self.reports.keys()
-
-    def pop(self, what):
-        return self.reports.pop(what)
-
-    def items(self):
-        return self.reports.items()
-
     def __setitem__(self, key, value):
         key = self.idx + key
-        self.reports[key] = value
+        dict.__setitem__(self, key, value)
 
     def __getitem__(self, key):
-        assert self.reports is not None
-        return self.reports[key]
+        key = self.idx + key
+        return dict.__getitem__(self, key)
 
     def _idx2prefix(self, idx):
         ret = "%03d-" % idx
@@ -117,17 +109,22 @@ class Rect_mpl(Rect_callback):
     """
     def __init__(self, subplot):
         self.subplot = subplot
+        self.ecs = ("w", "k")
+        self.ec = 0
+
+    def _flip_ec(self, dic):
+        dic["ec"] = self.ecs[self.ec % 2]
+        self.ec += 1
 
     def _call(self, idx, LLC, dims, special=False):
-        # We don't want to import this on the top-level due to test stuff
         import matplotlib.pyplot as plt
         # Get from the numpy -> MPL coord system
         LLC = LLC[::-1]
         URC = LLC + np.array((dims[1], dims[0]))
-        kwargs = dict(fc='none')
+        kwargs = dict(fc='none', lw=4, alpha=0.5)
+        self._flip_ec(kwargs)
         if special:
             kwargs["fc"] = 'w'
-            kwargs["alpha"] = 0.5
         rect = plt.Rectangle(LLC, dims[1], dims[0], ** kwargs)
         self.subplot.add_artist(rect)
         center = (URC + LLC) / 2.0
@@ -148,6 +145,8 @@ def slices2rects(slices, rect_cb):
 
 
 def imshow_spectra(fig, spectra):
+    import matplotlib.pyplot as plt
+    import mpl_toolkits.axes_grid1 as axg
     dfts_filt_extent = (-0.5, 0.5, -0.5, 0.5)
     grid = axg.ImageGrid(
         fig, 111, nrows_ncols=(1, 2),
@@ -165,6 +164,8 @@ def imshow_spectra(fig, spectra):
 
 
 def imshow_logpolars(fig, spectra):
+    import matplotlib.pyplot as plt
+    import mpl_toolkits.axes_grid1 as axg
     logpolars_extent = (0, 0.5, 0, 180)
     grid = axg.ImageGrid(
         fig, 111, nrows_ncols=(2, 1),
@@ -185,6 +186,8 @@ def imshow_logpolars(fig, spectra):
 
 
 def imshow_plain(fig, images, what, also_common=False):
+    import matplotlib.pyplot as plt
+    import mpl_toolkits.axes_grid1 as axg
     ncols = len(images)
     nrows = 1
     if also_common:
@@ -217,6 +220,8 @@ def imshow_plain(fig, images, what, also_common=False):
 
 
 def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
+    import matplotlib.pyplot as plt
+    import mpl_toolkits.axes_grid1 as axg
     grid = axg.ImageGrid(
         fig, 111,  # similar to subplot(111)
         nrows_ncols=(1, 2),
@@ -275,3 +280,92 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
     """
 
     return fig
+
+
+def _savefig(fig, fname):
+    fig.savefig(fname, bbox_inches="tight")
+    fig.clear()
+
+
+def imshow_tiles(im0, slices, prefix):
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots()
+    axes.imshow(im0, cmap=plt.cm.viridis)
+    callback = Rect_mpl(axes)
+    slices2rects(slices, callback)
+
+    fname = "%s-tiles.png" % prefix
+    _savefig(fig, fname)
+
+
+def imshow_results(successes, prefix):
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots()
+    axes.plot(successes, "o")
+    axes.grid()
+
+    fname = "%s-successes.png" % prefix
+    _savefig(fig, fname)
+
+
+def report_tile(reports, prefix):
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(18, 6))
+    for key, value in reports.items():
+        if "ims-filt" in key:
+            imshow_plain(fig, value, ("template", "sample"), True)
+
+            fname = "%s-%s.png" % (prefix, key)
+            _savefig(fig, fname)
+        elif "dfts-filt" in key:
+            imshow_spectra(fig, value)
+
+            fname = "%s-%s.png" % (prefix, key)
+            _savefig(fig, fname)
+        elif "logpolars" in key:
+            imshow_logpolars(fig, value)
+
+            fname = "%s-%s.png" % (prefix, key)
+            _savefig(fig, fname)
+        # if "s-orig" in key:
+        elif "amas-orig" in key:
+            center = np.array(reports["amas-result"], float)
+            center[0] = 1.0 / center[0]
+            imshow_pcorr(
+                fig, value, reports["amas-postproc"],
+                reports["amas-extent"], center,
+                reports["amas-success"], log_base=reports["base"]
+            )
+            fname = "%s-%s.png" % (prefix, key)
+            _savefig(fig, fname)
+
+    imshow_plain(fig, reports["asim"],
+                 ("template", "sample", "tformed sample"))
+
+    try:
+        prefix += "-{}".format(reports.prefixes[-1])
+    except AttributeError:
+        # reports is then just a dict
+        pass
+
+    # Here goes a plot of template, rotated and scaled subject and
+    fname = "{}-after-rot.png".format(prefix)
+    _savefig(fig, fname)
+
+    for idx in range(2):
+        img = reports["t{}-orig".format(idx)]
+        halves = np.array(img.shape) / 2.0
+        extent = np.array((- halves[1], halves[1], - halves[0], halves[0]))
+        center = reports["t{}-tvec".format(idx)][::-1]
+        imshow_pcorr(
+            fig, img, reports["t{}-postproc".format(idx)],
+            extent, center, reports["t{}-success".format(idx)]
+        )
+
+        fname = "{}-t{}.png".format(prefix, idx)
+        _savefig(fig, fname)
+
+    fig.clear()
+    del fig

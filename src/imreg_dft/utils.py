@@ -746,6 +746,26 @@ def decompose(what, outshp, coef):
     return decomps
 
 
+def starts2dshape(starts):
+    """
+    Given starts of tiles, deduce the shape of the decomposition from them.
+
+    Args:
+        starts (list of ints)
+
+    Return:
+        tuple: shape of the decomposition
+    """
+    ncols = 1
+    for start in starts[1:]:
+        if start[1] == 0:
+            break
+        ncols += 1
+    nrows = len(starts) // ncols
+    assert len(starts) == nrows * ncols
+    return (nrows, ncols)
+
+
 def getSlices(inshp, outshp, coef):
     shape = inshp
     starts = getCuts(shape, outshp, coef)

@@ -148,12 +148,9 @@ def create_base_parser(parser):
                         help="Where to save the transformed subject.")
 
 
-def create_parser():
-    parser = ap.ArgumentParser()
+def update_parser_imreg(parser):
     parser.add_argument('template')
     parser.add_argument('subject')
-    parser.add_argument('--show', action="store_true", default=False,
-                        help="Whether to show registration result")
     parser.add_argument('--lowpass', type=_float_tuple,
                         default=None, metavar="LOW_THRESH,HIGH_THRESH",
                         help="1,1 means no-op, 0.8,0.9 is a mild filter")
@@ -213,14 +210,17 @@ def create_parser():
         metavar="MEAN[,STD]", default=(0, None),
         help="The mean and standard deviation of the expected Y translation. ")
     loader.update_parser(parser)
+
+
+def create_parser():
+    parser = ap.ArgumentParser()
+    update_parser_imreg(parser)
+    parser.add_argument('--show', action="store_true", default=False,
+                        help="Whether to show registration result")
     return parser
 
 
-def main():
-    parser = create_parser()
-
-    args = parser.parse_args()
-
+def args2dict(args):
     loaders = loader.settle_loaders(args, (args.template, args.subject))
 
     # We need tuples in the parser and lists further in the code.
@@ -252,16 +252,24 @@ def main():
         constraints=constraints,
         output=args.output,
         loaders=loaders,
+        reports=None,
     )
+    return opts
+
+
+def main():
+    parser = create_parser()
+
+    args = parser.parse_args()
+
+    opts = args2dict(args)
     run(args.template, args.subject, opts)
 
 
 def _get_resdict(imgs, opts, tosa=None):
     import numpy as np
 
-    reports = None
-    # reports = dict()
-
+    reports = opts.get("reports", None)
     tiledim = None
     if opts["tile"]:
         shapes = np.array([np.array(img.shape) for img in imgs])

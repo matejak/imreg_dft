@@ -23,14 +23,14 @@ class TestReports(ut.TestCase):
         wrapper.pop_prefix("1-")
         wrapper["five"] = 5
 
-        self.assertIn("one", wrapped)
-        self.assertIn("1-two", wrapped)
-        self.assertIn("5-three", wrapped)
-        self.assertIn("1-four", wrapped)
-        self.assertIn("five", wrapped)
+        self.assertIn("one", wrapper)
+        self.assertIn("1-two", wrapper)
+        self.assertIn("5-three", wrapper)
+        self.assertIn("1-four", wrapper)
+        self.assertIn("five", wrapper)
 
         with self.assertRaises(AssertionError):
-            wrapper_none = reporting.ReportsWrapper(None)
+            reporting.ReportsWrapper(None)
 
 
 if __name__ == '__main__':

@@ -119,11 +119,6 @@ def _postprocess_unextend(ims, im2, extend, rcoef=1):
     return ret
 
 
-def _savefig(fig, fname):
-    fig.savefig(fname, bbox_inches="tight")
-    fig.clear()
-
-
 def process_images(ims, opts, tosa=None, get_unextended=False,
                    reports=None):
     """
@@ -146,60 +141,7 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
         opts["filter_pcorr"], opts["exponent"], reports=reports)
 
     if reports is not None:
-        import pylab as pyl
-        fig = pyl.figure(figsize=(18, 6))
-        prefix = "report"
-        for key, value in reports.items():
-            if "ims-filt" in key:
-                reporting.imshow_plain(fig, value,
-                                       ("template", "sample"), True)
-
-                fname = "%s-%s.png" % (prefix, key)
-                _savefig(fig, fname)
-            elif "dfts-filt" in key:
-                reporting.imshow_spectra(fig, value)
-
-                fname = "%s-%s.png" % (prefix, key)
-                _savefig(fig, fname)
-            elif "logpolars" in key:
-                reporting.imshow_logpolars(fig, value)
-
-                fname = "%s-%s.png" % (prefix, key)
-                _savefig(fig, fname)
-            # if "s-orig" in key:
-            elif key == "amas-orig":
-                center = np.array(reports["amas-result"], float)
-                center[0] = 1.0 / center[0]
-                reporting.imshow_pcorr(
-                    fig, value, reports["amas-postproc"],
-                    reports["amas-extent"], center,
-                    reports["amas-success"], log_base=reports["base"]
-                )
-                fname = "%s-%s.png" % (prefix, key)
-                _savefig(fig, fname)
-
-        reporting.imshow_plain(fig, reports["asim"],
-                               ("template", "sample", "tformed sample"))
-
-        # Here goes a plot of template, rotated and scaled subject and
-        fname = "{}-after-rot.png".format(prefix)
-        _savefig(fig, fname)
-
-        for idx in range(2):
-            halves = np.array(ims[0].shape) / 2.0
-            extent = np.array((- halves[1], halves[1], - halves[0], halves[0]))
-            center = reports["t{}-tvec".format(idx)][::-1]
-            img = reports["t{}-orig".format(idx)]
-            reporting.imshow_pcorr(
-                fig, img, reports["t{}-postproc".format(idx)],
-                extent, center, reports["t{}-success".format(idx)]
-            )
-
-            fname = "{}-t{}.png".format(prefix, idx)
-            _savefig(fig, fname)
-
-        fig.clear()
-        del fig
+        reporting.report_tile(reports, "reports")
 
     # Seems that the reampling simply scales the translation
     resdict["Dt"] /= rcoef
@@ -282,24 +224,24 @@ def _fill_globals(tiles, poss, image, opts):
 
 def settle_tiles(imgs, tiledim, opts, reports=None):
     global _SHIFTS
-    coef = 0.35
+    coef = 0.41
     img0 = imgs[0]
 
     if reports is not None:
         slices = utils.getSlices(img0.shape, tiledim, coef)
-        import pylab as pyl
-        fig, axes = pyl.subplots()
-        axes.imshow(img0)
-        callback = reporting.Rect_mpl(axes)
-        reporting.slices2rects(slices, callback)
-        fig.savefig("tiling.png")
+        reporting.imshow_tiles(img0, slices, opts["prefix"])
 
     tiles, poss = zip(* ird.utils.decompose(img0, tiledim, coef))
+    ncols = utils.starts2dshape(poss)[1]
 
     _fill_globals(tiles, poss, imgs[1], opts)
 
     for ii, pos in enumerate(poss):
         process_tile(ii, reports)
+        tile_coord = (ii // ncols, ii % ncols)
+
+    if reports is not None:
+        reporting.imshow_results(_SUCCS, opts["prefix"])
 
     """
     if ncores == 0:  # no multiprocessing (to see errors)
