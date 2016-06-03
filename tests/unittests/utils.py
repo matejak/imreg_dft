@@ -208,7 +208,7 @@ class TestUtils(ut.TestCase):
                   start[1]:start[1] + sshp[1]] = decarr
         np.testing.assert_array_equal(inarr, recon)
 
-        starts = zip(* decomps)[1]
+        starts = list(zip(* decomps))[1]
         dshape = np.array(utils.starts2dshape(starts), int)
         # vvv generic conditions decomp shape has to satisfy vvv
         # np.testing.assert((dshape - 1) * tileshp * coef < smallshp)

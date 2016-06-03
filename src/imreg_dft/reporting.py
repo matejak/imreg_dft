@@ -57,7 +57,6 @@ class ReportsWrapper(dict):
         assert reports is not None, \
             ("Use the report_wrapper wrapper factory, don't "
              "create wrappers from {}".format(reports))
-        super(dict, self).__init__(reports)
         self.update(reports)
         self.prefixes = []
         self.idx = ""
