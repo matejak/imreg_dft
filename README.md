@@ -1,7 +1,7 @@
 imreg_dft
 =========
 
-[![Latest Version on PyPi](https://pypip.in/version/imreg_dft/badge.svg)](https://pypi.python.org/pypi/imreg_dft)
+[![Latest Version on PyPi](http://img.shields.io/pypi/v/imreg_dft.svg)](https://pypi.python.org/pypi/imreg_dft)
 [![Build Status](https://travis-ci.org/matejak/imreg_dft.svg?branch=master)](https://travis-ci.org/matejak/imreg_dft)
 [![Documentation Status](https://readthedocs.org/projects/imreg-dft/badge/?version=latest)](https://readthedocs.org/projects/imreg-dft/?badge=latest)
 
