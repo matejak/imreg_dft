@@ -225,14 +225,11 @@ def _fill_globals(tiles, poss, image, opts):
 def settle_tiles(imgs, tiledim, opts, reports=None):
     global _SHIFTS
     coef = 0.41
+    coef = 0.81
     img0 = imgs[0]
 
-    if reports is not None:
-        slices = utils.getSlices(img0.shape, tiledim, coef)
-        reporting.imshow_tiles(img0, slices, opts["prefix"])
-
     tiles, poss = zip(* ird.utils.decompose(img0, tiledim, coef))
-    ncols = utils.starts2dshape(poss)[1]
+    nrows, ncols = utils.starts2dshape(poss)
 
     _fill_globals(tiles, poss, imgs[1], opts)
 
@@ -241,7 +238,11 @@ def settle_tiles(imgs, tiledim, opts, reports=None):
         tile_coord = (ii // ncols, ii % ncols)
 
     if reports is not None:
-        reporting.imshow_results(_SUCCS, opts["prefix"])
+        shape = (nrows, ncols)
+        reporting.imshow_results(_SUCCS, shape, opts["prefix"])
+
+        slices = utils.getSlices(img0.shape, tiledim, coef)
+        reporting.imshow_tiles(img0, slices, shape, opts["prefix"])
 
     """
     if ncores == 0:  # no multiprocessing (to see errors)

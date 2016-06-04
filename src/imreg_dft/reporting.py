@@ -106,14 +106,17 @@ class Rect_mpl(Rect_callback):
     """
     A class that can draw image tiles nicely
     """
-    def __init__(self, subplot):
+    def __init__(self, subplot, shape):
         self.subplot = subplot
         self.ecs = ("w", "k")
-        self.ec = 0
+        self.shape = shape
 
-    def _flip_ec(self, dic):
-        dic["ec"] = self.ecs[self.ec % 2]
-        self.ec += 1
+    def _get_color(self, coords, dic=None):
+        lidx = sum(coords)
+        ret = self.ecs[lidx % 2]
+        if dic is not None:
+            dic["ec"] = ret
+        return ret
 
     def _call(self, idx, LLC, dims, special=False):
         import matplotlib.pyplot as plt
@@ -121,13 +124,16 @@ class Rect_mpl(Rect_callback):
         LLC = LLC[::-1]
         URC = LLC + np.array((dims[1], dims[0]))
         kwargs = dict(fc='none', lw=4, alpha=0.5)
-        self._flip_ec(kwargs)
+        coords = np.unravel_index(idx, self.shape)
+        color = self._get_color(coords, kwargs)
         if special:
             kwargs["fc"] = 'w'
         rect = plt.Rectangle(LLC, dims[1], dims[0], ** kwargs)
         self.subplot.add_artist(rect)
         center = (URC + LLC) / 2.0
-        self.subplot.text(center[0], center[1], "(%02d)" % idx)
+        self.subplot.text(center[0], center[1],
+                          "%02d\n(%d, %d)" % (idx, coords[0], coords[1]),
+                          va="center", ha="center", color=color)
 
 
 def slices2rects(slices, rect_cb):
@@ -286,24 +292,29 @@ def _savefig(fig, fname):
     fig.clear()
 
 
-def imshow_tiles(im0, slices, prefix):
+def imshow_tiles(im0, slices, shape, prefix):
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots()
     axes.imshow(im0, cmap=plt.cm.viridis)
-    callback = Rect_mpl(axes)
+    callback = Rect_mpl(axes, shape)
     slices2rects(slices, callback)
 
     fname = "%s-tiles.png" % prefix
     _savefig(fig, fname)
 
 
-def imshow_results(successes, prefix):
+def imshow_results(successes, shape, prefix):
     import matplotlib.pyplot as plt
+    toshow = successes.reshape(shape)
 
     fig, axes = plt.subplots()
-    axes.plot(successes, "o")
-    axes.grid()
+    axes.imshow(toshow, cmap=plt.cm.viridis, interpolation="none")
+
+    coords = np.unravel_index(np.arange(len(successes)), shape)
+    for idx, coord in enumerate(zip(* coords)):
+        axes.text(coord[1], coord[0], "%02d" % (idx,),
+                  va="center", ha="center", color="r",)
 
     fname = "%s-successes.png" % prefix
     _savefig(fig, fname)
@@ -344,7 +355,8 @@ def report_tile(reports, prefix):
                  ("template", "sample", "tformed sample"))
 
     try:
-        prefix += "-{}".format(reports.prefixes[-1])
+        # the reports prefix ends with '-', which we take away
+        prefix += "-{}".format(reports.prefixes[-1][:-1])
     except AttributeError:
         # reports is then just a dict
         pass
