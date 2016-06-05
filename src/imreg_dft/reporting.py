@@ -287,8 +287,8 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
     return fig
 
 
-def _savefig(fig, fname):
-    fig.savefig(fname, bbox_inches="tight")
+def _savefig(fig, fname_base):
+    fig.savefig("{}.{}".format(fname_base, "png"), bbox_inches="tight")
     fig.clear()
 
 
@@ -300,7 +300,7 @@ def imshow_tiles(im0, slices, shape, prefix):
     callback = Rect_mpl(axes, shape)
     slices2rects(slices, callback)
 
-    fname = "%s-tiles.png" % prefix
+    fname = "%s-tiles" % prefix
     _savefig(fig, fname)
 
 
@@ -316,7 +316,7 @@ def imshow_results(successes, shape, prefix):
         axes.text(coord[1], coord[0], "%02d" % (idx,),
                   va="center", ha="center", color="r",)
 
-    fname = "%s-successes.png" % prefix
+    fname = "%s-successes" % prefix
     _savefig(fig, fname)
 
 
@@ -325,19 +325,19 @@ def report_tile(reports, prefix):
     fig = plt.figure(figsize=(18, 6))
     for key, value in reports.items():
         if "ims-filt" in key:
-            imshow_plain(fig, value, ("template", "sample"), True)
+            imshow_plain(fig, value, ("template", "subject"), True)
 
-            fname = "%s-%s.png" % (prefix, key)
+            fname = "%s-%s" % (prefix, key)
             _savefig(fig, fname)
         elif "dfts-filt" in key:
             imshow_spectra(fig, value)
 
-            fname = "%s-%s.png" % (prefix, key)
+            fname = "%s-%s" % (prefix, key)
             _savefig(fig, fname)
         elif "logpolars" in key:
             imshow_logpolars(fig, value)
 
-            fname = "%s-%s.png" % (prefix, key)
+            fname = "%s-%s" % (prefix, key)
             _savefig(fig, fname)
         # if "s-orig" in key:
         elif "amas-orig" in key:
@@ -348,11 +348,11 @@ def report_tile(reports, prefix):
                 reports["amas-extent"], center,
                 reports["amas-success"], log_base=reports["base"]
             )
-            fname = "%s-%s.png" % (prefix, key)
+            fname = "%s-%s" % (prefix, key)
             _savefig(fig, fname)
 
     imshow_plain(fig, reports["asim"],
-                 ("template", "sample", "tformed sample"))
+                 ("template", "subject", "tformed subject"))
 
     try:
         # the reports prefix ends with '-', which we take away
@@ -362,7 +362,7 @@ def report_tile(reports, prefix):
         pass
 
     # Here goes a plot of template, rotated and scaled subject and
-    fname = "{}-after-rot.png".format(prefix)
+    fname = "{}-after-rot".format(prefix)
     _savefig(fig, fname)
 
     for idx in range(2):
@@ -375,7 +375,7 @@ def report_tile(reports, prefix):
             extent, center, reports["t{}-success".format(idx)]
         )
 
-        fname = "{}-t{}.png".format(prefix, idx)
+        fname = "{}-t{}".format(prefix, idx)
         _savefig(fig, fname)
 
     fig.clear()
