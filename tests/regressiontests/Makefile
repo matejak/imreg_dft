@@ -23,6 +23,7 @@ CHECKS = \
 	check-constraints1 \
 	check-constraints2 \
 	check-examples \
+	check-tform \
 	$(NUL)
 
 check: $(CHECKS)
@@ -69,5 +70,9 @@ check-tiles: $(EXAMPLESDIR)/tiling/big.png $(EXAMPLESDIR)/tiling/small.png
 check-examples: $(RSRCDIR)/code/translation.py $(RSRCDIR)/code/similarity.py
 	cd $(RSRCDIR)/code && IMSHOW=no $(PYTHON) $(notdir $(word 1,$^)) > /dev/null
 	cd $(RSRCDIR)/code && IMSHOW=no $(PYTHON) $(notdir $(word 2,$^)) > /dev/null
+
+check-tform: $(EXAMPLESDIR)/sample1.png $(EXAMPLESDIR)/sample3.png
+	ird $^ --print-result -o temp-orig.png | ird-tform $(word 2,$^) --template $< temp-tform.png && $(PYTHON) $(RTESTDIR)/check_image_identity.py temp-orig.png temp-tform.png
+	$(RM) temp-orig.png temp-tform.png
 
 .PHONY: $(CHECKS)
