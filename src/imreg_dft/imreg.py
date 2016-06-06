@@ -47,6 +47,7 @@ except ImportError:
 import scipy.ndimage.interpolation as ndii
 
 import imreg_dft.utils as utils
+from imreg_dft import reporting
 
 
 __all__ = ['translation', 'similarity', 'transform_img',
@@ -56,7 +57,8 @@ __all__ = ['translation', 'similarity', 'transform_img',
 def _logpolar_filter(shape):
     """
     Make a radial cosine filter for the logpolar transform.
-    This filter suppresses low frequencies and completely removes the zero freq.
+    This filter suppresses low frequencies and completely removes
+    the zero freq.
     """
     yy = np.linspace(- np.pi / 2., np.pi / 2., shape[0])[:, np.newaxis]
     xx = np.linspace(- np.pi / 2., np.pi / 2., shape[1])[np.newaxis, :]
@@ -86,8 +88,8 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
         reports (optional)
 
     Returns:
-        tuple: Scale, angle. Describes the relationship of the subject  image to
-        the first one.
+        tuple: Scale, angle. Describes the relationship of
+        the subject image to the first one.
     """
     assert len(ims) == 2, \
         "Only two images are supported as input"
@@ -106,12 +108,6 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     stuffs = [_logpolar(np.abs(dft), pcorr_shape, log_base)
               for dft in dfts]
 
-    if 0:
-        import pylab as pyl
-        pyl.figure(); pyl.imshow(ims[0]);
-        pyl.figure(); pyl.imshow(ims[1]);
-        pyl.show()
-
     (arg_ang, arg_rad), success = _phase_correlation(
         stuffs[0], stuffs[1],
         utils.argmax_angscale, log_base, exponent, constraints, reports)
@@ -125,18 +121,24 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     scale = 1.0 / scale
 
     if reports is not None:
-        reports["dfts-filt"] = dfts
-        reports["ims-filt"] = [fft.ifft2(np.fft.ifftshift(dft))
-                               for dft in dfts]
-        reports["logpolars"] = stuffs
+        if reports.show("spectra"):
+            reports["dfts-filt"] = dfts
+        if reports.show("inputs") or reports.show("tile_info"):
+            reports["ims-filt"] = [fft.ifft2(np.fft.ifftshift(dft))
+                                   for dft in dfts]
+        if reports.show("logpolar"):
+            reports["logpolars"] = stuffs
         reports["base"] = log_base
 
-        reports["amas-result-raw"] = (arg_ang, arg_rad)
-        reports["amas-result"] = (scale, angle)
-        reports["amas-success"] = success
-        extent_el = pcorr_shape[1] / 2.0
-        reports["amas-extent"] = (log_base ** (-extent_el), log_base ** extent_el,
-                             -90, 90)
+        if reports.show("scale_angle"):
+            reports["amas-result-raw"] = (arg_ang, arg_rad)
+            reports["amas-result"] = (scale, angle)
+            reports["amas-success"] = success
+            extent_el = pcorr_shape[1] / 2.0
+            reports["amas-extent"] = (
+                log_base ** (-extent_el), log_base ** extent_el,
+                -90, 90
+            )
 
     if not 0.5 < scale < 2:
         raise ValueError(
@@ -168,22 +170,23 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
             The value 1 is neutral, the converse of 2 is 1 / 2 etc.
 
     Returns:
-        dict: Contains following keys: ``angle``, ``tvec`` (Y, X), and ``success``.
+        dict: Contains following keys: ``angle``, ``tvec`` (Y, X),
+            and ``success``.
     """
     angle = 0
     report_one = report_two = None
-    if reports is not None:
-        report_one = dict()
-        report_two = dict()
+    if reports is not None and reports.show("translation"):
+        report_one = reporting.ReportsWrapper(dict())
+        report_two = reporting.ReportsWrapper(dict())
 
     # We estimate translation for the original image...
     tvec, succ = _translation(im0, im1, filter_pcorr, constraints, report_one)
-    # ... and for the 180-degrees rotated image (the rotation estimation doesn't
-    # distinguish rotation of x vs x + 180deg).
+    # ... and for the 180-degrees rotated image (the rotation estimation
+    # doesn't distinguish rotation of x vs x + 180deg).
     tvec2, succ2 = _translation(im0, utils.rot180(im1), filter_pcorr,
                                 constraints, report_two)
 
-    if reports is not None:
+    if reports is not None and reports.show("translation"):
         reports["t0-orig"] = report_one["amt-orig"]
         reports["t0-postproc"] = report_one["amt-postproc"]
         reports["t0-success"] = succ
@@ -198,12 +201,6 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
         tvec = tvec2
         succ = succ2
         angle += 180
-
-    if 0:
-        # show the filtered template
-        import pylab as pyl
-        pyl.figure(); pyl.imshow(im0, cmap=pyl.cm.gray)
-        pyl.show()
 
     ret = dict(tvec=tvec, success=succ, angle=angle)
     return ret
@@ -274,7 +271,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
     constraints_dynamic["scale"] = list(constraints["scale"])
     constraints_dynamic["angle"] = list(constraints["angle"])
 
-    if reports is not None:
+    if reports is not None and reports.show("transformed"):
         reports["asim"] = [im0.copy(), im2.copy()]
 
     for ii in range(numiter):
@@ -288,7 +285,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
 
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
-        if reports is not None:
+        if reports is not None and reports.show("transformed"):
             reports["asim"].append(im2.copy())
 
     # Here we look how is the turn-180
@@ -381,11 +378,6 @@ def similarity(im0, im1, numiter=1, order=3, constraints=None,
     im3 = utils.frame_img(im2, imask, 10)
 
     res["timg"] = im3
-    if 0:
-        # showing result before and after "framing"
-        import pylab as pyl
-        pyl.figure(); pyl.imshow(im2); pyl.show()
-        pyl.figure(); pyl.imshow(im3); pyl.show()
     return res
 
 
@@ -463,14 +455,6 @@ def _phase_correlation(im0, im1, callback=None, * args):
     cps = abs(fft.ifft2((f0 * f1.conjugate()) / (abs(f0) * abs(f1) + eps)))
     # scps = shifted cps
     scps = fft.fftshift(cps)
-
-    if 0:
-        # show operands and cross-power spectra
-        import pylab as pyl
-        pyl.figure(); pyl.imshow(im0);
-        pyl.figure(); pyl.imshow(im1);
-        pyl.figure(); pyl.imshow(scps);
-        pyl.show()
 
     (t0, t1), success = callback(scps, * args)
     ret = np.array((t0, t1))
@@ -615,7 +599,8 @@ def _get_log_base(shape, new_r):
 def _logpolar(image, shape, log_base, bgval=None):
     """
     Return log-polar transformed image
-    Takes into account anisotropicity of the freq spectrum of rectangular images
+    Takes into account anisotropicity of the freq spectrum
+    of rectangular images
 
     Args:
         image: The image to be transformed

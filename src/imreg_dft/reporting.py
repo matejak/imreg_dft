@@ -52,17 +52,17 @@ class ReportsWrapper(dict):
     It allows a parent function to put it in a mode, in which it will
     prefix keys of items set.
     """
-    def __init__(self, reports, toshow):
+    def __init__(self, reports, toshow=""):
         assert reports is not None, \
             ("Use the report_wrapper wrapper factory, don't "
              "create wrappers from {}".format(reports))
         self.update(reports)
-        self.prefixes = []
+        self.prefixes = [""]
         self.idx = ""
         self._show = dict(
             inputs="i" in toshow,
             spectra="s" in toshow,
-            logpolars="l" in toshow,
+            logpolar="l" in toshow,
             tile_info="t" in toshow,
             translation="1" in toshow,
             scale_angle="2" in toshow,
@@ -302,31 +302,22 @@ def _savefig(fig, fname_base):
 
 
 def imshow_tiles(im0, slices, shape, prefix):
-    import matplotlib.pyplot as plt
-
-    fig, axes = plt.subplots()
+    axes = fig.add_subplot(111)
     axes.imshow(im0, cmap=plt.cm.viridis)
     callback = Rect_mpl(axes, shape)
     slices2rects(slices, callback)
 
-    fname = "%s-tiles" % prefix
-    _savefig(fig, fname)
 
-
-def imshow_results(successes, shape, prefix):
-    import matplotlib.pyplot as plt
+def imshow_results(fig, successes, shape, prefix):
     toshow = successes.reshape(shape)
 
-    fig, axes = plt.subplots()
+    axes = fig.add_subplot(111)
     axes.imshow(toshow, cmap=plt.cm.viridis, interpolation="none")
 
     coords = np.unravel_index(np.arange(len(successes)), shape)
     for idx, coord in enumerate(zip(* coords)):
         axes.text(coord[1], coord[0], "%02d" % (idx,),
                   va="center", ha="center", color="r",)
-
-    fname = "%s-successes" % prefix
-    _savefig(fig, fname)
 
 
 def mk_factory(prefix, basedim, dpi=150, ftype="png"):
@@ -347,22 +338,19 @@ def mk_factory(prefix, basedim, dpi=150, ftype="png"):
 
 
 def report_tile(reports, prefix, aspect):
-    import matplotlib.pyplot as plt
     basedim = 5.5 * np.array((aspect, 1), float)
     fig_factory = mk_factory(prefix, basedim)
     for key, value in reports.items():
-        if "ims-filt" in key:
-            fig = plt.figure(figsize=basedim * np.array((2, 2)))
+        if "ims-filt" in key and reports.show("inputs"):
             with fig_factory(key, 2, 2) as fig:
                 imshow_plain(fig, value, ("template", "subject"), True)
-        elif "dfts-filt" in key:
+        elif "dfts-filt" in key and reports.show("spectra"):
             with fig_factory(key, 2, 1, False) as fig:
                 imshow_spectra(fig, value)
-        elif "logpolars" in key:
+        elif "logpolars" in key and reports.show("logpolar"):
             with fig_factory(key, 1, 1.4, False) as fig:
                 imshow_logpolars(fig, value)
-        # if "s-orig" in key:
-        elif "amas-orig" in key:
+        elif "amas-orig" in key and reports.show("scale_angle"):
             with fig_factory(key, 2, 1) as fig:
                 center = np.array(reports["amas-result"], float)
                 center[0] = 1.0 / center[0]
@@ -371,27 +359,31 @@ def report_tile(reports, prefix, aspect):
                     reports["amas-extent"], center,
                     reports["amas-success"], log_base=reports["base"]
                 )
+        elif "tile-successes" in key and reports.show("tile_info"):
+            with fig_factory("tile-successes", 1, 1) as fig:
+                imshow_results(fig, reports["tiles-successes"],
+                               reports["tiles-shape"])
+        elif "tile-decomp" in key and reports.show("tile_info"):
+            with fig_factory("tile-decomposition", 1, 1) as fig:
+                imshow_tiles(fig, reports["ims-filt"][0],
+                             reports["tiles-decomp"], reports["tiles-shape"])
+        elif "asim" in key and reports.show("transformed"):
+            basename = "{}{}".format(reports.prefixes[-1], "after-rot")
 
-    basename = "after-rot"
-    try:
-        basename = "{}{}".format(reports.prefixes[-1], basename)
-    except AttributeError:
-        # reports is then just a dict
-        pass
-
-    with fig_factory(basename, 3, 1) as fig:
-        imshow_plain(fig, reports["asim"],
-                     ("template", "subject", "tformed subject"))
-
-    t_flip = ("0", "180")
-    for idx in range(2):
-        basename = "t_{}".format(t_flip[idx])
-        with fig_factory(basename, 2, 1) as fig:
-            img = reports["t{}-orig".format(idx)]
-            halves = np.array(img.shape) / 2.0
-            extent = np.array((- halves[1], halves[1], - halves[0], halves[0]))
-            center = reports["t{}-tvec".format(idx)][::-1]
-            imshow_pcorr(
-                fig, img, reports["t{}-postproc".format(idx)],
-                extent, center, reports["t{}-success".format(idx)]
-            )
+            with fig_factory(basename, 3, 1) as fig:
+                imshow_plain(fig, value,
+                             ("template", "subject", "tformed subject"))
+        elif "t0-orig" in key and reports.show("translation"):
+            t_flip = ("0", "180")
+            for idx in range(2):
+                basename = "t_{}".format(t_flip[idx])
+                with fig_factory(basename, 2, 1) as fig:
+                    img = reports["t{}-orig".format(idx)]
+                    halves = np.array(img.shape) / 2.0
+                    extent = np.array((- halves[1], halves[1],
+                                      - halves[0], halves[0]))
+                    center = reports["t{}-tvec".format(idx)][::-1]
+                    imshow_pcorr(
+                        fig, img, reports["t{}-postproc".format(idx)],
+                        extent, center, reports["t{}-success".format(idx)]
+                    )

@@ -55,7 +55,7 @@ def create_parser():
     parser.add_argument("--prefix", default="reports")
     parser.add_argument("--ftype", choices=("png", "pdf"), default="png")
     parser.add_argument(
-        "--show", type=_show_valid, default=TOSHOW_ABBR,
+        "--display", type=_show_valid, default=TOSHOW_ABBR,
         help="String composing of '{}', meaning respectively: {}."
         .format(TOSHOW_ABBR, ", ".join(TOSHOW)))
     return parser
@@ -75,7 +75,8 @@ def main():
     args = parser.parse_args()
 
     opts = cli.args2dict(args)
-    reports = reporting.ReportsWrapper(dict(), args.show)
+    reports = reporting.ReportsWrapper(dict(), args.display)
+    opts["show"] = False
     opts["reports"] = reports
     opts["prefix"] = args.prefix
     cli.run(args.template, args.subject, opts)

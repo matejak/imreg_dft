@@ -243,7 +243,6 @@ def args2dict(args):
         low=args.lowpass,
         high=args.highpass,
         cut=args.cut,
-        show=args.show,
         print_format=print_format,
         iters=args.iters,
         exponent="inf",
@@ -263,6 +262,7 @@ def main():
     args = parser.parse_args()
 
     opts = args2dict(args)
+    opts["show"] = args.show,
     run(args.template, args.subject, opts)
 
 

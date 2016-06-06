@@ -196,11 +196,6 @@ def process_tile(ii, reports=None):
         tosa = utils.unextend_by(tosa, opts["extend"])
         # ird.imshow(tile, image, tosa, cmap=pyl.cm.gray)
         # pyl.show()
-    if 0:
-        print(ii, _SUCCS[ii])
-        import pylab as pyl
-        pyl.figure(); pyl.imshow(tile)
-        pyl.show()
 
 
 def _fill_globals(tiles, poss, image, opts):
@@ -238,11 +233,15 @@ def settle_tiles(imgs, tiledim, opts, reports=None):
         process_tile(ii, reports)
         tile_coord = (ii // ncols, ii % ncols)
 
-    if reports is not None:
+    if reports is not None and reports.show("tile_info"):
         shape = (nrows, ncols)
+        slices = utils.getSlices(img0.shape, tiledim, coef)
+
+        reporting["tiles-shape"] = shape
+        reporting["tiles-successes"] = _SUCCS
+        reporting["tiles-decomp"] = slices
         reporting.imshow_results(_SUCCS, shape, opts["prefix"])
 
-        slices = utils.getSlices(img0.shape, tiledim, coef)
         reporting.imshow_tiles(img0, slices, shape, opts["prefix"])
 
     """
