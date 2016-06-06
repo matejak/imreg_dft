@@ -41,10 +41,9 @@ def report_wrapper(orig, index):
     if orig is None:
         yield None
     else:
-        ret = ReportsWrapper(orig)
-        ret.push_index(index)
-        yield ret
-        ret.pop_index(index)
+        orig.push_index(index)
+        yield orig
+        orig.pop_index(index)
 
 
 class ReportsWrapper(dict):
@@ -53,14 +52,25 @@ class ReportsWrapper(dict):
     It allows a parent function to put it in a mode, in which it will
     prefix keys of items set.
     """
-    def __init__(self, reports):
+    def __init__(self, reports, toshow):
         assert reports is not None, \
             ("Use the report_wrapper wrapper factory, don't "
              "create wrappers from {}".format(reports))
         self.update(reports)
         self.prefixes = []
         self.idx = ""
+        self._show = dict(
+            inputs="i" in toshow,
+            spectra="s" in toshow,
+            logpolars="l" in toshow,
+            tile_info="t" in toshow,
+            translation="1" in toshow,
+            scale_angle="2" in toshow,
+            transformed="a" in toshow,
+        )
 
+    def show(self, what):
+        return self._show[what]
     def __setitem__(self, key, value):
         key = self.idx + key
         dict.__setitem__(self, key, value)
@@ -187,6 +197,8 @@ def imshow_logpolars(fig, spectra):
     for ii, im in enumerate(ims):
         im = grid[ii].imshow(im, cmap=plt.cm.viridis, vmin=vmin, vmax=vmax,
                              aspect="auto", extent=logpolars_extent)
+        grid[ii].set_xlabel("log radius")
+        grid[ii].set_ylabel("azimuth / degrees")
         grid.cbar_axes[ii].colorbar(im)
 
     return fig
@@ -210,7 +222,7 @@ def imshow_plain(fig, images, what, also_common=False):
         vmin = np.percentile(im, 2)
         vmax = np.percentile(im, 98)
         grid[ii].set_title("individual cmap --- {}".format(what[ii]))
-        img = grid[ii].imshow(im, cmap=plt.cm.gray, origin="lower",
+        img = grid[ii].imshow(im, cmap=plt.cm.gray,
                               vmin=vmin, vmax=vmax)
         grid.cbar_axes[ii].colorbar(img)
 
@@ -220,7 +232,7 @@ def imshow_plain(fig, images, what, also_common=False):
         for ii, im in enumerate(images):
             grid[ii + ncols].set_title("common cmap --- {}".format(what[ii]))
             im = grid[ii + ncols].imshow(im, cmap=plt.cm.viridis,
-                                         origin="lower", vmin=vmin, vmax=vmax)
+                                         vmin=vmin, vmax=vmax)
             grid.cbar_axes[ii + ncols].colorbar(im)
 
     return fig
@@ -248,7 +260,7 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
         cmap=plt.cm.viridis,
     )
     grid[0].set_title("pcorr --- original")
-    labels = ("translation y", "translation x")
+    labels = ("translation y / px", "translation x / px")
     grid[0].imshow(raw, ** imshow_kwargs)
 
     center = np.array(result)
@@ -263,11 +275,6 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
     im = grid[1].imshow(filtered, ** imshow_kwargs)
     grid.cbar_axes[0].colorbar(im)
 
-    # The common stuff
-    for idx in range(2):
-        grid[idx].grid(c="w")
-        grid[idx].set_xlabel(labels[1])
-
     if log_base is not None:
         for dim in range(2):
             grid[dim].set_xscale("log", basex=log_base)
@@ -278,6 +285,12 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
                 x.set_rotation_mode("anchor")
                 x.set_rotation(40)
         labels = ("rotation / degrees", "scale change")
+
+    # The common stuff
+    for idx in range(2):
+        grid[idx].grid(c="w")
+        grid[idx].set_xlabel(labels[1])
+
     grid[0].set_ylabel(labels[0])
 
     return fig
@@ -359,7 +372,7 @@ def report_tile(reports, prefix, aspect):
                     reports["amas-success"], log_base=reports["base"]
                 )
 
-    basename = "after-rot".format(prefix)
+    basename = "after-rot"
     try:
         basename = "{}{}".format(reports.prefixes[-1], basename)
     except AttributeError:
@@ -370,7 +383,9 @@ def report_tile(reports, prefix, aspect):
         imshow_plain(fig, reports["asim"],
                      ("template", "subject", "tformed subject"))
 
+    t_flip = ("0", "180")
     for idx in range(2):
+        basename = "t_{}".format(t_flip[idx])
         with fig_factory(basename, 2, 1) as fig:
             img = reports["t{}-orig".format(idx)]
             halves = np.array(img.shape) / 2.0

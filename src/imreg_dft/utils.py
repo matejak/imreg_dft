@@ -174,7 +174,7 @@ def argmax_angscale(array, log_base, exponent, constraints=None, reports=None):
     ret = _argmax_ext(array, exponent)
     ret_final = _interpolate(array, ret)
 
-    if reports is not None:
+    if reports is not None and reports.show("scale_angle"):
         reports["amas-orig"] = array_orig.copy()
         reports["amas-postproc"] = array.copy()
 
@@ -236,7 +236,7 @@ def argmax_translation(array, filter_pcorr, constraints=None, reports=None):
     # array_orig[tvec] may not be the maximum
     success = _get_success(array_orig, tuple(tvec), 2)
 
-    if reports is not None:
+    if reports is not None and reports.show("translation"):
         reports["amt-orig"] = array_orig.copy()
         reports["amt-postproc"] = array.copy()
 

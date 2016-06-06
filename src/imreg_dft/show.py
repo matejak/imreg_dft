@@ -32,18 +32,41 @@
 import argparse as ap
 
 from imreg_dft import cli
+from imreg_dft import reporting
+
+
+TOSHOW = (
+    "filtered input (I)mages",
+    "filtered input images (S)pectra",
+    "spectra (L)ogpolar transform",
+    "(1) angle-scale phase correlation",
+    "angle-scale transform (A)pplied",
+    "(2) translation phase correlation",
+    "(T)ile info",
+)
+
+
+TOSHOW_ABBR = "isl1a2t"
 
 
 def create_parser():
     parser = ap.ArgumentParser()
     cli.update_parser_imreg(parser)
     parser.add_argument("--prefix", default="reports")
-    parser.add_argument("--show", default="")
+    parser.add_argument("--ftype", choices=("png", "pdf"), default="png")
+    parser.add_argument(
+        "--show", type=_show_valid, default=TOSHOW_ABBR,
+        help="String composing of '{}', meaning respectively: {}."
+        .format(TOSHOW_ABBR, ", ".join(TOSHOW)))
     return parser
 
 
 def _show_valid(stri):
-    allowed_chars = "lsf"
+    stripped = stri.rstrip(TOSHOW_ABBR)
+    if len(stripped) > 0:
+        raise ap.ArgumentError("Argument contains invalid characters: {}"
+                               .format(stripped))
+    return stri
 
 
 def main():
@@ -52,7 +75,8 @@ def main():
     args = parser.parse_args()
 
     opts = cli.args2dict(args)
-    opts["reports"] = dict()
+    reports = reporting.ReportsWrapper(dict(), args.show)
+    opts["reports"] = reports
     opts["prefix"] = args.prefix
     cli.run(args.template, args.subject, opts)
 
