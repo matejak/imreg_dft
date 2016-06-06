@@ -164,6 +164,8 @@ def imshow_spectra(fig, spectra):
         grid[ii].set_title("log abs dfts - %s" % what[ii])
         im = grid[ii].imshow(np.log(np.abs(im)), cmap=plt.cm.viridis,
                              extent=dfts_filt_extent, )
+        grid[ii].set_xlabel("X / px")
+        grid[ii].set_ylabel("Y / px")
         grid.cbar_axes[ii].colorbar(im)
     return fig
 
@@ -247,12 +249,6 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
     )
     grid[0].set_title("pcorr --- original")
     labels = ("translation y", "translation x")
-    if log_base is not None:
-        for dim in range(2):
-            grid[dim].set_xscale("log", basex=log_base)
-            grid[dim].get_xaxis().set_major_formatter(plt.ScalarFormatter())
-        labels = ("rotation / degrees", "scale change")
-    grid[0].set_ylabel(labels[0])
     grid[0].imshow(raw, ** imshow_kwargs)
 
     center = np.array(result)
@@ -272,17 +268,17 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
         grid[idx].grid(c="w")
         grid[idx].set_xlabel(labels[1])
 
-    """
-    pl = fig.add_subplot(122)
-    extent2 = np.zeros(4, int)
-    radius = 8
-    center = (np.array(reports["amas-result-raw"], int)
-                + np.array(raw.shape, int) // 2)
-    closeup = utils._get_subarr(raw, center, radius)
-
-    pl.imshow(closeup, interpolation="nearest", origin="lower",
-              cmap=plt.cm.viridis, vmin=0, vmax=vmax)
-    """
+    if log_base is not None:
+        for dim in range(2):
+            grid[dim].set_xscale("log", basex=log_base)
+            grid[dim].get_xaxis().set_major_formatter(plt.ScalarFormatter())
+            xlabels = grid[dim].get_xticklabels(False, "both")
+            for x in xlabels:
+                x.set_ha("right")
+                x.set_rotation_mode("anchor")
+                x.set_rotation(40)
+        labels = ("rotation / degrees", "scale change")
+    grid[0].set_ylabel(labels[0])
 
     return fig
 
@@ -320,63 +316,67 @@ def imshow_results(successes, shape, prefix):
     _savefig(fig, fname)
 
 
-def report_tile(reports, prefix):
+def mk_factory(prefix, basedim, dpi=150, ftype="png"):
     import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(18, 6))
+
+    @contextlib.contextmanager
+    def _figfun(basename, x, y, use_aspect=True):
+        _basedim = basedim
+        if use_aspect is False:
+            _basedim = basedim[0]
+        fig = plt.figure(figsize=_basedim * np.array((x, y)))
+        yield fig
+        fname = "{}-{}.{}".format(prefix, basename, ftype)
+        fig.savefig(fname, dpi=dpi, bbox_inches="tight")
+        del fig
+
+    return _figfun
+
+
+def report_tile(reports, prefix, aspect):
+    import matplotlib.pyplot as plt
+    basedim = 5.5 * np.array((aspect, 1), float)
+    fig_factory = mk_factory(prefix, basedim)
     for key, value in reports.items():
         if "ims-filt" in key:
-            imshow_plain(fig, value, ("template", "subject"), True)
-
-            fname = "%s-%s" % (prefix, key)
-            _savefig(fig, fname)
+            fig = plt.figure(figsize=basedim * np.array((2, 2)))
+            with fig_factory(key, 2, 2) as fig:
+                imshow_plain(fig, value, ("template", "subject"), True)
         elif "dfts-filt" in key:
-            imshow_spectra(fig, value)
-
-            fname = "%s-%s" % (prefix, key)
-            _savefig(fig, fname)
+            with fig_factory(key, 2, 1, False) as fig:
+                imshow_spectra(fig, value)
         elif "logpolars" in key:
-            imshow_logpolars(fig, value)
-
-            fname = "%s-%s" % (prefix, key)
-            _savefig(fig, fname)
+            with fig_factory(key, 1, 1.4, False) as fig:
+                imshow_logpolars(fig, value)
         # if "s-orig" in key:
         elif "amas-orig" in key:
-            center = np.array(reports["amas-result"], float)
-            center[0] = 1.0 / center[0]
-            imshow_pcorr(
-                fig, value, reports["amas-postproc"],
-                reports["amas-extent"], center,
-                reports["amas-success"], log_base=reports["base"]
-            )
-            fname = "%s-%s" % (prefix, key)
-            _savefig(fig, fname)
+            with fig_factory(key, 2, 1) as fig:
+                center = np.array(reports["amas-result"], float)
+                center[0] = 1.0 / center[0]
+                imshow_pcorr(
+                    fig, value, reports["amas-postproc"],
+                    reports["amas-extent"], center,
+                    reports["amas-success"], log_base=reports["base"]
+                )
 
-    imshow_plain(fig, reports["asim"],
-                 ("template", "subject", "tformed subject"))
-
+    basename = "after-rot".format(prefix)
     try:
-        # the reports prefix ends with '-', which we take away
-        prefix += "-{}".format(reports.prefixes[-1][:-1])
+        basename = "{}{}".format(reports.prefixes[-1], basename)
     except AttributeError:
         # reports is then just a dict
         pass
 
-    # Here goes a plot of template, rotated and scaled subject and
-    fname = "{}-after-rot".format(prefix)
-    _savefig(fig, fname)
+    with fig_factory(basename, 3, 1) as fig:
+        imshow_plain(fig, reports["asim"],
+                     ("template", "subject", "tformed subject"))
 
     for idx in range(2):
-        img = reports["t{}-orig".format(idx)]
-        halves = np.array(img.shape) / 2.0
-        extent = np.array((- halves[1], halves[1], - halves[0], halves[0]))
-        center = reports["t{}-tvec".format(idx)][::-1]
-        imshow_pcorr(
-            fig, img, reports["t{}-postproc".format(idx)],
-            extent, center, reports["t{}-success".format(idx)]
-        )
-
-        fname = "{}-t{}".format(prefix, idx)
-        _savefig(fig, fname)
-
-    fig.clear()
-    del fig
+        with fig_factory(basename, 2, 1) as fig:
+            img = reports["t{}-orig".format(idx)]
+            halves = np.array(img.shape) / 2.0
+            extent = np.array((- halves[1], halves[1], - halves[0], halves[0]))
+            center = reports["t{}-tvec".format(idx)][::-1]
+            imshow_pcorr(
+                fig, img, reports["t{}-postproc".format(idx)],
+                extent, center, reports["t{}-success".format(idx)]
+            )

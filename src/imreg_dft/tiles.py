@@ -140,8 +140,9 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
         ims[0], ims[1], opts["iters"], opts["order"], opts["constraints"],
         opts["filter_pcorr"], opts["exponent"], reports=reports)
 
+    aspect = ims[0].shape[1] / float(ims[0].shape[0])
     if reports is not None:
-        reporting.report_tile(reports, "reports")
+        reporting.report_tile(reports, "reports", aspect)
 
     # Seems that the reampling simply scales the translation
     resdict["Dt"] /= rcoef
