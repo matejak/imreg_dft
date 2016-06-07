@@ -80,6 +80,7 @@ def main():
     opts["reports"] = reports
     opts["prefix"] = args.prefix
     cli.run(args.template, args.subject, opts)
+    reporting.report_tile(reports, args.prefix)
 
 
 if __name__ == "__main__":

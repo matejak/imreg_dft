@@ -58,7 +58,10 @@ class ReportsWrapper(dict):
              "create wrappers from {}".format(reports))
         self.update(reports)
         self.prefixes = [""]
+        #: Keys by prefix
+        self._keys = {"": set()}
         self.idx = ""
+        self._toshow = toshow
         self._show = dict(
             inputs="i" in toshow,
             spectra="s" in toshow,
@@ -69,10 +72,29 @@ class ReportsWrapper(dict):
             transformed="a" in toshow,
         )
 
-    def show(self, what):
-        return self._show[what]
+    def copy(self):
+        ret = ReportsWrapper(self, self._toshow)
+        return ret
+
+    def set_global(self, key, value):
+        self._keys[""].add(key)
+        print("Set global {}".format(key))
+        dict.__setitem__(self, key, value)
+
+    def get_global(self, key):
+        return dict.__getitem__(self, key)
+
+    def show(self, * args):
+        ret = False
+        for arg in args:
+            ret |= self._show[arg]
+        return ret
+
     def __setitem__(self, key, value):
         key = self.idx + key
+        self._keys.setdefault(self.idx, set())
+        self._keys[self.idx].add(key)
+        print("Set {}".format(key))
         dict.__setitem__(self, key, value)
 
     def __getitem__(self, key):
@@ -96,12 +118,13 @@ class ReportsWrapper(dict):
         self.idx = "%s" % idx
 
     def pop_prefix(self, idx):
-        assert self.prefixes[-1] == idx
+        assert self.prefixes[-1] == idx, \
+            ("Real previous prefix ({}) differs from the specified ({})"
+             .format(self.prefixes[-1], idx))
+        assert len(self.prefixes) > 1, \
+            "There is not more than 1 prefix left, you can't remove any."
         self.prefixes.pop()
-        if len(self.prefixes) > 0:
-            self.idx = self.prefixes[-1]
-        else:
-            self.idx = ""
+        self.idx = self.prefixes[-1]
 
 
 class Rect_callback(object):
@@ -301,14 +324,16 @@ def _savefig(fig, fname_base):
     fig.clear()
 
 
-def imshow_tiles(im0, slices, shape, prefix):
+def imshow_tiles(fig, im0, slices, shape):
+    import matplotlib.pyplot as plt
     axes = fig.add_subplot(111)
     axes.imshow(im0, cmap=plt.cm.viridis)
     callback = Rect_mpl(axes, shape)
     slices2rects(slices, callback)
 
 
-def imshow_results(fig, successes, shape, prefix):
+def imshow_results(fig, successes, shape):
+    import matplotlib.pyplot as plt
     toshow = successes.reshape(shape)
 
     axes = fig.add_subplot(111)
@@ -337,7 +362,8 @@ def mk_factory(prefix, basedim, dpi=150, ftype="png"):
     return _figfun
 
 
-def report_tile(reports, prefix, aspect):
+def report_tile(reports, prefix):
+    aspect = reports.get_global("aspect")
     basedim = 5.5 * np.array((aspect, 1), float)
     fig_factory = mk_factory(prefix, basedim)
     for key, value in reports.items():
@@ -359,18 +385,15 @@ def report_tile(reports, prefix, aspect):
                     reports["amas-extent"], center,
                     reports["amas-success"], log_base=reports["base"]
                 )
-        elif "tile-successes" in key and reports.show("tile_info"):
+        elif "tiles-successes" in key and reports.show("tile_info"):
             with fig_factory("tile-successes", 1, 1) as fig:
-                imshow_results(fig, reports["tiles-successes"],
-                               reports["tiles-shape"])
-        elif "tile-decomp" in key and reports.show("tile_info"):
+                imshow_results(fig, value, reports.get_global("tiles-shape"))
+        elif "tiles-decomp" in key and reports.show("tile_info"):
             with fig_factory("tile-decomposition", 1, 1) as fig:
-                imshow_tiles(fig, reports["ims-filt"][0],
-                             reports["tiles-decomp"], reports["tiles-shape"])
-        elif "asim" in key and reports.show("transformed"):
-            basename = "{}{}".format(reports.prefixes[-1], "after-rot")
-
-            with fig_factory(basename, 3, 1) as fig:
+                imshow_tiles(fig, reports.get_global("tiles-whole"),
+                             value, reports.get_global("tiles-shape"))
+        elif "after-rot" in key and reports.show("transformed"):
+            with fig_factory(key, 3, 1) as fig:
                 imshow_plain(fig, value,
                              ("template", "subject", "tformed subject"))
         elif "t0-orig" in key and reports.show("translation"):

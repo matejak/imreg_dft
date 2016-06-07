@@ -286,6 +286,10 @@ def _get_resdict(imgs, opts, tosa=None):
     else:
         resdict = tiles.process_images(imgs, opts, tosa, True, reports=reports)
 
+    if reports is not None:
+        reports.set_global("aspect",
+                           imgs[0].shape[1] / float(imgs[0].shape[0]))
+
     return resdict
 
 

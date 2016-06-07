@@ -47,7 +47,6 @@ except ImportError:
 import scipy.ndimage.interpolation as ndii
 
 import imreg_dft.utils as utils
-from imreg_dft import reporting
 
 
 __all__ = ['translation', 'similarity', 'transform_img',
@@ -123,14 +122,14 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     if reports is not None:
         if reports.show("spectra"):
             reports["dfts-filt"] = dfts
-        if reports.show("inputs") or reports.show("tile_info"):
+        if reports.show("inputs"):
             reports["ims-filt"] = [fft.ifft2(np.fft.ifftshift(dft))
                                    for dft in dfts]
         if reports.show("logpolar"):
             reports["logpolars"] = stuffs
-        reports["base"] = log_base
 
         if reports.show("scale_angle"):
+            reports["base"] = log_base
             reports["amas-result-raw"] = (arg_ang, arg_rad)
             reports["amas-result"] = (scale, angle)
             reports["amas-success"] = success
@@ -176,8 +175,8 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
     angle = 0
     report_one = report_two = None
     if reports is not None and reports.show("translation"):
-        report_one = reporting.ReportsWrapper(dict())
-        report_two = reporting.ReportsWrapper(dict())
+        report_one = reports.copy()
+        report_two = reports.copy()
 
     # We estimate translation for the original image...
     tvec, succ = _translation(im0, im1, filter_pcorr, constraints, report_one)
@@ -272,7 +271,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
     constraints_dynamic["angle"] = list(constraints["angle"])
 
     if reports is not None and reports.show("transformed"):
-        reports["asim"] = [im0.copy(), im2.copy()]
+        reports["after-rot"] = [im0.copy(), im2.copy()]
 
     for ii in range(numiter):
         newscale, newangle = _get_ang_scale([im0, im2], bgval, exponent,
@@ -286,7 +285,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
         if reports is not None and reports.show("transformed"):
-            reports["asim"].append(im2.copy())
+            reports["after-rot"].append(im2.copy())
 
     # Here we look how is the turn-180
     target, stdev = constraints.get("angle", (0, None))

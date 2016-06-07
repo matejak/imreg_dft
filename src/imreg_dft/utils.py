@@ -224,14 +224,6 @@ def argmax_translation(array, filter_pcorr, constraints=None, reports=None):
     tvec = _argmax_ext(array, 'inf')
     tvec = _interpolate(array_orig, tvec)
 
-    if 0:
-        print("tvec: %s" % tvec)
-        import pylab as pyl
-        pyl.figure()
-        pyl.imshow(array, cmap=pyl.cm.gray, interpolation='nearest')
-        pyl.colorbar()
-        # pyl.show()
-
     # If we use constraints or min filter,
     # array_orig[tvec] may not be the maximum
     success = _get_success(array_orig, tuple(tvec), 2)

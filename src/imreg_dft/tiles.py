@@ -133,16 +133,19 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
     rcoef = opts["resample"]
     ims = _preprocess_extend(ims, opts["extend"],
                              opts["low"], opts["high"], opts["cut"], rcoef)
+    """
     if reports is not None:
         reports["processed-0"] = ims
+    """
 
     resdict = imreg._similarity(
         ims[0], ims[1], opts["iters"], opts["order"], opts["constraints"],
         opts["filter_pcorr"], opts["exponent"], reports=reports)
 
-    aspect = ims[0].shape[1] / float(ims[0].shape[0])
-    if reports is not None:
-        reporting.report_tile(reports, "reports", aspect)
+    if reports is not None and reports.show(
+        "inputs", "translation", "scale_angle", "transformed"):
+        reports["aspect"] = ims[0].shape[1] / float(ims[0].shape[0])
+        # reporting.report_tile(reports, "reports", aspect)
 
     # Seems that the reampling simply scales the translation
     resdict["Dt"] /= rcoef
@@ -237,12 +240,10 @@ def settle_tiles(imgs, tiledim, opts, reports=None):
         shape = (nrows, ncols)
         slices = utils.getSlices(img0.shape, tiledim, coef)
 
-        reporting["tiles-shape"] = shape
-        reporting["tiles-successes"] = _SUCCS
-        reporting["tiles-decomp"] = slices
-        reporting.imshow_results(_SUCCS, shape, opts["prefix"])
-
-        reporting.imshow_tiles(img0, slices, shape, opts["prefix"])
+        reports.set_global("tiles-whole", img0)
+        reports.set_global("tiles-shape", shape)
+        reports.set_global("tiles-successes", _SUCCS)
+        reports.set_global("tiles-decomp", slices)
 
     """
     if ncores == 0:  # no multiprocessing (to see errors)
