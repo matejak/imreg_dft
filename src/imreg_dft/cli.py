@@ -144,8 +144,6 @@ def create_base_parser(parser):
                         "edge effects)")
     parser.add_argument('--order', type=int, default=1,
                         help="Interpolation order (1 = linear, 3 = cubic etc)")
-    parser.add_argument('--output', '-o',
-                        help="Where to save the transformed subject.")
 
 
 def update_parser_imreg(parser):
@@ -209,6 +207,8 @@ def update_parser_imreg(parser):
         "--ty", type=_constraints("shift"),
         metavar="MEAN[,STD]", default=(0, None),
         help="The mean and standard deviation of the expected Y translation. ")
+    parser.add_argument('--output', '-o',
+                        help="Where to save the transformed subject.")
     loader.update_parser(parser)
 
 
@@ -262,7 +262,7 @@ def main():
     args = parser.parse_args()
 
     opts = args2dict(args)
-    opts["show"] = args.show,
+    opts["show"] = args.show
     run(args.template, args.subject, opts)
 
 
@@ -320,11 +320,9 @@ def run(template, subject, opts):
         saver.save(outname, tosa, loader_img)
 
     if opts["show"]:
-        # import ipdb; ipdb.set_trace()
         import pylab as pyl
         fig = pyl.figure()
         imreg.imshow(im0, im1, im2, fig=fig)
-        # imreg.imshow(imgs[0], imgs[1], im2, fig=fig)
         pyl.show()
 
 
