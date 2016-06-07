@@ -3,7 +3,7 @@
 Command-line tool overview
 ==========================
 
-The package contains one Python :abbr:`CLI (command-line interface)` script.
+The package contains three Python :abbr:`CLI (command-line interface)` scripts.
 Although you are more likely to use the ``imreg_dft`` functionality from your own Python programs, you can still have some use to the ``ird`` front-end.
 
 There are these main reasons why you would want to use it:
@@ -12,6 +12,8 @@ There are these main reasons why you would want to use it:
 * Quickly tune the advanced image registration settings.
 * Use ``ird`` in a script and process batches of images instead of one-by-one.
   (``ird`` can't do it, but you can call it in the script, possibly using `GNU Paralell <http://www.gnu.org/software/parallel>`_.)
+
+Additionally, there are two more scripts --- see their documentation in the :ref:`utilities section <utils>`.
 
 General considerations
 ----------------------

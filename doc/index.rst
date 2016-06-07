@@ -90,6 +90,7 @@ Contents
    quickstart.rst
    cli.rst
    cli-advanced.rst
+   utilities.rst
    api.rst
    howitsdone.rst
    devel.rst

@@ -479,7 +479,7 @@ def settle_loaders(args, fnames=None):
     #. If filenames are supplied, it returns list of respective loaders.
 
     Args:
-        args (namespace): The output of :function:`argparse.parse_args`
+        args (namespace): The output of :func:`argparse.parse_args`
         fnames (list, optional): List of filenames to load
 
     Returns:

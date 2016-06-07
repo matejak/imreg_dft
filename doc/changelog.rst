@@ -5,6 +5,8 @@ User-centric changelog
 
  * Support for sub-pixel transformation detection.
  * Changed interface for the ``imreg_dft.imreg.translation`` function (it returns a dict).
+ * New script: ``ird-tform`` transforms an image if given a transformation.
+ * New script: ``ird-show`` allows in-depth visual insight into a phase correlation operation.
 
 **1.0.5 --- 2015-05-02**
 
