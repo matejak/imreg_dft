@@ -41,25 +41,22 @@ def report_wrapper(orig, index):
     if orig is None:
         yield None
     else:
-        orig.push_index(index)
+        prefix = "%03d-" % index
+        orig.push_prefix(prefix)
         yield orig
-        orig.pop_index(index)
+        orig.pop_prefix(prefix)
 
 
-class ReportsWrapper(dict):
+class ReportsWrapper(object):
     """
     A wrapped dictionary.
     It allows a parent function to put it in a mode, in which it will
     prefix keys of items set.
     """
-    def __init__(self, reports, toshow=""):
-        assert reports is not None, \
-            ("Use the report_wrapper wrapper factory, don't "
-             "create wrappers from {}".format(reports))
-        self.update(reports)
+    def __init__(self, toshow=""):
         self.prefixes = [""]
         #: Keys by prefix
-        self._keys = {"": set()}
+        self._stuff = {"": dict()}
         self.idx = ""
         self._toshow = toshow
         self._show = dict(
@@ -67,22 +64,29 @@ class ReportsWrapper(dict):
             spectra="s" in toshow,
             logpolar="l" in toshow,
             tile_info="t" in toshow,
-            translation="1" in toshow,
-            scale_angle="2" in toshow,
+            scale_angle="1" in toshow,
             transformed="a" in toshow,
+            translation="2" in toshow,
         )
 
-    def copy(self):
-        ret = ReportsWrapper(self, self._toshow)
+    def get_contents(self):
+        ret = self._stuff.items()
+        return ret
+
+    def copy_empty(self):
+        ret = ReportsWrapper(self._toshow)
+        ret.idx = self.idx
+        ret.prefixes = self.prefixes
+        for prefix in self.prefixes:
+            ret._stuff[prefix] = dict()
         return ret
 
     def set_global(self, key, value):
-        self._keys[""].add(key)
-        print("Set global {}".format(key))
-        dict.__setitem__(self, key, value)
+        self._stuff[""][key] = value
 
     def get_global(self, key):
-        return dict.__getitem__(self, key)
+        ret = self._stuff[""][key]
+        return ret
 
     def show(self, * args):
         ret = False
@@ -91,31 +95,16 @@ class ReportsWrapper(dict):
         return ret
 
     def __setitem__(self, key, value):
-        key = self.idx + key
-        self._keys.setdefault(self.idx, set())
-        self._keys[self.idx].add(key)
-        print("Set {}".format(key))
-        dict.__setitem__(self, key, value)
+        self._stuff[self.idx][key] = value
 
     def __getitem__(self, key):
-        key = self.idx + key
-        return dict.__getitem__(self, key)
-
-    def _idx2prefix(self, idx):
-        ret = "%03d-" % idx
+        ret = self._stuff[self.idx][key]
         return ret
 
-    def push_index(self, idx):
-        prefix = self._idx2prefix(idx)
-        self.push_prefix(prefix)
-
-    def pop_index(self, idx):
-        prefix = self._idx2prefix(idx)
-        self.pop_prefix(prefix)
-
     def push_prefix(self, idx):
-        self.prefixes.append(idx)
-        self.idx = "%s" % idx
+        self._stuff.setdefault(idx, dict())
+        self.idx = idx
+        self.prefixes.append(self.idx)
 
     def pop_prefix(self, idx):
         assert self.prefixes[-1] == idx, \
@@ -337,11 +326,16 @@ def imshow_results(fig, successes, shape):
     toshow = successes.reshape(shape)
 
     axes = fig.add_subplot(111)
-    axes.imshow(toshow, cmap=plt.cm.viridis, interpolation="none")
+    img = axes.imshow(toshow, cmap=plt.cm.viridis, interpolation="none")
+    fig.colorbar(img)
+
+    axes.set_xticks(np.arange(shape[1]))
+    axes.set_yticks(np.arange(shape[0]))
 
     coords = np.unravel_index(np.arange(len(successes)), shape)
     for idx, coord in enumerate(zip(* coords)):
-        axes.text(coord[1], coord[0], "%02d" % (idx,),
+        label = "{:02d}\n({},{})".format(idx, coord[1], coord[0])
+        axes.text(coord[1], coord[0], label,
                   va="center", ha="center", color="r",)
 
 
@@ -355,58 +349,60 @@ def mk_factory(prefix, basedim, dpi=150, ftype="png"):
             _basedim = basedim[0]
         fig = plt.figure(figsize=_basedim * np.array((x, y)))
         yield fig
-        fname = "{}-{}.{}".format(prefix, basename, ftype)
+        fname = "{}{}.{}".format(prefix, basename, ftype)
         fig.savefig(fname, dpi=dpi, bbox_inches="tight")
         del fig
 
     return _figfun
 
 
-def report_tile(reports, prefix):
+def report_tile(reports, prefix, multiplier=5.5):
     aspect = reports.get_global("aspect")
-    basedim = 5.5 * np.array((aspect, 1), float)
-    fig_factory = mk_factory(prefix, basedim)
-    for key, value in reports.items():
-        if "ims-filt" in key and reports.show("inputs"):
-            with fig_factory(key, 2, 2) as fig:
-                imshow_plain(fig, value, ("template", "subject"), True)
-        elif "dfts-filt" in key and reports.show("spectra"):
-            with fig_factory(key, 2, 1, False) as fig:
-                imshow_spectra(fig, value)
-        elif "logpolars" in key and reports.show("logpolar"):
-            with fig_factory(key, 1, 1.4, False) as fig:
-                imshow_logpolars(fig, value)
-        elif "amas-orig" in key and reports.show("scale_angle"):
-            with fig_factory(key, 2, 1) as fig:
-                center = np.array(reports["amas-result"], float)
-                center[0] = 1.0 / center[0]
-                imshow_pcorr(
-                    fig, value, reports["amas-postproc"],
-                    reports["amas-extent"], center,
-                    reports["amas-success"], log_base=reports["base"]
-                )
-        elif "tiles-successes" in key and reports.show("tile_info"):
-            with fig_factory("tile-successes", 1, 1) as fig:
-                imshow_results(fig, value, reports.get_global("tiles-shape"))
-        elif "tiles-decomp" in key and reports.show("tile_info"):
-            with fig_factory("tile-decomposition", 1, 1) as fig:
-                imshow_tiles(fig, reports.get_global("tiles-whole"),
-                             value, reports.get_global("tiles-shape"))
-        elif "after-rot" in key and reports.show("transformed"):
-            with fig_factory(key, 3, 1) as fig:
-                imshow_plain(fig, value,
-                             ("template", "subject", "tformed subject"))
-        elif "t0-orig" in key and reports.show("translation"):
-            t_flip = ("0", "180")
-            for idx in range(2):
-                basename = "t_{}".format(t_flip[idx])
-                with fig_factory(basename, 2, 1) as fig:
-                    img = reports["t{}-orig".format(idx)]
-                    halves = np.array(img.shape) / 2.0
-                    extent = np.array((- halves[1], halves[1],
-                                      - halves[0], halves[0]))
-                    center = reports["t{}-tvec".format(idx)][::-1]
+    basedim = multiplier * np.array((aspect, 1), float)
+    for index, contents in reports.get_contents():
+        fig_factory = mk_factory("{}-{}".format(prefix, index), basedim)
+        for key, value in contents.items():
+            if "ims-filt" in key and reports.show("inputs"):
+                with fig_factory(key, 2, 2) as fig:
+                    imshow_plain(fig, value, ("template", "subject"), True)
+            elif "dfts-filt" in key and reports.show("spectra"):
+                with fig_factory(key, 2, 1, False) as fig:
+                    imshow_spectra(fig, value)
+            elif "logpolars" in key and reports.show("logpolar"):
+                with fig_factory(key, 1, 1.4, False) as fig:
+                    imshow_logpolars(fig, value)
+            elif "amas-orig" in key and reports.show("scale_angle"):
+                with fig_factory(key, 2, 1) as fig:
+                    center = np.array(contents["amas-result"], float)
+                    center[0] = 1.0 / center[0]
                     imshow_pcorr(
-                        fig, img, reports["t{}-postproc".format(idx)],
-                        extent, center, reports["t{}-success".format(idx)]
+                        fig, value, contents["amas-postproc"],
+                        contents["amas-extent"], center,
+                        contents["amas-success"], log_base=contents["base"]
                     )
+            elif "tiles-successes" in key and reports.show("tile_info"):
+                with fig_factory("tile-successes", 1, 1) as fig:
+                    imshow_results(fig, value, reports.get_global("tiles-shape"))
+            elif "tiles-decomp" in key and reports.show("tile_info"):
+                with fig_factory("tile-decomposition", 1, 1) as fig:
+                    imshow_tiles(fig, reports.get_global("tiles-whole"),
+                                 value, reports.get_global("tiles-shape"))
+            elif "after-rot" in key and reports.show("transformed"):
+                # TODO: Show: Original, rotated, translated0, translated180.
+                with fig_factory(key, 3, 1) as fig:
+                    imshow_plain(fig, value,
+                                 ("template", "subject", "tformed subject"))
+            elif "t0-orig" in key and reports.show("translation"):
+                t_flip = ("0", "180")
+                for idx in range(2):
+                    basename = "t_{}".format(t_flip[idx])
+                    with fig_factory(basename, 2, 1) as fig:
+                        img = contents["t{}-orig".format(idx)]
+                        halves = np.array(img.shape) / 2.0
+                        extent = np.array((- halves[1], halves[1],
+                                           - halves[0], halves[0]))
+                        center = contents["t{}-tvec".format(idx)][::-1]
+                        imshow_pcorr(
+                            fig, img, contents["t{}-postproc".format(idx)],
+                            extent, center, contents["t{}-success".format(idx)]
+                        )

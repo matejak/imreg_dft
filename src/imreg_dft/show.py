@@ -75,7 +75,7 @@ def main():
     args = parser.parse_args()
 
     opts = cli.args2dict(args)
-    reports = reporting.ReportsWrapper(dict(), args.display)
+    reports = reporting.ReportsWrapper(args.display)
     opts["show"] = False
     opts["reports"] = reports
     opts["prefix"] = args.prefix

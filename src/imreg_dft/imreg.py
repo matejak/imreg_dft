@@ -175,8 +175,8 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
     angle = 0
     report_one = report_two = None
     if reports is not None and reports.show("translation"):
-        report_one = reports.copy()
-        report_two = reports.copy()
+        report_one = reports.copy_empty()
+        report_two = reports.copy_empty()
 
     # We estimate translation for the original image...
     tvec, succ = _translation(im0, im1, filter_pcorr, constraints, report_one)
