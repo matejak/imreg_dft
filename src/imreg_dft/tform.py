@@ -91,7 +91,6 @@ def str2tform(tstr, invert=False):
         ret["tx"] *= -1
         ret["ty"] *= -1
         ret["tvec"] *= -1
-    print(ret)
     return ret
 
 
