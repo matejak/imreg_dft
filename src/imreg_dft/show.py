@@ -54,6 +54,9 @@ def create_parser():
     cli.update_parser_imreg(parser)
     parser.add_argument("--prefix", default="reports")
     parser.add_argument("--ftype", choices=("png", "pdf"), default="png")
+    parser.add_argument("--dpi", default=150, type=float)
+    parser.add_argument("--size", default=5, type=float,
+                        help="Base image element size [in]")
     parser.add_argument(
         "--display", type=_show_valid, default=TOSHOW_ABBR,
         help="String composing of '{}', meaning respectively: {}."
@@ -76,6 +79,11 @@ def main():
 
     opts = cli.args2dict(args)
     reports = reporting.ReportsWrapper(args.display)
+
+    reports.set_global("dpi", args.dpi)
+    reports.set_global("ftype", args.ftype)
+    reports.set_global("size", args.size)
+
     opts["show"] = False
     opts["reports"] = reports
     opts["prefix"] = args.prefix

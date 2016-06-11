@@ -42,3 +42,34 @@ The phase correlation method is built around the Fourier transform and some rela
 Although the phase correlation is an image registration technique that is highly regarded by field experts, it may produce unwanted results.
 In order to find out what is going on, you can request visualizations of various phases of the registration process.
 
+Typically, you choose the template, the subject and instead of performing casual phase correlation using ``ird``, you use ``ird-show``.
+Then, the normal phase correlation takes place and various stages of it are output in form of images (see the ``--display`` argument of ``ird-show``).
+
+For example, consider the display of the final part of phase correlation --- the translation (between the ``sample1.png`` and ``sample3.png`` from the examples):
+
+.. figure:: _build/images/reports-t_0.*
+
+   The left part shows the cross-power spectrum of the template and rotated and scaled subject as-is.
+   The right part shows the same after possible filters are applied (s.a. constraints).
+
+There is a second figure, where one of the images is rotated over additional 180°:
+
+.. figure:: _build/images/reports-t_180.*
+
+   The left part shows the cross-power spectrum of the template and rotated and scaled subject as-is.
+   The right part shows the same after possible filters are applied (s.a. constraints).
+
+As we can see, the success value is much higher for the first figure, so unless there is a angle constraint, the registration procedure will assume that the match in the first figure corresponds to the successful final step of the image registration.
+You can visualize any subset from the table below:
+
+===== ===================================== ==========
+code  filename                              what it is
+===== ===================================== ==========
+``i`` ``ims-filt``                          supplied template and subject after application of common filters
+``s`` ``dfts-filt``                         log-abs of frequency spectra of supplied template and subject (after application of common filters)
+``l`` ``logpolars``                         log-polar transform of the former
+``1`` ``sa``                                insight into scale-angle phase correlation
+``a`` ``after-rot``                         after application of the first part of phase correlation --- the angle-scale transform
+``2`` ``t_0``, ``t_180``                    insight into translation phase correlation
+``t`` ``tiles_successes``, ``tiles_decomp`` insight into the :ref:`tiling functionality <tiling>`
+===== ===================================== ==========

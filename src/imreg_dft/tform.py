@@ -46,6 +46,9 @@ def create_parser():
     parser.add_argument("subject")
     parser.add_argument("transformation", nargs="?", default="-",
                         help="The transformation string.")
+    parser.add_argument(
+        "--invert", default=False, action="store_true",
+        help="Invert the transformation (not clear what this is good for)")
     parser.add_argument("outname")
     cli.create_base_parser(parser)
     grp = parser.add_mutually_exclusive_group()
@@ -77,11 +80,18 @@ def _str2tform(tstr):
     return ret
 
 
-def str2tform(tstr):
+def str2tform(tstr, invert=False):
     try:
         ret = _str2tform(tstr)
     except Exception:
         raise ap.ArgumentTypeError()
+    if invert:
+        ret["scale"] = 1.0 / ret["scale"]
+        ret["angle"] *= -1
+        ret["tx"] *= -1
+        ret["ty"] *= -1
+        ret["tvec"] *= -1
+    print(ret)
     return ret
 
 
@@ -110,7 +120,7 @@ def args2dict(args):
     tstring = args.transformation
     if tstring == "-":
         tstring = sys.stdin.read()
-    ret["tform"] = str2tform(tstring)
+    ret["tform"] = str2tform(tstring, args.invert)
     return ret
 
 

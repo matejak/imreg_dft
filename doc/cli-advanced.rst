@@ -150,6 +150,8 @@ You can either:
      On unix-like systems, you may circumvent this by writing ``--angle ' -30,2'``.
      Now, the argument value begins by space (and not by the dash) which doesn't make any trouble further down the road.
 
+.. _tiling:
+
 Large templates
 ---------------
 

@@ -40,6 +40,9 @@ def main():
     if norm(mean) * args.thresh < norm(diff):
         # The difference is too big
         ret = 1
+        msg = ("{} and {} are significantly different :-(\n"
+               .format(args.one, args.two))
+        sys.stderr.write(msg)
 
     if args.verbose:
         print("The two images are {}.".format(RET2RES[ret]))

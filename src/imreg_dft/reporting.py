@@ -308,11 +308,6 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
     return fig
 
 
-def _savefig(fig, fname_base):
-    fig.savefig("{}.{}".format(fname_base, "png"), bbox_inches="tight")
-    fig.clear()
-
-
 def imshow_tiles(fig, im0, slices, shape):
     import matplotlib.pyplot as plt
     axes = fig.add_subplot(111)
@@ -357,10 +352,15 @@ def mk_factory(prefix, basedim, dpi=150, ftype="png"):
 
 
 def report_tile(reports, prefix, multiplier=5.5):
+    multiplier = reports.get_global("size")
+    dpi = reports.get_global("dpi")
+    ftype = reports.get_global("ftype")
+
     aspect = reports.get_global("aspect")
     basedim = multiplier * np.array((aspect, 1), float)
     for index, contents in reports.get_contents():
-        fig_factory = mk_factory("{}-{}".format(prefix, index), basedim)
+        fig_factory = mk_factory("{}-{}".format(prefix, index),
+                                 basedim, dpi, ftype)
         for key, value in contents.items():
             if "ims-filt" in key and reports.show("inputs"):
                 with fig_factory(key, 2, 2) as fig:
@@ -372,7 +372,7 @@ def report_tile(reports, prefix, multiplier=5.5):
                 with fig_factory(key, 1, 1.4, False) as fig:
                     imshow_logpolars(fig, value)
             elif "amas-orig" in key and reports.show("scale_angle"):
-                with fig_factory(key, 2, 1) as fig:
+                with fig_factory("sa", 2, 1) as fig:
                     center = np.array(contents["amas-result"], float)
                     center[0] = 1.0 / center[0]
                     imshow_pcorr(

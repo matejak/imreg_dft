@@ -1,6 +1,10 @@
 REPEATER = ./repeat.sh
 
 PYTHON ?= python
+
+# Take from here:
+# http://stackoverflow.com/a/324782/592892
+# DOCDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 RSRCDIR = ../resources/examples
 
 NUL =
@@ -30,6 +34,8 @@ IMGS = \
 	difficult.pdf \
 	constraints.png \
 	constraints.pdf \
+	reports-t_0.png \
+	reports-t_0.pdf \
 	$(NUL)
 
 EXAMPLEDIR = _static/examples
@@ -110,6 +116,14 @@ $(IMGDIR)/constraints.png $(IMGDIR)/constraints.pdf: $(CONSDIR)/tricky.png $(CON
 
 $(IMGDIR)/difficult.png $(IMGDIR)/difficult.pdf: $(TILEDIR)/big.png $(TILEDIR)/small.png $(DIFFICULT_PNG)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2 --colormap gray_r
+
+# reports-t_180 will be created as a side-effect
+$(IMGDIR)/reports-t_0.png: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3.png
+	ird-show $^ --display 2 --ftype png --dpi 90 --size 4.4 && mv reports-t_*.png $(IMGDIR)
+
+# reports-t_180 will be created as a side-effect
+$(IMGDIR)/reports-t_0.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3.png
+	ird-show $^ --display 2 --ftype pdf --dpi 90 --size 4.4 && mv reports-t_*.pdf $(IMGDIR)
 
 define already-have-it
 @echo This file is a side-effect product of the rule for $|
