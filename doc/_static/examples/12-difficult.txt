@@ -1,6 +1,6 @@
 [user@linuxbox examples]$ cd tiling
 [user@linuxbox tiling]$ ird big.png small.png --tile --print-result
-scale: 0.518141 +-0.00402346
-angle: 40.616799 +-0.168539
-shift: 156.203, 136.691 +-0.25
-Success: 0.688
+scale: 0.51837 +-0.004024
+angle: 40.5952 +-0.16854
+shift (x, y): 156.397, 136.526 +-0.25
+success: 0.6728

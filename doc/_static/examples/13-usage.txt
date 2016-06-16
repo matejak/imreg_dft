@@ -1,12 +1,12 @@
 [user@linuxbox examples]$ ird -h
-usage: ird [-h] [--show] [--lowpass HI_THRESH,LOW_THRESH]
-           [--highpass HI_THRESH,LOW_THRESH] [--resample RESAMPLE]
-           [--iters ITERS] [--extend PIXELS] [--order ORDER] [--output OUTPUT]
-           [--filter-pcorr FILTER_PCORR] [--print-result]
+usage: ird [-h] [--lowpass LOW_THRESH,HIGH_THRESH]
+           [--highpass LOW_THRESH,HIGH_THRESH] [--cut LOW_THRESH,HIGH_THRESH]
+           [--resample RESAMPLE] [--iters ITERS] [--extend PIXELS]
+           [--order ORDER] [--filter-pcorr FILTER_PCORR] [--print-result]
            [--print-format PRINT_FORMAT] [--tile] [--version]
            [--angle MEAN[,STD]] [--scale MEAN[,STD]] [--tx MEAN[,STD]]
-           [--ty MEAN[,STD]] [--loader {pil,mat,hdr}]
-           [--loader-opts LOADER_OPTS] [--help-loader]
+           [--ty MEAN[,STD]] [--output OUTPUT] [--loader {pil,mat,hdr}]
+           [--loader-opts LOADER_OPTS] [--help-loader] [--show]
            template subject
 
 positional arguments:
@@ -15,18 +15,18 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --show                Whether to show registration result
-  --lowpass HI_THRESH,LOW_THRESH
+  --lowpass LOW_THRESH,HIGH_THRESH
                         1,1 means no-op, 0.8,0.9 is a mild filter
-  --highpass HI_THRESH,LOW_THRESH
+  --highpass LOW_THRESH,HIGH_THRESH
                         0,0 means no-op, 0.1,0.2 is a mild filter
+  --cut LOW_THRESH,HIGH_THRESH
+                        Cap values of the image according to quantile values.
+                        0,1 means no-op, 0.01,0.99 is a mild filter
   --resample RESAMPLE   Work with resampled images.
   --iters ITERS         How many iterations to guess the right scale and angle
   --extend PIXELS       Extend images by the specified amount of pixels before
                         the processing (thus eliminating edge effects)
   --order ORDER         Interpolation order (1 = linear, 3 = cubic etc)
-  --output OUTPUT, -o OUTPUT
-                        Where to save the transformed subject.
   --filter-pcorr FILTER_PCORR
                         Whether to filter during translation detection.
                         Normally not needed, but when using low-pass
@@ -48,6 +48,8 @@ optional arguments:
                         translation.
   --ty MEAN[,STD]       The mean and standard deviation of the expected Y
                         translation.
+  --output OUTPUT, -o OUTPUT
+                        Where to save the transformed subject.
   --loader {pil,mat,hdr}
                         Force usage of a concrete loader (default is
                         autodetection). If you plan on using two types of
@@ -58,3 +60,4 @@ optional arguments:
                         one is used or read the docs.)
   --help-loader         Get help on all loaders or on the current loader and
                         its options.
+  --show                Whether to show registration result

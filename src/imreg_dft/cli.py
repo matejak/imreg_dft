@@ -178,9 +178,9 @@ def update_parser_imreg(parser):
         help="We don't print anything unless this option is specified")
     parser.add_argument(
         '--print-format', type=outmsg,
-        default="scale: %(scale)f +-%(Dscale)g\n"
-        "angle: %(angle)f +-%(Dangle)g\n"
-        "shift (x, y): %(tx)g, %(ty)g +-%(Dt)g\nsuccess: %(success).3g\n",
+        default="scale: %(scale).5g +-%(Dscale).4g\n"
+        "angle: %(angle).6g +-%(Dangle).5g\n"
+        "shift (x, y): %(tx).6g, %(ty).6g +-%(Dt).4g\nsuccess: %(success).4g\n",
         help="Print a string (to stdout) in a given format. A dictionary "
         "containing the 'scale', 'angle', 'tx', 'ty', 'Dscale', 'Dangle', "
         "'Dt' and 'success' keys will be passed for string interpolation")
