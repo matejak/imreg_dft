@@ -36,6 +36,15 @@ import numpy as np
 # to be importable even if one doesn't have matplotlib
 
 
+TEXT_MODE = "plain"
+
+
+def _t(stri):
+    if TEXT_MODE == "tex":
+        return r"\textrm{%s}" % stri
+    return stri
+
+
 @contextlib.contextmanager
 def report_wrapper(orig, index):
     if orig is None:
@@ -183,11 +192,11 @@ def imshow_spectra(fig, spectra):
     )
     what = ("template", "subject")
     for ii, im in enumerate(spectra):
-        grid[ii].set_title("log abs dfts - %s" % what[ii])
+        grid[ii].set_title(_t("log abs dfts - %s" % what[ii]))
         im = grid[ii].imshow(np.log(np.abs(im)), cmap=plt.cm.viridis,
                              extent=dfts_filt_extent, )
-        grid[ii].set_xlabel("X / px")
-        grid[ii].set_ylabel("Y / px")
+        grid[ii].set_xlabel(_t("X / px"))
+        grid[ii].set_ylabel(_t("Y / px"))
         grid.cbar_axes[ii].colorbar(im)
     return fig
 
@@ -209,8 +218,8 @@ def imshow_logpolars(fig, spectra):
     for ii, im in enumerate(ims):
         im = grid[ii].imshow(im, cmap=plt.cm.viridis, vmin=vmin, vmax=vmax,
                              aspect="auto", extent=logpolars_extent)
-        grid[ii].set_xlabel("log radius")
-        grid[ii].set_ylabel("azimuth / degrees")
+        grid[ii].set_xlabel(_t("log radius"))
+        grid[ii].set_ylabel(_t("azimuth / degrees"))
         grid.cbar_axes[ii].colorbar(im)
 
     return fig
@@ -223,6 +232,10 @@ def imshow_plain(fig, images, what, also_common=False):
     nrows = 1
     if also_common:
         nrows = 2
+    elif len(images) == 4:
+        # not also_common and we have 4 images --- we make a grid of 2x2
+        nrows = ncols = 2
+
     grid = axg.ImageGrid(
         fig, 111,  nrows_ncols=(nrows, ncols), add_all=True,
         axes_pad=0.4, label_mode="L",
@@ -233,7 +246,7 @@ def imshow_plain(fig, images, what, also_common=False):
     for ii, im in enumerate(images):
         vmin = np.percentile(im, 2)
         vmax = np.percentile(im, 98)
-        grid[ii].set_title("individual cmap --- {}".format(what[ii]))
+        grid[ii].set_title(_t(what[ii]))
         img = grid[ii].imshow(im, cmap=plt.cm.gray,
                               vmin=vmin, vmax=vmax)
         grid.cbar_axes[ii].colorbar(img)
@@ -242,7 +255,7 @@ def imshow_plain(fig, images, what, also_common=False):
         vmin = min([np.percentile(im, 2) for im in images])
         vmax = max([np.percentile(im, 98) for im in images])
         for ii, im in enumerate(images):
-            grid[ii + ncols].set_title("common cmap --- {}".format(what[ii]))
+            grid[ii + ncols].set_title(_t(what[ii]))
             im = grid[ii + ncols].imshow(im, cmap=plt.cm.viridis,
                                          vmin=vmin, vmax=vmax)
             grid.cbar_axes[ii + ncols].colorbar(im)
@@ -271,8 +284,8 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
         origin="lower", extent=extent,
         cmap=plt.cm.viridis,
     )
-    grid[0].set_title("pcorr --- original")
-    labels = ("translation y / px", "translation x / px")
+    grid[0].set_title(_t(u"CPS — original"))
+    labels = (_t("translation y / px"), _t("translation x / px"))
     grid[0].imshow(raw, ** imshow_kwargs)
 
     center = np.array(result)
@@ -280,10 +293,10 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
     grid[0].autoscale(False)
     grid[0].plot(center[0], center[1], "o",
                  color="r", fillstyle="none", markersize=18, lw=8)
-    grid[0].annotate("succ: {:.3g}".format(success), xy=center,
+    grid[0].annotate(_t("succ: {:.3g}".format(success)), xy=center,
                      xytext=(0, 8), textcoords='offset points',
                      color="red", va="bottom", ha="center")
-    grid[1].set_title("pcorr --- constrained and filtered")
+    grid[1].set_title(_t(u"CPS — constrained and filtered"))
     im = grid[1].imshow(filtered, ** imshow_kwargs)
     grid.cbar_axes[0].colorbar(im)
 
@@ -296,7 +309,7 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
                 x.set_ha("right")
                 x.set_rotation_mode("anchor")
                 x.set_rotation(40)
-        labels = ("rotation / degrees", "scale change")
+        labels = (_t("rotation / degrees"), _t("scale change"))
 
     # The common stuff
     for idx in range(2):
@@ -316,7 +329,7 @@ def imshow_tiles(fig, im0, slices, shape):
     slices2rects(slices, callback)
 
 
-def imshow_results(fig, successes, shape):
+def imshow_results(fig, successes, shape, cluster):
     import matplotlib.pyplot as plt
     toshow = successes.reshape(shape)
 
@@ -329,9 +342,12 @@ def imshow_results(fig, successes, shape):
 
     coords = np.unravel_index(np.arange(len(successes)), shape)
     for idx, coord in enumerate(zip(* coords)):
+        color = "w"
+        if cluster[idx]:
+            color = "r"
         label = "{:02d}\n({},{})".format(idx, coord[1], coord[0])
         axes.text(coord[1], coord[0], label,
-                  va="center", ha="center", color="r",)
+                  va="center", ha="center", color=color,)
 
 
 def mk_factory(prefix, basedim, dpi=150, ftype="png"):
@@ -355,6 +371,7 @@ def report_tile(reports, prefix, multiplier=5.5):
     multiplier = reports.get_global("size")
     dpi = reports.get_global("dpi")
     ftype = reports.get_global("ftype")
+    terse = reports.get_global("terse")
 
     aspect = reports.get_global("aspect")
     basedim = multiplier * np.array((aspect, 1), float)
@@ -362,47 +379,57 @@ def report_tile(reports, prefix, multiplier=5.5):
         fig_factory = mk_factory("{}-{}".format(prefix, index),
                                  basedim, dpi, ftype)
         for key, value in contents.items():
-            if "ims-filt" in key and reports.show("inputs"):
-                with fig_factory(key, 2, 2) as fig:
-                    imshow_plain(fig, value, ("template", "subject"), True)
-            elif "dfts-filt" in key and reports.show("spectra"):
-                with fig_factory(key, 2, 1, False) as fig:
-                    imshow_spectra(fig, value)
-            elif "logpolars" in key and reports.show("logpolar"):
-                with fig_factory(key, 1, 1.4, False) as fig:
-                    imshow_logpolars(fig, value)
-            elif "amas-orig" in key and reports.show("scale_angle"):
-                with fig_factory("sa", 2, 1) as fig:
-                    center = np.array(contents["amas-result"], float)
-                    center[0] = 1.0 / center[0]
-                    imshow_pcorr(
-                        fig, value, contents["amas-postproc"],
-                        contents["amas-extent"], center,
-                        contents["amas-success"], log_base=contents["base"]
-                    )
-            elif "tiles-successes" in key and reports.show("tile_info"):
-                with fig_factory("tile-successes", 1, 1) as fig:
-                    imshow_results(fig, value, reports.get_global("tiles-shape"))
-            elif "tiles-decomp" in key and reports.show("tile_info"):
-                with fig_factory("tile-decomposition", 1, 1) as fig:
-                    imshow_tiles(fig, reports.get_global("tiles-whole"),
-                                 value, reports.get_global("tiles-shape"))
-            elif "after-rot" in key and reports.show("transformed"):
-                # TODO: Show: Original, rotated, translated0, translated180.
-                with fig_factory(key, 3, 1) as fig:
-                    imshow_plain(fig, value,
-                                 ("template", "subject", "tformed subject"))
-            elif "t0-orig" in key and reports.show("translation"):
-                t_flip = ("0", "180")
-                for idx in range(2):
-                    basename = "t_{}".format(t_flip[idx])
-                    with fig_factory(basename, 2, 1) as fig:
-                        img = contents["t{}-orig".format(idx)]
-                        halves = np.array(img.shape) / 2.0
-                        extent = np.array((- halves[1], halves[1],
-                                           - halves[0], halves[0]))
-                        center = contents["t{}-tvec".format(idx)][::-1]
-                        imshow_pcorr(
-                            fig, img, contents["t{}-postproc".format(idx)],
-                            extent, center, contents["t{}-success".format(idx)]
-                        )
+            _report_switch(fig_factory, key, value, reports, contents, terse)
+
+
+def _report_switch(fig_factory, key, value, reports, contents, terse):
+    if "ims_filt" in key and reports.show("inputs"):
+        with fig_factory(key, 2, 2) as fig:
+            imshow_plain(fig, value, ("template", "subject"), not terse)
+    elif "dfts_filt" in key and reports.show("spectra"):
+        with fig_factory(key, 2, 1, False) as fig:
+            imshow_spectra(fig, value)
+    elif "logpolars" in key and reports.show("logpolar"):
+        with fig_factory(key, 1, 1.4, False) as fig:
+            imshow_logpolars(fig, value)
+    elif "amas-orig" in key and reports.show("scale_angle"):
+        with fig_factory("sa", 2, 1) as fig:
+            center = np.array(contents["amas-result"], float)
+            center[0] = 1.0 / center[0]
+            imshow_pcorr(
+                fig, value, contents["amas-postproc"],
+                contents["amas-extent"], center,
+                contents["amas-success"], log_base=contents["base"]
+            )
+    elif "tiles_successes" in key and reports.show("tile_info"):
+        with fig_factory("tile-successes", 1, 1) as fig:
+            imshow_results(fig, value, reports.get_global("tiles-shape"),
+                           reports.get_global("tiles-cluster"))
+    elif "tiles_decomp" in key and reports.show("tile_info"):
+        with fig_factory("tile-decomposition", 1, 1) as fig:
+            imshow_tiles(fig, reports.get_global("tiles-whole"),
+                         value, reports.get_global("tiles-shape"))
+    elif "after_tform" in key and reports.show("transformed"):
+        shape = (len(value), 2)
+        if terse:
+            shape = (2, 2)
+        with fig_factory(key, * shape) as fig:
+            imshow_plain(
+                fig, value,
+                ("plain", "rotated--scaled",
+                 u"translated — bad rotation", u"translated — good rotation"),
+                not terse)
+    elif "t0-orig" in key and reports.show("translation"):
+        t_flip = ("0", "180")
+        for idx in range(2):
+            basename = "t_{}".format(t_flip[idx])
+            with fig_factory(basename, 2, 1) as fig:
+                img = contents["t{}-orig".format(idx)]
+                halves = np.array(img.shape) / 2.0
+                extent = np.array((- halves[1], halves[1],
+                                   - halves[0], halves[0]))
+                center = contents["t{}-tvec".format(idx)][::-1]
+                imshow_pcorr(
+                    fig, img, contents["t{}-postproc".format(idx)],
+                    extent, center, contents["t{}-success".format(idx)]
+                )

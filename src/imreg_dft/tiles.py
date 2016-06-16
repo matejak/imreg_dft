@@ -87,7 +87,7 @@ def _assemble_resdict(ii):
 
 def _preprocess_extend(ims, extend, low, high, cut, rcoef):
     bigshape = np.array([img.shape for img in ims]).max(0) + 2 * extend
-    bigshape *= rcoef
+    bigshape = (bigshape * rcoef).astype(int)
     ims = [_preprocess_extend_single(im, extend, low, high, cut,
                                      rcoef, bigshape)
            for im in ims]
@@ -224,7 +224,6 @@ def _fill_globals(tiles, poss, image, opts):
 def settle_tiles(imgs, tiledim, opts, reports=None):
     global _SHIFTS
     coef = 0.41
-    coef = 0.81
     img0 = imgs[0]
 
     tiles, poss = zip(* ird.utils.decompose(img0, tiledim, coef))
@@ -235,15 +234,6 @@ def settle_tiles(imgs, tiledim, opts, reports=None):
     for ii, pos in enumerate(poss):
         process_tile(ii, reports)
         tile_coord = (ii // ncols, ii % ncols)
-
-    if reports is not None and reports.show("tile_info"):
-        shape = (nrows, ncols)
-        slices = utils.getSlices(img0.shape, tiledim, coef)
-
-        reports.set_global("tiles-whole", img0)
-        reports.set_global("tiles-shape", shape)
-        reports.set_global("tiles-successes", _SUCCS)
-        reports.set_global("tiles-decomp", slices)
 
     """
     if ncores == 0:  # no multiprocessing (to see errors)
@@ -277,6 +267,16 @@ def settle_tiles(imgs, tiledim, opts, reports=None):
     # the average of all good tiles
     shift, angle, scale, score = utils.get_values(
         cluster, _SHIFTS, _SUCCS, _ANGLES, _SCALES)
+
+    if reports is not None and reports.show("tile_info"):
+        shape = (nrows, ncols)
+        slices = utils.getSlices(img0.shape, tiledim, coef)
+
+        reports.set_global("tiles-whole", img0)
+        reports.set_global("tiles-shape", shape)
+        reports.set_global("tiles-cluster", cluster)
+        reports.set_global("tiles_successes", _SUCCS)
+        reports.set_global("tiles_decomp", slices)
 
     resdict = _assemble_resdict(amax)
     resdict["scale"] = scale

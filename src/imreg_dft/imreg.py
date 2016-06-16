@@ -49,10 +49,6 @@ import scipy.ndimage.interpolation as ndii
 import imreg_dft.utils as utils
 
 
-__all__ = ['translation', 'similarity', 'transform_img',
-           'transform_img_dict', 'imshow']
-
-
 def _logpolar_filter(shape):
     """
     Make a radial cosine filter for the logpolar transform.
@@ -121,9 +117,9 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
 
     if reports is not None:
         if reports.show("spectra"):
-            reports["dfts-filt"] = dfts
+            reports["dfts_filt"] = dfts
         if reports.show("inputs"):
-            reports["ims-filt"] = [fft.ifft2(np.fft.ifftshift(dft))
+            reports["ims_filt"] = [fft.ifft2(np.fft.ifftshift(dft))
                                    for dft in dfts]
         if reports.show("logpolar"):
             reports["logpolars"] = stuffs
@@ -185,6 +181,10 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
     tvec2, succ2 = _translation(im0, utils.rot180(im1), filter_pcorr,
                                 constraints, report_two)
 
+    pick_rotated = False
+    if succ2 * odds > succ or odds == -1:
+        pick_rotated = True
+
     if reports is not None and reports.show("translation"):
         reports["t0-orig"] = report_one["amt-orig"]
         reports["t0-postproc"] = report_one["amt-postproc"]
@@ -196,7 +196,16 @@ def translation(im0, im1, filter_pcorr=0, odds=1, constraints=None,
         reports["t1-success"] = succ2
         reports["t1-tvec"] = tuple(tvec2)
 
-    if succ2 * odds > succ or odds == -1:
+    if reports is not None and reports.show("transformed"):
+        toapp = [
+            transform_img(utils.rot180(im1), tvec=tvec2, mode="wrap", order=3),
+            transform_img(im1, tvec=tvec, mode="wrap", order=3),
+        ]
+        if pick_rotated:
+            toapp = toapp[::-1]
+        reports["after_tform"].extend(toapp)
+
+    if pick_rotated:
         tvec = tvec2
         succ = succ2
         angle += 180
@@ -271,7 +280,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
     constraints_dynamic["angle"] = list(constraints["angle"])
 
     if reports is not None and reports.show("transformed"):
-        reports["after-rot"] = [im0.copy(), im2.copy()]
+        reports["after_tform"] = [im2.copy()]
 
     for ii in range(numiter):
         newscale, newangle = _get_ang_scale([im0, im2], bgval, exponent,
@@ -285,7 +294,7 @@ def _similarity(im0, im1, numiter=1, order=3, constraints=None,
         im2 = transform_img(im1, scale, angle, bgval=bgval, order=order)
 
         if reports is not None and reports.show("transformed"):
-            reports["after-rot"].append(im2.copy())
+            reports["after_tform"].append(im2.copy())
 
     # Here we look how is the turn-180
     target, stdev = constraints.get("angle", (0, None))
@@ -494,7 +503,8 @@ def transform_img_dict(img, tdict, bgval=None, order=1, invert=False):
     return res
 
 
-def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
+def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0),
+                  mode="constant", bgval=None, order=1):
     """
     Return translation vector to register images.
 
@@ -506,6 +516,8 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
         scale (float): The scale factor (scale > 1.0 means zooming in)
         angle (float): Degrees of rotation (clock-wise)
         tvec (2-tuple): Pixel translation vector, Y and X component.
+        mode (string): The transformation mode (refer to e.g.
+            :func:`scipy.ndimage.shift` and its kwarg ``mode``).
         bgval (float): Shade of the background (filling during transformations)
             If None is passed, :func:`imreg_dft.utils.get_borderval` with
             radius of 5 is used to get it.
@@ -522,7 +534,7 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
         for idx in range(img.shape[2]):
             sli = (slice(None), slice(None), idx)
             ret[sli] = transform_img(img[sli], scale, angle, tvec,
-                                     bgval, order)
+                                     mode, bgval, order)
         return ret
 
     if bgval is None:
@@ -533,12 +545,12 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0), bgval=None, order=1):
 
     dest0 = utils.embed_to(bg, img.copy())
     if scale != 1.0:
-        dest0 = ndii.zoom(dest0, scale, order=order, cval=bgval)
+        dest0 = ndii.zoom(dest0, scale, order=order, mode=mode, cval=bgval)
     if angle != 0.0:
-        dest0 = ndii.rotate(dest0, angle, order=order, cval=bgval)
+        dest0 = ndii.rotate(dest0, angle, order=order, mode=mode, cval=bgval)
 
     if tvec[0] != 0 or tvec[1] != 0:
-        dest0 = ndii.shift(dest0, tvec, order=order, cval=bgval)
+        dest0 = ndii.shift(dest0, tvec, order=order, mode=mode, cval=bgval)
 
     bg = np.zeros_like(img) + bgval
     dest = utils.embed_to(bg, dest0)
@@ -631,11 +643,6 @@ def _logpolar(image, shape, log_base, bgval=None):
     output = np.empty_like(y)
     ndii.map_coordinates(image, [y, x], output=output, order=3,
                          mode="constant", cval=bgval)
-    """
-    import pylab as pyl
-    pyl.figure(); pyl.imshow(output);
-    pyl.show()
-    """
     return output
 
 

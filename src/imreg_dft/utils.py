@@ -894,7 +894,7 @@ def get_best_cluster(points, scores, rad=0):
     and a point may be members of multiple cluster.
 
     Args:
-        points
+        points: Array of bools, indices that belong to the cluster are True
         scores: Rates a point by a number --- higher is better.
     """
     clusters = get_clusters(points, rad)
