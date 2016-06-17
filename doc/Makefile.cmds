@@ -119,11 +119,11 @@ $(IMGDIR)/difficult.png $(IMGDIR)/difficult.pdf: $(TILEDIR)/big.png $(TILEDIR)/s
 
 # reports-t_180 will be created as a side-effect
 $(IMGDIR)/reports-t_0.png: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3n.jpg
-	ird-show $^ --display i2 --ftype png --dpi 90 --size 4.4 --terse && mv reports-ims-filt* reports-t_*.png $(IMGDIR)
+	ird-show $^ --display i2 --ftype png --dpi 90 --size 4.4 --terse && mv reports-ims_filt* reports-t_*.png $(IMGDIR)
 
 # reports-t_180 will be created as a side-effect
 $(IMGDIR)/reports-t_0.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3n.jpg
-	ird-show $^ --display i2 --ftype pdf --dpi 90 --size 4.4 --tex --terse && mv reports-ims-filt* reports-t_*.pdf $(IMGDIR)
+	ird-show $^ --display i2 --ftype pdf --dpi 90 --size 4.4 --tex --terse && mv reports-ims_filt* reports-t_*.pdf $(IMGDIR)
 
 define already-have-it
 @echo This file is a side-effect product of the rule for $|

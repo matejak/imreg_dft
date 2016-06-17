@@ -629,7 +629,7 @@ def _logpolar(image, shape, log_base, bgval=None):
     center = imshape[0] / 2.0, imshape[1] / 2.0
     # 0 .. pi = only half of the spectrum is used
     theta = utils._get_angles(shape)
-    radius_x = utils._get_scales(shape, log_base)
+    radius_x = utils._get_lograd(shape, log_base)
     radius_y = radius_x.copy()
     ellipse_coef = imshape[0] / float(imshape[1])
     # We have to acknowledge that the frequency spectrum can be deformed

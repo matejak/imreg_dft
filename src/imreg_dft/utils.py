@@ -96,11 +96,15 @@ def _get_angles(shape):
     return ret
 
 
-def _get_scales(shape, log_base):
+def _get_lograd(shape, log_base):
     """
     In the log-polar spectrum, the (second) coord corresponds to an angle.
     This function returns a mapping of (the two) coordinates
     to the respective scale.
+
+    Returns:
+        2D np.ndarray of shape ``shape``, -1 coord contains scales
+            from 0 to log_base ** (shape[1] - 1)
     """
     ret = np.zeros(shape, dtype=np.float64)
     ret += np.power(log_base, np.arange(shape[1], dtype=float))[np.newaxis, :]
@@ -121,9 +125,9 @@ def _get_constraint_mask(shape, log_base, constraints=None):
     # coordinates to values of quantities.
     if "scale" in constraints:
         scale, sigma = constraints["scale"]
-        scales = fft.ifftshift(_get_scales(shape, log_base))
-        # vvv This issome kind of transformation of result of _get_scales
-        # vvv (apparently log scales) to linear ones.
+        scales = fft.ifftshift(_get_lograd(shape, log_base))
+        # vvv This issome kind of transformation of result of _get_lograd
+        # vvv (log radius in pixels) to the linear scale.
         scales *= log_base ** (- shape[1] / 2.0)
         # This makes the scales array low near where scales is near 'scale'
         scales -= 1.0 / scale

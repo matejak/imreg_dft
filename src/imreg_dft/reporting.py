@@ -263,12 +263,65 @@ def imshow_plain(fig, images, what, also_common=False):
     return fig
 
 
-def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
+def imshow_pcorr_translation(fig, cpss, extent, results, successes):
     import matplotlib.pyplot as plt
     import mpl_toolkits.axes_grid1 as axg
+    ncols = 2
     grid = axg.ImageGrid(
         fig, 111,  # similar to subplot(111)
-        nrows_ncols=(1, 2),
+        nrows_ncols=(1, ncols),
+        add_all=True,
+        axes_pad=0.4,
+        aspect=False,
+        cbar_pad=0.05,
+        label_mode="L",
+        cbar_mode="single",
+        cbar_size="3.5%",
+    )
+    vmax = max(cpss[0].max(), cpss[1].max())
+    imshow_kwargs = dict(
+        vmin=0, vmax=vmax,
+        aspect="auto",
+        origin="lower", extent=extent,
+        cmap=plt.cm.viridis,
+    )
+    titles = (_t(u"CPS — translation 0°"), _t(u"CPS — translation 180°"))
+    labels = (_t("translation y / px"), _t("translation x / px"))
+    for idx, pl in enumerate(grid):
+        # TODO: Code duplication with imshow_pcorr
+        pl.set_title(titles[idx])
+        center = np.array(results[idx])
+        im = pl.imshow(cpss[idx], ** imshow_kwargs)
+
+        # Otherwise plot would change xlim
+        pl.autoscale(False)
+        pl.plot(center[0], center[1], "o",
+                color="r", fillstyle="none", markersize=18, lw=8)
+        pl.annotate(_t("succ: {:.3g}".format(successes[idx])), xy=center,
+                    xytext=(0, 9), textcoords='offset points',
+                    color="red", va="bottom", ha="center")
+        pl.annotate(_t("({:.3g}, {:.3g})".format(* center)), xy=center,
+                    xytext=(0, -9), textcoords='offset points',
+                    color="red", va="top", ha="center")
+        pl.grid(c="w")
+        pl.set_xlabel(labels[1])
+
+    grid.cbar_axes[0].colorbar(im)
+    grid[0].set_ylabel(labels[0])
+
+    return fig
+
+
+def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None,
+                 terse=False):
+    import matplotlib.pyplot as plt
+    import mpl_toolkits.axes_grid1 as axg
+    ncols = 2
+    if terse:
+        ncols = 1
+    grid = axg.ImageGrid(
+        fig, 111,  # similar to subplot(111)
+        nrows_ncols=(1, ncols),
         add_all=True,
         axes_pad=0.4,
         aspect=False,
@@ -284,9 +337,9 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
         origin="lower", extent=extent,
         cmap=plt.cm.viridis,
     )
-    grid[0].set_title(_t(u"CPS — original"))
+    grid[0].set_title(_t(u"CPS"))
     labels = (_t("translation y / px"), _t("translation x / px"))
-    grid[0].imshow(raw, ** imshow_kwargs)
+    im = grid[0].imshow(raw, ** imshow_kwargs)
 
     center = np.array(result)
     # Otherwise plot would change xlim
@@ -294,14 +347,18 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
     grid[0].plot(center[0], center[1], "o",
                  color="r", fillstyle="none", markersize=18, lw=8)
     grid[0].annotate(_t("succ: {:.3g}".format(success)), xy=center,
-                     xytext=(0, 8), textcoords='offset points',
+                     xytext=(0, 9), textcoords='offset points',
                      color="red", va="bottom", ha="center")
-    grid[1].set_title(_t(u"CPS — constrained and filtered"))
-    im = grid[1].imshow(filtered, ** imshow_kwargs)
+    grid[0].annotate(_t("({:.3g}, {:.3g})".format(* center)), xy=center,
+                     xytext=(0, -9), textcoords='offset points',
+                     color="red", va="top", ha="center")
+    if not terse:
+        grid[1].set_title(_t(u"CPS — constrained and filtered"))
+        im = grid[1].imshow(filtered, ** imshow_kwargs)
     grid.cbar_axes[0].colorbar(im)
 
     if log_base is not None:
-        for dim in range(2):
+        for dim in range(ncols):
             grid[dim].set_xscale("log", basex=log_base)
             grid[dim].get_xaxis().set_major_formatter(plt.ScalarFormatter())
             xlabels = grid[dim].get_xticklabels(False, "both")
@@ -312,7 +369,7 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None):
         labels = (_t("rotation / degrees"), _t("scale change"))
 
     # The common stuff
-    for idx in range(2):
+    for idx in range(ncols):
         grid[idx].grid(c="w")
         grid[idx].set_xlabel(labels[1])
 
@@ -390,14 +447,14 @@ def _report_switch(fig_factory, key, value, reports, contents, terse):
         with fig_factory(key, 2, 1, False) as fig:
             imshow_spectra(fig, value)
     elif "logpolars" in key and reports.show("logpolar"):
+        # TODO: settle the X axis, so it shows real data
         with fig_factory(key, 1, 1.4, False) as fig:
             imshow_logpolars(fig, value)
     elif "amas-orig" in key and reports.show("scale_angle"):
         with fig_factory("sa", 2, 1) as fig:
             center = np.array(contents["amas-result"], float)
-            center[0] = 1.0 / center[0]
             imshow_pcorr(
-                fig, value, contents["amas-postproc"],
+                fig, value[:, ::-1], contents["amas-postproc"][:, ::-1],
                 contents["amas-extent"], center,
                 contents["amas-success"], log_base=contents["base"]
             )
@@ -421,15 +478,25 @@ def _report_switch(fig_factory, key, value, reports, contents, terse):
                 not terse)
     elif "t0-orig" in key and reports.show("translation"):
         t_flip = ("0", "180")
-        for idx in range(2):
-            basename = "t_{}".format(t_flip[idx])
-            with fig_factory(basename, 2, 1) as fig:
-                img = contents["t{}-orig".format(idx)]
-                halves = np.array(img.shape) / 2.0
-                extent = np.array((- halves[1], halves[1],
-                                   - halves[0], halves[0]))
-                center = contents["t{}-tvec".format(idx)][::-1]
-                imshow_pcorr(
-                    fig, img, contents["t{}-postproc".format(idx)],
-                    extent, center, contents["t{}-success".format(idx)]
-                )
+        origs = [contents["t{}-orig".format(idx)] for idx in range(2)]
+        tvecs = [contents["t{}-tvec".format(idx)][::-1] for idx in range(2)]
+        successes = [contents["t{}-success".format(idx)] for idx in range(2)]
+        halves = np.array(origs[0].shape) / 2.0
+        extent = np.array((- halves[1], halves[1],
+                           - halves[0], halves[0]))
+
+        if terse:
+            with fig_factory("t", 2, 1) as fig:
+                imshow_pcorr_translation(fig, origs, extent, tvecs, successes)
+        else:
+            for idx in range(2):
+                basename = "t_{}".format(t_flip[idx])
+                ncols = 2
+                if terse:
+                    ncols = 1
+                with fig_factory(basename, ncols, 1) as fig:
+                    imshow_pcorr(
+                        fig, origs[idx], contents["t{}-postproc".format(idx)],
+                        extent, tvecs[idx], successes[idx],
+                        terse=terse
+                    )

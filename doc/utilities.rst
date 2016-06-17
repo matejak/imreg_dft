@@ -45,7 +45,7 @@ In order to find out what is going on, you can request visualizations of various
 Typically, you choose the template, the subject and instead of performing casual phase correlation using ``ird``, you use ``ird-show``.
 Then, the normal phase correlation takes place and various stages of it are output in form of images (see the ``--display`` argument of ``ird-show``).
 
-.. figure:: _build/images/reports-ims-filt.*
+.. figure:: _build/images/reports-ims_filt.*
 
    Filtered ``sample1.png`` and ``sample3n.jpg`` respectively.
 
@@ -69,11 +69,11 @@ You can visualize any subset from the table below:
 ===== ===================================== ==========
 code  filename stem                         what it is
 ===== ===================================== ==========
-``i`` ``ims-filt``                          supplied template and subject after application of common filters
-``s`` ``dfts-filt``                         log-abs of frequency spectra of supplied template and subject (after application of common filters)
+``i`` ``ims_filt``                          supplied template and subject after application of common filters
+``s`` ``dfts_filt``                         log-abs of frequency spectra of supplied template and subject (after application of common filters)
 ``l`` ``logpolars``                         log-polar transform of the former
 ``1`` ``sa``                                insight into scale-angle phase correlation
-``a`` ``after-tform``                       after application of the first part of phase correlation --- the angle-scale transform
+``a`` ``after_tform``                       after application of the first part of phase correlation --- the angle-scale transform
 ``2`` ``t_0``, ``t_180``                    insight into translation phase correlation
 ``t`` ``tiles_successes``, ``tiles_decomp`` insight into the :ref:`tiling functionality <tiling>`
 ===== ===================================== ==========
