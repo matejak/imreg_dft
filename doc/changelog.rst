@@ -1,7 +1,7 @@
 User-centric changelog
 ======================
 
-**2.0.0 --- TBA**
+**2.0.0 --- 2016-06-19**
 
  * Preliminary support for sub-pixel transformation detection (watch `#10 <https://github.com/matejak/imreg_dft/issues/10>`_).
  * Changed interface for the ``imreg_dft.imreg.translation`` function (it returns a dict).
