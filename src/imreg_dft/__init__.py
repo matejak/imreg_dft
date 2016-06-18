@@ -10,4 +10,4 @@ except ImportError as exc:
     print("Unable to import the main package: %s" % exc)
 
 
-__version__ = "2.0.0a"
+__version__ = "2.0.0"
