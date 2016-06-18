@@ -45,6 +45,14 @@ In order to find out what is going on, you can request visualizations of various
 Typically, you choose the template, the subject and instead of performing casual phase correlation using ``ird``, you use ``ird-show``.
 Then, the normal phase correlation takes place and various stages of it are output in form of images (see the ``--display`` argument of ``ird-show``).
 
+{% if READTHEDOCS %}
+.. warning::
+
+   Some images are not available on readthedocs. 
+   To see them, refer to the `uploaded documentation <>`_.
+   We apologize for the inconvenience which is related to `this readthedocs limitation <https://github.com/rtfd/readthedocs.org/issues/1054>`_.
+{% endif %}
+
 .. figure:: _build/images/reports-ims_filt.*
 
    Filtered ``sample1.png`` and ``sample3n.jpg`` respectively.

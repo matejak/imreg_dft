@@ -13,11 +13,15 @@ Given two images, `imreg_dft` can calculate difference between scale, rotation a
 Given you have the requirements, you can start aligning images in about five minutes!
 Check the documentation on [readthedocs.org](http://imreg-dft.readthedocs.org/en/latest/quickstart.html) (bleeding-edge) or [pythonhosted.org](http://pythonhosted.org//imreg_dft/) (with images).
 
+If you are a part of the education process that has something to do with phase correlation (doesn't matter whether you are a student or a teacher), the `ird-show` utility that is part of the `imreg_dft` project can help you understand (or explain) how the phase correlation process works.
+If you are a researcher and you are having problems with the method on your data, you can use `ird-show` to find out what causes your problems quite easily.
+
 Features
 --------
 * Image pre-processing options (frequency filtration, image extension).
 * Under-the-hood options exposed (iterations, phase correlation filtration).
-* Command-line interface (text output and/or image output).
+* Visualization of various stages of the image registration (so you can more easily find out how it works or what went wrong).
+* Command-line interface for image registration (`ird` - text output and/or image output), for image transformation (`ird-tform`, cooperates with `ird`) and inspection (`ird-show`).
 * Documented Python API with examples.
 * Permissive open-source license (3-clause BSD).
 

@@ -3,18 +3,18 @@ User-centric changelog
 
 **2.0.0 --- TBA**
 
- * Support for sub-pixel transformation detection.
+ * Preliminary support for sub-pixel transformation detection (watch `#10 <https://github.com/matejak/imreg_dft/issues/10>`_).
  * Changed interface for the ``imreg_dft.imreg.translation`` function (it returns a dict).
- * New script: ``ird-tform`` transforms an image if given a transformation.
- * New script: ``ird-show`` allows in-depth visual insight into a phase correlation operation.
+ * New script: ``ird-tform`` transforms an image if given a transformation (closes `#19 <https://github.com/matejak/imreg_dft/issues/19>`_).
+ * New script: ``ird-show`` allows in-depth visual insight into a phase correlation operation (closes `#20 <https://github.com/matejak/imreg_dft/issues/20>`_).
 
 **1.0.5 --- 2015-05-02**
 
  * Fixed project documentation typos, added the ``AUTHORS`` file.
  * Added support for ``pyfftw`` for increased performance.
  * Improved integration with MS Windows.
- * Fixed an install bug #18 that occured when dependencies were not met at install-time.
- * Added documentation for Python constraint interface #15
+ * Fixed an install bug (closes `#18 <https://github.com/matejak/imreg_dft/issues/18>`_) that occured when dependencies were not met at install-time.
+ * Added documentation for Python constraint interface (closes `#15 <https://github.com/matejak/imreg_dft/issues/15>`_).
 
 **1.0.4 --- 2015-03-03**
 
