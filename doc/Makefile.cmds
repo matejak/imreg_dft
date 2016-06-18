@@ -34,8 +34,8 @@ IMGS = \
 	difficult.pdf \
 	constraints.png \
 	constraints.pdf \
-	reports-t_0.png \
-	reports-t_0.pdf \
+	reports-t.png \
+	reports-t.pdf \
 	$(NUL)
 
 EXAMPLEDIR = _static/examples
@@ -117,13 +117,13 @@ $(IMGDIR)/constraints.png $(IMGDIR)/constraints.pdf: $(CONSDIR)/tricky.png $(CON
 $(IMGDIR)/difficult.png $(IMGDIR)/difficult.pdf: $(TILEDIR)/big.png $(TILEDIR)/small.png $(DIFFICULT_PNG)
 	$(PYTHON) stack_imgs.py $^ -o $@ --size 8.2,2.2 --colormap gray_r
 
-# reports-t_180 will be created as a side-effect
-$(IMGDIR)/reports-t_0.png: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3n.jpg
-	ird-show $^ --display i2 --ftype png --dpi 90 --size 4.4 --terse && mv reports-ims_filt* reports-t_*.png $(IMGDIR)
+# reports-ims_filt will be created as a side-effect
+$(IMGDIR)/reports-t.png: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3n.jpg
+	ird-show $^ --display i2 --ftype png --dpi 90 --size 4.4 --terse && mv reports-ims_filt* reports-t*.png $(IMGDIR)
 
-# reports-t_180 will be created as a side-effect
-$(IMGDIR)/reports-t_0.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3n.jpg
-	ird-show $^ --display i2 --ftype pdf --dpi 90 --size 4.4 --tex --terse && mv reports-ims_filt* reports-t_*.pdf $(IMGDIR)
+# reports-ims_filt will be created as a side-effect
+$(IMGDIR)/reports-t.pdf: $(RSRCDIR)/sample1.png $(RSRCDIR)/sample3n.jpg
+	ird-show $^ --display i2 --ftype pdf --dpi 90 --size 4.4 --tex --terse && mv reports-ims_filt* reports-t*.pdf $(IMGDIR)
 
 define already-have-it
 @echo This file is a side-effect product of the rule for $|

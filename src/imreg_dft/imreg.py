@@ -116,6 +116,9 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
     scale = 1.0 / scale
 
     if reports is not None:
+        reports["shape"] = filt.shape
+        reports["base"] = log_base
+
         if reports.show("spectra"):
             reports["dfts_filt"] = dfts
         if reports.show("inputs"):
@@ -125,7 +128,6 @@ def _get_ang_scale(ims, bgval, exponent='inf', constraints=None, reports=None):
             reports["logpolars"] = stuffs
 
         if reports.show("scale_angle"):
-            reports["base"] = log_base
             reports["amas-result-raw"] = (arg_ang, arg_rad)
             reports["amas-result"] = (scale, angle)
             reports["amas-success"] = success
@@ -580,6 +582,7 @@ def similarity_matrix(scale, angle, vector):
     return np.dot(m_transl, np.dot(m_rot, m_scale))
 
 
+EXCESS_CONST = 1.1
 def _get_log_base(shape, new_r):
     """
     Basically common functionality of :func:`_logpolar`
@@ -589,21 +592,23 @@ def _get_log_base(shape, new_r):
     transform, mess with the shape.
 
     Args:
-        shape (): Shape of the original image.
+        shape: Shape of the original image.
         new_r (float): The r-size of the log-polar transform array dimension.
 
     Returns:
-        float - Base of the log-polar transform.
+        float: Base of the log-polar transform.
+        The following holds:
+        :math:`log\_base = \exp( \ln [ \mathit{spectrum\_dim} ] / \mathit{loglpolar\_scale\_dim} )`,
+        or the equivalent :math:`log\_base^{\mathit{loglpolar\_scale\_dim}} = \mathit{spectrum\_dim}`.
     """
     # The highest radius we have to accomodate is 'old_r',
     # However, we cut some parts out as only a thin part of the spectra has
     # these high frequencies
-    old_r = shape[0] * 1.1
+    old_r = shape[0] * EXCESS_CONST
     # We are radius, so we divide the diameter by two.
     old_r /= 2.0
     # we have at most 'new_r' of space.
-    # the base is chosen so that 'new_r' = log_'base'('old_r')
-    log_base = np.exp(np.log(old_r) / (new_r))
+    log_base = np.exp(np.log(old_r) / new_r)
     return log_base
 
 

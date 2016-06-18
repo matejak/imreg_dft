@@ -35,6 +35,8 @@ import numpy as np
 # We intentionally don't import matplotlib on this level - we want this module
 # to be importable even if one doesn't have matplotlib
 
+from imreg_dft import imreg
+
 
 TEXT_MODE = "plain"
 
@@ -183,44 +185,53 @@ def slices2rects(slices, rect_cb):
 def imshow_spectra(fig, spectra):
     import matplotlib.pyplot as plt
     import mpl_toolkits.axes_grid1 as axg
-    dfts_filt_extent = (-0.5, 0.5, -0.5, 0.5)
+    dfts_filt_extent = (-1, 1, -1, 1)
     grid = axg.ImageGrid(
         fig, 111, nrows_ncols=(1, 2),
         add_all=True,
         axes_pad=0.4, label_mode="L",
-        cbar_pad=0.05, cbar_mode="each", cbar_size="3.5%",
     )
     what = ("template", "subject")
     for ii, im in enumerate(spectra):
         grid[ii].set_title(_t("log abs dfts - %s" % what[ii]))
         im = grid[ii].imshow(np.log(np.abs(im)), cmap=plt.cm.viridis,
                              extent=dfts_filt_extent, )
-        grid[ii].set_xlabel(_t("X / px"))
-        grid[ii].set_ylabel(_t("Y / px"))
-        grid.cbar_axes[ii].colorbar(im)
+        grid[ii].set_xlabel(_t("2 X / px"))
+        grid[ii].set_ylabel(_t("2 Y / px"))
     return fig
 
 
-def imshow_logpolars(fig, spectra):
+def imshow_logpolars(fig, spectra, log_base, im_shape):
     import matplotlib.pyplot as plt
     import mpl_toolkits.axes_grid1 as axg
-    logpolars_extent = (0, 0.5, 0, 180)
+    low = 1.0
+    high = log_base ** spectra[0].shape[1]
+    logpolars_extent = (low, high,
+                        0, 180)
     grid = axg.ImageGrid(
         fig, 111, nrows_ncols=(2, 1),
         add_all=True,
         aspect=False,
         axes_pad=0.4, label_mode="L",
-        cbar_pad=0.05, cbar_mode="each", cbar_size="3.5%",
     )
     ims = [np.log(np.abs(im)) for im in spectra]
-    vmin = min([np.percentile(im, 2) for im in ims])
-    vmax = max([np.percentile(im, 98) for im in ims])
     for ii, im in enumerate(ims):
+        vmin = np.percentile(im, 1)
+        vmax = np.percentile(im, 99)
+        grid[ii].set_xscale("log", basex=log_base)
+        grid[ii].get_xaxis().set_major_formatter(plt.ScalarFormatter())
         im = grid[ii].imshow(im, cmap=plt.cm.viridis, vmin=vmin, vmax=vmax,
                              aspect="auto", extent=logpolars_extent)
         grid[ii].set_xlabel(_t("log radius"))
         grid[ii].set_ylabel(_t("azimuth / degrees"))
-        grid.cbar_axes[ii].colorbar(im)
+
+        xticklabels = ["{:.3g}".format(tick * 2 / im_shape[0])
+                      for tick in grid[ii].get_xticks()]
+
+        grid[ii].set_xticklabels(
+            xticklabels,
+            rotation=40, rotation_mode="anchor", ha="right"
+        )
 
     return fig
 
@@ -239,7 +250,6 @@ def imshow_plain(fig, images, what, also_common=False):
     grid = axg.ImageGrid(
         fig, 111,  nrows_ncols=(nrows, ncols), add_all=True,
         axes_pad=0.4, label_mode="L",
-        cbar_pad=0.05, cbar_mode="each", cbar_size="3.5%",
     )
     images = [im.real for im in images]
 
@@ -249,7 +259,6 @@ def imshow_plain(fig, images, what, also_common=False):
         grid[ii].set_title(_t(what[ii]))
         img = grid[ii].imshow(im, cmap=plt.cm.gray,
                               vmin=vmin, vmax=vmax)
-        grid.cbar_axes[ii].colorbar(img)
 
     if also_common:
         vmin = min([np.percentile(im, 2) for im in images])
@@ -258,7 +267,6 @@ def imshow_plain(fig, images, what, also_common=False):
             grid[ii + ncols].set_title(_t(what[ii]))
             im = grid[ii + ncols].imshow(im, cmap=plt.cm.viridis,
                                          vmin=vmin, vmax=vmax)
-            grid.cbar_axes[ii + ncols].colorbar(im)
 
     return fig
 
@@ -447,9 +455,8 @@ def _report_switch(fig_factory, key, value, reports, contents, terse):
         with fig_factory(key, 2, 1, False) as fig:
             imshow_spectra(fig, value)
     elif "logpolars" in key and reports.show("logpolar"):
-        # TODO: settle the X axis, so it shows real data
         with fig_factory(key, 1, 1.4, False) as fig:
-            imshow_logpolars(fig, value)
+            imshow_logpolars(fig, value, contents["base"], contents["shape"])
     elif "amas-orig" in key and reports.show("scale_angle"):
         with fig_factory("sa", 2, 1) as fig:
             center = np.array(contents["amas-result"], float)
