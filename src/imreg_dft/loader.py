@@ -475,7 +475,7 @@ def settle_loaders(args, fnames=None):
     It:
 
     #. If requested by passed args, it prints loaders help
-        and then exits the app
+       and then exits the app
     #. If filenames are supplied, it returns list of respective loaders.
 
     Args:

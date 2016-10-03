@@ -476,7 +476,7 @@ def extend_to(what, newdim):
     res = embed_to(res, what)
 
     apofield = get_apofield(what.shape, dst)
-    apoemb = embed_to(dest.copy().astype(float), apofield)
+    apoemb = embed_to(dest.copy().astype(what.dtype), apofield)
 
     # res is a convex combination of its previous self and the bg value
     res = apoemb * res + (1 - apoemb) * bgval

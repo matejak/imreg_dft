@@ -50,7 +50,7 @@ def resample(img, coef):
     from scipy import signal
     ret = img
     for axis in range(2):
-        newdim = ret.shape[axis] * coef
+        newdim = int(ret.shape[axis] * coef)
         ret = signal.resample(ret, newdim, axis=axis)
     return ret
 
