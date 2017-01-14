@@ -5,6 +5,14 @@ imreg_dft
 [![Build Status](https://travis-ci.org/matejak/imreg_dft.svg?branch=master)](https://travis-ci.org/matejak/imreg_dft)
 [![Documentation Status](https://readthedocs.org/projects/imreg-dft/badge/?version=latest)](https://readthedocs.org/projects/imreg-dft/?badge=latest)
 
+Project status
+--------------
+
+`imreg_dft` has reached a stable state.
+This means that although you won't see many commits, the project is not dead, there are just no outstanding issues and people are not complaining.
+Addition of some nice-to-have features is planned in Q3/2017.
+Until then, I will spend time on the [Argbash project](https://argbash.io) - you might want to check it out if you write shell scripts.
+
 Overview
 --------
 Image registration using discrete Fourier transform.
