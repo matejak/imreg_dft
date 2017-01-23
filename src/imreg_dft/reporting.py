@@ -360,6 +360,8 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None,
     grid[0].annotate(_t("({:.3g}, {:.3g})".format(* center)), xy=center,
                      xytext=(0, -9), textcoords='offset points',
                      color="red", va="top", ha="center")
+    # Show the grid only on the annotated image
+    grid[0].grid(c="w")
     if not terse:
         grid[1].set_title(_t(u"CPS — constrained and filtered"))
         im = grid[1].imshow(filtered, ** imshow_kwargs)
@@ -378,7 +380,6 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None,
 
     # The common stuff
     for idx in range(ncols):
-        grid[idx].grid(c="w")
         grid[idx].set_xlabel(labels[1])
 
     grid[0].set_ylabel(labels[0])
