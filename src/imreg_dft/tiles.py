@@ -104,7 +104,7 @@ def _preprocess_extend_single(im, extend, low, high, cut, rcoef, bigshape):
         im = resample(im, rcoef)
 
     # Make the shape of images the same
-    bg = np.zeros(bigshape) + utils.get_borderval(im, 5)
+    bg = np.zeros(bigshape, dtype=im.dtype) + utils.get_borderval(im, 5)
     im = utils.embed_to(bg, im)
     return im
 

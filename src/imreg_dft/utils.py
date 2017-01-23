@@ -540,7 +540,11 @@ def imfilter(img, low=None, high=None, cap=None):
     if high is not None:
         _highpass(dft, high[0], high[1])
 
-    ret = np.real(fft.ifft2(dft))
+    ret = fft.ifft2(dft)
+    # if the input was a real number array, return real numbers,
+    # otherwise let it be complex.
+    if not np.iscomplexobj(img):
+        ret = np.real(ret)
 
     if cap is None:
         cap = (0, 1)

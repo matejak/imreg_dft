@@ -515,6 +515,8 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0),
             If a 3D array is passed, it is treated in a manner in which RGB
             images are supposed to be handled - i.e. assume that coordinates
             are (Y, X, channels).
+            Complex images are handled in a way that treats separately
+            the real and imaginary parts.
         scale (float): The scale factor (scale > 1.0 means zooming in)
         angle (float): Degrees of rotation (clock-wise)
         tvec (2-tuple): Pixel translation vector, Y and X component.
@@ -538,6 +540,14 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0),
             ret[sli] = transform_img(img[sli], scale, angle, tvec,
                                      mode, bgval, order)
         return ret
+    elif np.iscomplexobj(img):
+        decomposed = np.empty(img.shape + (2,), float)
+        decomposed[:, :, 0] = img.real
+        decomposed[:, :, 1] = img.imag
+        # The bgval makes little sense now, as we decompose the image
+        res = transform_img(decomposed, scale, angle, tvec, mode, None, order)
+        ret = res[:, :, 0] + 1j * res[:, :, 1]
+        return ret
 
     if bgval is None:
         bgval = utils.get_borderval(img)
@@ -546,6 +556,8 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0),
     bg = np.zeros(bigshape, img.dtype) + bgval
 
     dest0 = utils.embed_to(bg, img.copy())
+    # TODO: We have problems with complex numbers
+    # that are not supported by zoom(), rotate() or shift()
     if scale != 1.0:
         dest0 = ndii.zoom(dest0, scale, order=order, mode=mode, cval=bgval)
     if angle != 0.0:
@@ -687,19 +699,23 @@ def imshow(im0, im1, im2, cmap=None, fig=None, **kwargs):
     # We do the difference between the template and the result now
     # To increase the contrast of the difference, we norm images according
     # to their near-maximums
-    norm = np.percentile(im2, 99.5) / np.percentile(im0, 99.5)
+    norm = np.percentile(np.abs(im2), 99.5) / np.percentile(np.abs(im0), 99.5)
+    # Divide by zero is OK here
+    phase_norm = np.median(np.angle(im2 / im0) % (2 * np.pi))
+    if phase_norm != 0:
+        norm *= np.exp(1j * phase_norm)
     im3 = abs(im2 - im0 * norm)
     pl0 = fig.add_subplot(221)
-    pl0.imshow(im0, cmap, **kwargs)
+    pl0.imshow(im0.real, cmap, **kwargs)
     pl0.grid()
     share = dict(sharex=pl0, sharey=pl0)
     pl = fig.add_subplot(222, ** share)
-    pl.imshow(im1, cmap, **kwargs)
+    pl.imshow(im1.real, cmap, **kwargs)
     pl.grid()
     pl = fig.add_subplot(223, ** share)
     pl.imshow(im3, cmap, **kwargs)
     pl.grid()
     pl = fig.add_subplot(224, ** share)
-    pl.imshow(im2, cmap, **kwargs)
+    pl.imshow(im2.real, cmap, **kwargs)
     pl.grid()
     return fig
