@@ -37,6 +37,53 @@ import numpy.fft as fft
 import scipy.ndimage as ndi
 
 
+
+
+def _get_pads_and_slices(shape_src, shape_dest):
+    """ returns correct pads, slices for transforming shape_src to shape_dest"""
+
+    diff = tuple(s1 - s2 for s1, s2 in zip(shape_dest, shape_src))
+    slices = tuple(slice((-d) // 2, -(((-d) + 1) // 2)) if d < 0 else slice(None, None) for d in diff)
+    pads = tuple((d // 2, d - (d // 2)) if d > 0 else (0, 0) for d in diff)
+    return pads, slices
+
+
+def _to_shape(img_src, shape_dest, mode="constant", bgval=0):
+    """ pad/crops img_src to shape_dest
+
+
+    Parameters
+    ----------
+    img_src: ndarray
+        the input image
+    shape_dest: tuple
+        desired output shape
+    mode: str or function
+        same as numpy.pad, e.g. "constant", "reflect", ...
+
+    bgval:
+        value to use when mode== "constant"
+
+    Returns
+    -------
+        padded/cropped image
+    """
+
+    if img_src.ndim != 2:
+        raise ValueError("img 2d (but is %sd )" % img_src.ndim)
+
+    if img_src.ndim != len(shape_dest):
+        raise ValueError("im and shape should be same dimension (%s != %s)" % (img_src.ndim, len(shape_dest)))
+
+    shape_src = img_src.shape
+    if shape_src == shape_dest:
+        return img_src
+    pads, slices = _get_pads_and_slices(shape_src, shape_dest)
+    kwargs = {}
+    kwargs.update({"constant_values": bgval} if mode == "constant" else {})
+    return np.pad(img_src, pads, mode=mode, **kwargs)[slices]
+
+
 def wrap_angle(angles, ceil=2 * np.pi):
     """
     Args:
