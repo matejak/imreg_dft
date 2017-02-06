@@ -67,8 +67,8 @@ def _constraints(what):
             lo, hi = BOUNDS[what]
             if not lo <= mean <= hi:
                 raise ap.ArgumentTypeError(
-                    "The %s value must be a number between %g and %g, got %g."
-                    % (lo, hi, mean))
+                    "The {} value must be a number between {:g} and {:g}, "
+                    "got {:g}.".format(what, lo, hi, mean))
         std = 0
         if len(components) == 2:
             std = components[1]
@@ -133,7 +133,7 @@ def outmsg(msg):
              " value '%s'.") % (msg, fake_data.keys(), exc.args[0]))
     except Exception as exc:
         raise ap.ArgumentTypeError(
-            (tpl + " - %s") % (msg, exc.message))
+            (tpl + " - %s") % (msg, str(exc)))
     return msg
 
 

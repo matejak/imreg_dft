@@ -265,7 +265,7 @@ def settle_tiles(imgs, tiledim, opts, reports=None):
     cluster, amax = utils.get_best_cluster(_SHIFTS, _SUCCS, 5)
     # Make the quantities estimation even more precise by taking
     # the average of all good tiles
-    shift, angle, scale, score = utils.get_values(
+    shift, angle, scale, _ = utils.get_values(
         cluster, _SHIFTS, _SUCCS, _ANGLES, _SCALES)
 
     if reports is not None and reports.show("tile_info"):

@@ -99,7 +99,7 @@ class ReportsWrapper(object):
         ret = self._stuff[""][key]
         return ret
 
-    def show(self, * args):
+    def show(self, *args):
         ret = False
         for arg in args:
             ret |= self._show[arg]
@@ -131,7 +131,7 @@ class Rect_callback(object):
     def __call__(self, idx, LLC, dims):
         self._call(idx, LLC, dims)
 
-    def _call(idx, LLC, dims):
+    def _call(self, idx, LLC, dims):
         raise NotImplementedError()
 
 
@@ -161,7 +161,7 @@ class Rect_mpl(Rect_callback):
         color = self._get_color(coords, kwargs)
         if special:
             kwargs["fc"] = 'w'
-        rect = plt.Rectangle(LLC, dims[1], dims[0], ** kwargs)
+        rect = plt.Rectangle(LLC, dims[1], dims[0], **kwargs)
         self.subplot.add_artist(rect)
         center = (URC + LLC) / 2.0
         self.subplot.text(center[0], center[1],
@@ -226,7 +226,7 @@ def imshow_logpolars(fig, spectra, log_base, im_shape):
         grid[ii].set_ylabel(_t("azimuth / degrees"))
 
         xticklabels = ["{:.3g}".format(tick * 2 / im_shape[0])
-                      for tick in grid[ii].get_xticks()]
+                       for tick in grid[ii].get_xticks()]
 
         grid[ii].set_xticklabels(
             xticklabels,
@@ -299,7 +299,7 @@ def imshow_pcorr_translation(fig, cpss, extent, results, successes):
         # TODO: Code duplication with imshow_pcorr
         pl.set_title(titles[idx])
         center = np.array(results[idx])
-        im = pl.imshow(cpss[idx], ** imshow_kwargs)
+        im = pl.imshow(cpss[idx], **imshow_kwargs)
 
         # Otherwise plot would change xlim
         pl.autoscale(False)
@@ -347,7 +347,7 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None,
     )
     grid[0].set_title(_t(u"CPS"))
     labels = (_t("translation y / px"), _t("translation x / px"))
-    im = grid[0].imshow(raw, ** imshow_kwargs)
+    im = grid[0].imshow(raw, **imshow_kwargs)
 
     center = np.array(result)
     # Otherwise plot would change xlim
@@ -364,7 +364,7 @@ def imshow_pcorr(fig, raw, filtered, extent, result, success, log_base=None,
     grid[0].grid(c="w")
     if not terse:
         grid[1].set_title(_t(u"CPS — constrained and filtered"))
-        im = grid[1].imshow(filtered, ** imshow_kwargs)
+        im = grid[1].imshow(filtered, **imshow_kwargs)
     grid.cbar_axes[0].colorbar(im)
 
     if log_base is not None:

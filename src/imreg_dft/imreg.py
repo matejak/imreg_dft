@@ -438,7 +438,7 @@ def _translation(im0, im1, filter_pcorr=0, constraints=None, reports=None):
     return ret, succ
 
 
-def _phase_correlation(im0, im1, callback=None, * args):
+def _phase_correlation(im0, im1, callback=None, *args):
     """
     Computes phase correlation between im0 and im1
 
@@ -454,7 +454,7 @@ def _phase_correlation(im0, im1, callback=None, * args):
             means that the two images match.
     """
     if callback is None:
-        callback = utils.argmax2D
+        callback = utils._argmax2D
 
     # TODO: Implement some form of high-pass filtering of PHASE correlation
     f0, f1 = [fft.fft2(arr) for arr in (im0, im1)]
@@ -466,7 +466,7 @@ def _phase_correlation(im0, im1, callback=None, * args):
     # scps = shifted cps
     scps = fft.fftshift(cps)
 
-    (t0, t1), success = callback(scps, * args)
+    (t0, t1), success = callback(scps, *args)
     ret = np.array((t0, t1))
 
     # _compensate_fftshift is not appropriate here, this is OK.
@@ -709,13 +709,13 @@ def imshow(im0, im1, im2, cmap=None, fig=None, **kwargs):
     pl0.imshow(im0.real, cmap, **kwargs)
     pl0.grid()
     share = dict(sharex=pl0, sharey=pl0)
-    pl = fig.add_subplot(222, ** share)
+    pl = fig.add_subplot(222, **share)
     pl.imshow(im1.real, cmap, **kwargs)
     pl.grid()
-    pl = fig.add_subplot(223, ** share)
+    pl = fig.add_subplot(223, **share)
     pl.imshow(im3, cmap, **kwargs)
     pl.grid()
-    pl = fig.add_subplot(224, ** share)
+    pl = fig.add_subplot(224, **share)
     pl.imshow(im2.real, cmap, **kwargs)
     pl.grid()
     return fig

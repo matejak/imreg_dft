@@ -71,7 +71,7 @@ def _str2nptype(stri):
     try:
         typ = eval("np." + stri, dict(np=np))
     except Exception as exc:
-        msg += " but it is not the case at all - %s." % exc.message
+        msg += " but it is not the case at all - %s." % str(exc)
         raise ValueError(msg)
     typestr = type(typ).__name__
     # We allow mock object for people who know what they are doing.
@@ -88,6 +88,17 @@ def _str2flat(stri):
 
 
 def flatten(image, char):
+    """
+    Given a layered image (typically (y, x, RGB)), return a plain 2D image
+    (y, x) according to a spec.
+
+    Args:
+        image (np.ndarray): The image to flatten
+        char (char): One of (R, G, B, or V (=value))
+
+    Returns:
+        np.ndarray - The 2D image.
+    """
     if image.ndim < 3:
         return image
     char2idx = dict(R=0, G=1, B=2)
@@ -109,7 +120,7 @@ class LoaderSet(object):
 
     def __init__(self):
         if LoaderSet._we is not None:
-            return LoaderSet._we
+            return
         loaders = [loader() for loader in LoaderSet._LOADERS]
         self.loader_dict = {}
         for loader in loaders:
@@ -201,7 +212,7 @@ class LoaderSet(object):
             loader.setOpts(opts)
 
 
-def loader(lname, priority):
+def loader_of(lname, priority):
     """
     A decorator interconnecting an abstract loader with the rest of imreg_dft
     It sets the "nickname" of the loader and its priority during autodetection
@@ -286,7 +297,7 @@ class Loader(object):
         """
         raise NotImplementedError("Use the derived class")
 
-    def _save(self, fname):
+    def _save(self, fname, tformed):
         """
         To be implemented by derived class.
         Save data to fname, possibly taking into account previous loads
@@ -303,7 +314,7 @@ class Loader(object):
         self._save(fname, what)
 
 
-@loader("mat", 10)
+@loader_of("mat", 10)
 class _MatLoader(Loader):
     desc = "Loader of .mat (MATLAB v5) binary files"
     opts = {"in": "The structure to load (empty => autodetect)",
@@ -314,7 +325,7 @@ class _MatLoader(Loader):
             "flat": "How to flatten (the possibly RGB image) for the "
                     "registration. Values can be R, G, B or V (V for value - "
                     "a number proportional to average of R, G and B)",
-            }
+           }
     defaults = {"in": "", "out": "", "type": "float", "flat": "V"}
     str2val = {"type": _str2nptype, "flat": _str2flat}
 
@@ -339,8 +350,8 @@ class _MatLoader(Loader):
             keys = mat.keys()
             if key not in keys:
                 raise LookupError(
-                    "You requested load of '%s', but you can only choose from"
-                    " %s" % (tuple(keys),))
+                    "You requested load of '{}', but you can only choose from"
+                    " {}".format(key, tuple(keys)))
         ret = mat[key]
         self.saveopts["loaded_all"] = mat
         self.saveopts["key"] = key
@@ -365,7 +376,7 @@ class _MatLoader(Loader):
         return fname.endswith(".mat")
 
 
-@loader("pil", 50)
+@loader_of("pil", 50)
 class _PILLoader(Loader):
     desc = "Loader of image formats that Pillow (or PIL) can support"
     opts = {"flat": _MatLoader.opts["flat"]}
@@ -394,7 +405,7 @@ class _PILLoader(Loader):
         return True
 
 
-@loader("hdr", 10)
+@loader_of("hdr", 10)
 class _HDRLoader(Loader):
     desc = ("Loader of .hdr and .img binary files. Supply the '.hdr' as input,"
             "a '.img' with the same basename is expected.")
