@@ -11,17 +11,22 @@ SETUPDIR = os.path.dirname(__file__)
 PKGDIR = os.path.join(SETUPDIR, 'src')
 
 sys.path.append(PKGDIR)
-import imreg_dft
 
 reqsfname = os.path.join(SETUPDIR, 'requirements.txt')
 reqs = open(reqsfname, 'r', encoding='utf-8').read().strip().splitlines()
+
+# get version from __init__.py without importing
+versfname = os.path.join(PKGDIR, 'imreg_dft', '__init__.py')
+init_lines = open(versfname).readlines()
+version_line = list(filter(lambda x: '__version__' in x, init_lines))[0]
+version = version_line.split('"')[1]
 
 descfname = os.path.join(SETUPDIR, 'doc', 'description.rst')
 longdesc = open(descfname, 'r', encoding='utf-8').read()
 
 st.setup(
     name="imreg_dft",
-    version=imreg_dft.__version__,
+    version=version,
     author=u"Matěj Týč",
     author_email="matej.tyc@gmail.com",
     description=("Image registration utility using algorithms based on "
