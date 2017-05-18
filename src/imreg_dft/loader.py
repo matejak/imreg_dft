@@ -69,7 +69,7 @@ def _str2nptype(stri):
     msg = ("The string '%s' is supposed to correspond to a "
            "numpy type" % stri)
     try:
-        typ = eval("np." + stri, dict(np=np))
+        typ = getattr(np, stri)
     except Exception as exc:
         msg += " but it is not the case at all - %s." % str(exc)
         raise ValueError(msg)
@@ -325,7 +325,7 @@ class _MatLoader(Loader):
             "flat": "How to flatten (the possibly RGB image) for the "
                     "registration. Values can be R, G, B or V (V for value - "
                     "a number proportional to average of R, G and B)",
-           }
+            }
     defaults = {"in": "", "out": "", "type": "float", "flat": "V"}
     str2val = {"type": _str2nptype, "flat": _str2flat}
 

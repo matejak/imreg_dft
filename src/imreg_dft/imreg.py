@@ -595,6 +595,8 @@ def similarity_matrix(scale, angle, vector):
 
 
 EXCESS_CONST = 1.1
+
+
 def _get_log_base(shape, new_r):
     """
     Basically common functionality of :func:`_logpolar`

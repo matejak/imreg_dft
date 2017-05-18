@@ -64,6 +64,7 @@ class ReportsWrapper(object):
     It allows a parent function to put it in a mode, in which it will
     prefix keys of items set.
     """
+
     def __init__(self, toshow=""):
         self.prefixes = [""]
         #: Keys by prefix
@@ -139,6 +140,7 @@ class Rect_mpl(Rect_callback):
     """
     A class that can draw image tiles nicely
     """
+
     def __init__(self, subplot, shape):
         self.subplot = subplot
         self.ecs = ("w", "k")

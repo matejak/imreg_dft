@@ -143,7 +143,7 @@ def process_images(ims, opts, tosa=None, get_unextended=False,
         opts["filter_pcorr"], opts["exponent"], reports=reports)
 
     if reports is not None and reports.show(
-        "inputs", "translation", "scale_angle", "transformed"):
+            "inputs", "translation", "scale_angle", "transformed"):
         reports["aspect"] = ims[0].shape[1] / float(ims[0].shape[0])
         # reporting.report_tile(reports, "reports", aspect)
 
