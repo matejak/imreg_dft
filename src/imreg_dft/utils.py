@@ -709,7 +709,7 @@ def get_borderval(img, radius=None):
     mask = np.zeros_like(img, dtype=np.bool)
     mask[:, :radius] = True
     mask[:, -radius:] = True
-    mask[radius, :] = True
+    mask[:radius, :] = True
     mask[-radius:, :] = True
 
     mean = np.median(img[mask])
