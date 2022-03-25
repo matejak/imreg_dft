@@ -574,24 +574,64 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0),
 def similarity_matrix(scale, angle, vector):
     """
     Return homogeneous transformation matrix from similarity parameters.
+    
+    The output matrix can be used to calculate the position to which a pixel
+    would move after applying the implied transformation.
+    
+    Example:
+    img = np.random.randn(20, 20)
+    
+    # Assume the in put `img` was aligned and the result of the algorithm
+    # is stored in `res`
+    transformation = similarity_matrix(res["scale"], res["angle"], res["tvec"])
+    
+    # Need to find to what index did the pixel at (0, 10) in the input image
+    # moved after the transformation
+    query_index = np.array([0, 10])
+    
+    # The transformation is calculated with respect to the center of the image
+    # so we need to translate `query_index` there first.
+    # -1 because indices are associated with center of pixel
+    query_index_center = query_index - (np.array(img.shape) - 1)/2
+    
+    query_index_transformed = np.dot(transformation, query_index_center)
+    
+    # Move coordinates back so that they are refered with respect to the top
+    # left corner of the image
+    query_index_transformed = query_index_transformed + np.array(img.shape)/2
+    
+    
 
-    Transformation parameters are: isotropic scale factor, rotation angle (in
-    degrees), and translation vector (of size 2).
-
-    The order of transformations is: scale, rotate, translate.
-
+    Args:
+        scale (float): Isotropic scale factor
+        angle (float): Rotation angle in degrees
+        vector (np.array): A vector with shape (2,) representing the translation
+            in units of pixels.
+    
+    Returns:
+        np.array: A shape (3, 3) matrix that encodes the affine transformation
+        associated with the input parameters. The origin of the transformation is
+        assumed to have its origin at the center of the image. To apply the
+        transformation to a vector you first need to augment it by appending a
+        1.
     """
-    raise NotImplementedError("We have no idea what this is supposed to do")
-    m_scale = np.diag([scale, scale, 1.0])
-    m_rot = np.identity(3)
+    sim_matrix = np.identity(3)
+
+    # Rotation matrix
     angle = math.radians(angle)
-    m_rot[0, 0] = math.cos(angle)
-    m_rot[1, 1] = math.cos(angle)
-    m_rot[0, 1] = -math.sin(angle)
-    m_rot[1, 0] = math.sin(angle)
-    m_transl = np.identity(3)
-    m_transl[:2, 2] = vector
-    return np.dot(m_transl, np.dot(m_rot, m_scale))
+    c, s = math.cos(angle), math.sin(angle)
+    m_rot = np.array([[c, -s],[s, c]])
+
+    # Add the scaling
+    m_linear = scale * m_rot
+
+    # Incorporate linear transform to similarity matrix
+    sim_matrix[:2, :2] = m_linear
+
+    # Incorporate translation to similarity matrix
+    sim_matrix[:2, 2] = vector
+
+    return sim_matrix
 
 
 EXCESS_CONST = 1.1
