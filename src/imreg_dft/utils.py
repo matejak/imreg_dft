@@ -706,7 +706,7 @@ def get_borderval(img, radius=None):
     if radius is None:
         mindim = min(img.shape)
         radius = max(1, mindim // 20)
-    mask = np.zeros_like(img, dtype=np.bool)
+    mask = np.zeros_like(img, dtype=bool)
     mask[:, :radius] = True
     mask[:, -radius:] = True
     mask[:radius, :] = True
