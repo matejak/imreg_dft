@@ -46,7 +46,7 @@ except ImportError:
     import numpy.fft as fft
 import scipy.ndimage.interpolation as ndii
 
-import imreg_dft.utils as utils
+import utils
 
 
 def _logpolar_filter(shape):
