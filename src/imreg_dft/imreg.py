@@ -40,6 +40,7 @@ from __future__ import division, print_function
 import math
 
 import numpy as np
+
 try:
     import pyfftw.interfaces.numpy_fft as fft
 except ImportError:
@@ -477,7 +478,7 @@ def _phase_correlation(im0, im1, callback=None, *args):
     return ret, success
 
 
-def transform_img_dict(img, tdict, bgval=None, order=1, invert=False):
+def transform_img_dict(img, tdict, mode="constant", bgval=None, order=1, invert=False):
     """
     Wrapper of :func:`transform_img`, works well with the :func:`similarity`
     output.
@@ -486,6 +487,9 @@ def transform_img_dict(img, tdict, bgval=None, order=1, invert=False):
         img
         tdict (dictionary): Transformation dictionary --- supposed to contain
             keys "scale", "angle" and "tvec"
+
+        mode (string): The transformation mode (refer to e.g.
+            :func:`scipy.ndimage.shift` and its kwarg ``mode``).
         bgval
         order
         invert (bool): Whether to perform inverse transformation --- doesn't
@@ -501,7 +505,7 @@ def transform_img_dict(img, tdict, bgval=None, order=1, invert=False):
         scale = 1.0 / scale
         angle *= -1
         tvec *= -1
-    res = transform_img(img, scale, angle, tvec, bgval=bgval, order=order)
+    res = transform_img(img, scale, angle, tvec, bgval=bgval, mode=mode, order=order)
     return res
 
 
@@ -552,22 +556,18 @@ def transform_img(img, scale=1.0, angle=0.0, tvec=(0, 0),
     if bgval is None:
         bgval = utils.get_borderval(img)
 
-    bigshape = np.round(np.array(img.shape) * 1.2).astype(int)
-    bg = np.zeros(bigshape, img.dtype) + bgval
+    dest0 = utils._to_shape(img.copy(), img.shape, mode=mode, bgval=bgval)
 
-    dest0 = utils.embed_to(bg, img.copy())
     # TODO: We have problems with complex numbers
     # that are not supported by zoom(), rotate() or shift()
     if scale != 1.0:
         dest0 = ndii.zoom(dest0, scale, order=order, mode=mode, cval=bgval)
     if angle != 0.0:
         dest0 = ndii.rotate(dest0, angle, order=order, mode=mode, cval=bgval)
-
     if tvec[0] != 0 or tvec[1] != 0:
         dest0 = ndii.shift(dest0, tvec, order=order, mode=mode, cval=bgval)
 
-    bg = np.zeros_like(img) + bgval
-    dest = utils.embed_to(bg, dest0)
+    dest = utils._to_shape(dest0, img.shape, mode=mode, bgval=bgval)
     return dest
 
 
